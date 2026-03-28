@@ -387,17 +387,54 @@ body{font-family:var(--font-body);background:#0f2318;color:#1a1a1a;overscroll-be
         <label>Your Online Name</label>
         <input type="text" id="online-player-name" maxlength="24" placeholder="Enter your name">
       </div>
-      <div class="two-col">
-        <button class="btn btn-secondary btn-sm" id="create-room-btn" onclick="createOnlineRoom()">Create Room</button>
+
+      <div class="two-col" id="online-mode-row">
+        <button class="btn btn-secondary btn-sm" id="mode-host-btn" onclick="setOnlineMode('host')">Host</button>
+        <button class="btn btn-secondary btn-sm" id="mode-join-btn" onclick="setOnlineMode('join')">Join</button>
+      </div>
+
+      <div id="host-options" style="margin-top:.75rem">
+        <div class="two-col">
+          <div class="input-group" style="margin-bottom:.5rem">
+            <label>Room Visibility</label>
+            <select id="room-visibility">
+              <option value="open" selected>Open</option>
+              <option value="closed">Closed</option>
+            </select>
+          </div>
+          <div class="input-group" style="margin-bottom:.5rem">
+            <label>Room Password (closed only)</label>
+            <input type="password" id="host-room-password" maxlength="20" placeholder="Set password">
+          </div>
+        </div>
+        <button class="btn btn-secondary btn-sm btn-full" id="create-room-btn" onclick="createOnlineRoom()">Create Room</button>
+      </div>
+
+      <div id="join-options" style="margin-top:.75rem;display:none">
+        <div class="input-group" style="margin-bottom:.5rem">
+          <label>Room Code</label>
+          <input type="text" id="join-room-code" maxlength="6" placeholder="ABC123" style="text-transform:uppercase">
+        </div>
+        <div class="input-group" style="margin-bottom:.5rem">
+          <label>Password (for closed room)</label>
+          <input type="password" id="join-room-password" maxlength="20" placeholder="Password if needed">
+        </div>
+        <button class="btn btn-primary btn-sm btn-full" id="join-room-btn" onclick="joinOnlineRoom()">Join by Code</button>
+        <div style="margin-top:.75rem;display:flex;align-items:center;justify-content:space-between">
+          <label style="color:rgba(255,255,255,.7);font-size:.85rem">Open Rooms</label>
+          <button class="btn btn-sm" style="padding:.3rem .55rem;background:rgba(255,255,255,.12);color:#fff" onclick="refreshOpenRoomsList(true)">Refresh</button>
+        </div>
+        <div id="open-rooms-list" style="margin-top:.5rem;max-height:150px;overflow-y:auto"></div>
+      </div>
+
+      <div class="two-col" style="margin-top:.75rem">
+        <button class="btn btn-gold btn-sm" id="ready-btn" onclick="toggleReadyState()" disabled>✅ Ready</button>
         <button class="btn btn-danger btn-sm" id="leave-room-btn" onclick="leaveOnlineRoom()" disabled>Leave Room</button>
       </div>
-      <div class="input-group" style="margin-top:.75rem">
-        <label>Room Code</label>
-        <input type="text" id="join-room-code" maxlength="6" placeholder="ABC123" style="text-transform:uppercase">
-      </div>
-      <button class="btn btn-primary btn-sm btn-full" id="join-room-btn" onclick="joinOnlineRoom()">Join Room</button>
+
+      <div id="online-room-players" style="margin-top:.75rem;max-height:150px;overflow-y:auto"></div>
       <div id="online-room-status" style="margin-top:.75rem;color:rgba(255,255,255,.65);font-size:.82rem;line-height:1.5">
-        Offline mode. Create or join a room to play online.
+        Offline mode. Choose Host or Join.
       </div>
     </div>
     <div class="card">
@@ -690,6 +727,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyBHqtL0dCXAzP4W0GPQtAYdb39xmprz4sk",
   authDomain: "monopoly-bd.firebaseapp.com",
   projectId: "monopoly-bd",
+  databaseURL: "https://monopoly-bd-default-rtdb.asia-southeast1.firebasedatabase.app",
   storageBucket: "monopoly-bd.firebasestorage.app",
   messagingSenderId: "415179857628",
   appId: "1:415179857628:web:c7cd7db68740d358135e19",
@@ -698,7 +736,9 @@ const firebaseConfig = {
 
 const FIREBASE = {
   db: null,
+  fs: null,
   api: null,
+  auth: null,
 };
 
 const ONLINE = {
@@ -706,9 +746,14 @@ const ONLINE = {
   connected: false,
   roomId: null,
   isHost: false,
+  mode: 'host',
   localUid: null,
   localName: '',
+  hostUid: null,
+  visibility: 'open',
   unsubRoom: null,
+  roomsListLoading: false,
+  lastRoomsFetchAt: 0,
   isApplyingRemote: false,
   status: 'offline',
   revision: 0,
@@ -719,6 +764,9 @@ const ONLINE_MUTATION_FUNCS = [
   'confirmTrade', 'payBailout', 'endTurn', 'confirmBankruptcy', 'confirmBuy',
   'startAuction', 'placeBid', 'passAuction', 'sendChat'
 ];
+
+const ROOM_SCHEMA_VERSION = 2;
+const OPEN_ROOM_STALE_MS = 1000 * 60 * 60 * 6;
 
 function ensureLocalUid() {
   const key = 'monopoly_online_uid';
@@ -734,33 +782,244 @@ function roomCode() {
   return Math.random().toString(36).slice(2, 8).toUpperCase();
 }
 
+function isValidRoomId(v) {
+  return /^[A-Z0-9]{6}$/.test(String(v || ''));
+}
+
+function sanitizeRoomId(v) {
+  return String(v || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
+}
+
+async function hashRoomPassword(roomId, plainPassword) {
+  const payload = `${roomId}|${plainPassword}|monopoly-bd-v1`;
+  if (!window.crypto?.subtle || !window.TextEncoder) {
+    throw new Error('Secure password hashing is unavailable in this browser context.');
+  }
+  const bytes = new TextEncoder().encode(payload);
+  const digest = await window.crypto.subtle.digest('SHA-256', bytes);
+  return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function generateUniqueRoomId(maxAttempts = 20) {
+  for (let i = 0; i < maxAttempts; i++) {
+    const id = roomCode();
+    if (isValidRoomId(id)) return id;
+  }
+  return null;
+}
+
+function tokenForPlayer(players, uid) {
+  const fallback = TOKENS[players.length % TOKENS.length] || TOKENS[0];
+  const existing = players.find(p => p.uid === uid);
+  if (existing) return sanitizeToken(existing.token, fallback);
+  const used = new Set(players.map(p => sanitizeToken(p.token, '')).filter(t => TOKENS.includes(t)));
+  return TOKENS.find(t => !used.has(t)) || TOKENS[players.length % TOKENS.length];
+}
+
+function setOnlineMode(mode) {
+  ONLINE.mode = mode === 'join' ? 'join' : 'host';
+  updateOnlineLobbyUI();
+}
+
+async function updateLocalPlayerProfile(next = {}) {
+  if (!isOnlineGame() || !FIREBASE.api) return;
+  const roomRef = getRoomRef();
+  await FIREBASE.api.runTransaction(roomRef, current => {
+    const data = current || null;
+    if (!data) return;
+    if ((data.status || 'lobby') !== 'lobby') return;
+    const playersIn = indexedObjectToArray(data.players).filter(p => p && typeof p === 'object');
+    const usedByOthers = new Set(
+      playersIn
+        .filter(p => p.uid !== ONLINE.localUid)
+        .map((p, i) => sanitizeToken(p.token, TOKENS[i % TOKENS.length]))
+    );
+    const players = playersIn.map((p, i) => {
+      if (p.uid !== ONLINE.localUid) return p;
+      const currentToken = sanitizeToken(p.token, TOKENS[i % TOKENS.length]);
+      const proposedToken = sanitizeToken(next.token || currentToken, currentToken);
+      const safeToken = usedByOthers.has(proposedToken)
+        ? (TOKENS.find(t => !usedByOthers.has(t)) || currentToken)
+        : proposedToken;
+      return {
+        uid: p.uid,
+        name: sanitizeName(next.name ?? p.name, `Player ${i + 1}`),
+        token: safeToken,
+        ready: typeof next.ready === 'boolean' ? next.ready : !!p.ready,
+      };
+    });
+    return {
+      ...data,
+      players,
+      playerUids: players.map(p => p.uid).filter(Boolean),
+      updatedAt: Date.now(),
+    };
+  });
+}
+
+async function toggleReadyState() {
+  if (!isOnlineGame()) {
+    toast('Join a room first.', 'danger');
+    return;
+  }
+  const me = lobbyPlayers.find(p => p.uid === ONLINE.localUid);
+  if (!me) return;
+  await updateLocalPlayerProfile({ ready: !me.ready });
+}
+
+function cycleMyToken(step = 1) {
+  if (!isOnlineGame()) return;
+  const me = lobbyPlayers.find(p => p.uid === ONLINE.localUid);
+  if (!me) return;
+  const idx = Math.max(0, TOKENS.indexOf(me.token));
+  const token = TOKENS[(idx + step + TOKENS.length) % TOKENS.length];
+  updateLocalPlayerProfile({ token, ready: false }).catch(err => {
+    console.error(err);
+    toast('Could not update token right now.', 'danger');
+  });
+}
+
+async function refreshOpenRoomsList(force = false) {
+  if (!FIREBASE.api || isOnlineGame() || ONLINE.mode !== 'join') return;
+  if (ONLINE.roomsListLoading) return;
+  if (!force && Date.now() - ONLINE.lastRoomsFetchAt < 4000) return;
+  const listEl = document.getElementById('open-rooms-list');
+  if (!listEl) return;
+  ONLINE.roomsListLoading = true;
+  ONLINE.lastRoomsFetchAt = Date.now();
+  listEl.innerHTML = '<div style="color:rgba(255,255,255,.45);font-size:.8rem;padding:.3rem">Loading open rooms...</div>';
+
+  try {
+    const snap = await FIREBASE.api.get(FIREBASE.api.ref(FIREBASE.db, 'rooms'));
+    const rawRooms = snap.exists() ? (snap.val() || {}) : {};
+    const now = Date.now();
+    const rooms = [];
+    Object.entries(rawRooms).forEach(([roomId, d]) => {
+      if (!d || typeof d !== 'object') return;
+      if (Number(d.schemaVersion || 0) !== ROOM_SCHEMA_VERSION) return;
+      const updatedAt = Number(d.updatedAt || 0);
+      if (!Number.isFinite(updatedAt) || now - updatedAt > OPEN_ROOM_STALE_MS) return;
+      const players = indexedObjectToArray(d.players).filter(p => p && typeof p === 'object');
+      if ((d.status || 'lobby') !== 'lobby') return;
+      if ((d.visibility || 'open') !== 'open') return;
+      if (players.length < 8 && isValidRoomId(roomId)) {
+        rooms.push({ id: roomId, players, hostUid: d.hostUid, updatedAt: d.updatedAt || 0 });
+      }
+    });
+
+    rooms.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+    const visibleRooms = rooms.slice(0, 25);
+
+    if (!visibleRooms.length) {
+      listEl.innerHTML = '<div style="color:rgba(255,255,255,.45);font-size:.8rem;padding:.3rem">No open rooms available.</div>';
+      return;
+    }
+
+    listEl.innerHTML = visibleRooms.map(r => {
+      const host = r.players.find(p => p.uid === r.hostUid)?.name || 'Host';
+      return `<div style="display:flex;align-items:center;justify-content:space-between;gap:.5rem;padding:.45rem .5rem;border:1px solid rgba(255,255,255,.13);border-radius:7px;margin-bottom:.35rem;background:rgba(255,255,255,.05)">
+        <div style="min-width:0">
+          <div style="color:#fff;font-size:.82rem;font-weight:700">${escHtml(r.id)} • ${r.players.length}/8</div>
+          <div style="color:rgba(255,255,255,.5);font-size:.72rem">Host: ${escHtml(host)}</div>
+        </div>
+        <button class="btn btn-sm" style="padding:.3rem .55rem;background:rgba(45,160,90,.35);color:#fff" onclick="joinOpenRoom('${r.id}')">Join</button>
+      </div>`;
+    }).join('');
+  } catch (err) {
+    console.error(err);
+    const msg = firebaseErrorMessage(err, 'Failed to load room list.');
+    listEl.innerHTML = `<div style="color:#ff9ca1;font-size:.8rem;padding:.3rem">${escHtml(msg)}</div>`;
+    updateOnlineStatus(msg, true);
+  } finally {
+    ONLINE.roomsListLoading = false;
+  }
+}
+
+function joinOpenRoom(roomId) {
+  if (!isValidRoomId(roomId)) {
+    toast('Room code is invalid.', 'danger');
+    return;
+  }
+  const code = document.getElementById('join-room-code');
+  if (code) code.value = roomId;
+  joinOnlineRoom();
+}
+
 function sanitizeName(v, fallback = 'Player') {
-  const clean = String(v || '').trim().replace(/\s+/g, ' ');
+  const clean = String(v || '')
+    .replace(/[\u0000-\u001F\u007F]/g, '')
+    .replace(/[<>`"'\\]/g, '')
+    .trim()
+    .replace(/\s+/g, ' ');
   return clean.slice(0, 24) || fallback;
+}
+
+function sanitizeToken(v, fallback = TOKENS[0]) {
+  const token = String(v || '');
+  if (TOKENS.includes(token)) return token;
+  if (TOKENS.includes(fallback)) return fallback;
+  return TOKENS[0];
+}
+
+function sanitizeColor(v, fallback = '#ffffff') {
+  const color = String(v || '').trim();
+  if (/^#[0-9a-fA-F]{3,8}$/.test(color)) return color;
+  return fallback;
+}
+
+function indexedObjectToArray(value) {
+  if (Array.isArray(value)) return value;
+  if (!value || typeof value !== 'object') return [];
+  const keys = Object.keys(value).filter(k => /^\d+$/.test(k));
+  if (!keys.length) return [];
+  const arr = [];
+  keys.sort((a, b) => Number(a) - Number(b)).forEach(k => {
+    arr[Number(k)] = value[k];
+  });
+  return arr;
 }
 
 async function bootstrapFirebase() {
   try {
-    const [appMod, dbMod] = await Promise.all([
+    const [appMod, dbMod, fsMod, authMod] = await Promise.all([
       import('https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js'),
+      import('https://www.gstatic.com/firebasejs/12.11.0/firebase-database.js'),
       import('https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js'),
+      import('https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js'),
     ]);
     const app = appMod.initializeApp(firebaseConfig);
-    FIREBASE.db = dbMod.getFirestore(app);
+    const auth = authMod.getAuth(app);
+    if (!auth.currentUser) {
+      await authMod.signInAnonymously(auth);
+    }
+    if (auth.currentUser?.uid) {
+      ONLINE.localUid = auth.currentUser.uid;
+      if (Array.isArray(lobbyPlayers) && lobbyPlayers[0]) {
+        lobbyPlayers[0].uid = ONLINE.localUid;
+      }
+    }
+    FIREBASE.db = dbMod.getDatabase(app, firebaseConfig.databaseURL);
+    FIREBASE.fs = fsMod.getFirestore(app);
+    FIREBASE.auth = auth;
     FIREBASE.api = {
-      doc: dbMod.doc,
-      setDoc: dbMod.setDoc,
-      getDoc: dbMod.getDoc,
-      updateDoc: dbMod.updateDoc,
-      onSnapshot: dbMod.onSnapshot,
-      serverTimestamp: dbMod.serverTimestamp,
+      ref: dbMod.ref,
+      query: dbMod.query,
+      orderByChild: dbMod.orderByChild,
+      equalTo: dbMod.equalTo,
+      limitToFirst: dbMod.limitToFirst,
+      get: dbMod.get,
+      set: dbMod.set,
+      update: dbMod.update,
+      onValue: dbMod.onValue,
       runTransaction: dbMod.runTransaction,
+      serverTimestamp: dbMod.serverTimestamp,
     };
     ONLINE.ready = true;
-    updateOnlineStatus('Firebase ready. You can create or join a room.');
+    updateOnlineStatus('Firebase RTDB ready. You can create or join a room.');
   } catch (err) {
     console.error(err);
-    updateOnlineStatus('Firebase failed to initialize. Check internet or Firebase config.', true);
+    const msg = firebaseErrorMessage(err, 'Firebase failed to initialize. Check RTDB URL and enable Anonymous Auth.');
+    updateOnlineStatus(msg, true);
   }
 }
 
@@ -769,6 +1028,21 @@ function updateOnlineStatus(text, isError = false) {
   if (!el) return;
   el.textContent = text;
   el.style.color = isError ? '#ff9ca1' : 'rgba(255,255,255,.65)';
+}
+
+function firebaseErrorMessage(err, fallback = 'Firebase request failed.') {
+  const code = String(err?.code || '').toLowerCase();
+  const message = String(err?.message || '');
+  if (code.includes('permission-denied') || message.includes('Permission denied') || message.includes('PERMISSION_DENIED')) {
+    return 'Permission denied by RTDB rules. Allow authenticated users to read/write rooms.';
+  }
+  if (code.includes('unauthenticated') || code.includes('auth') || message.toLowerCase().includes('anonymous')) {
+    return 'Authentication failed. Enable Anonymous Auth in Firebase Authentication.';
+  }
+  if (code.includes('network') || message.toLowerCase().includes('network')) {
+    return 'Network error while contacting RTDB. Check your internet connection.';
+  }
+  return fallback;
 }
 
 function isOnlineGame() {
@@ -1158,7 +1432,7 @@ let lobbyPlayers = [
 ];
 
 function getRoomRef() {
-  return FIREBASE.api.doc(FIREBASE.db, 'rooms', ONLINE.roomId);
+  return FIREBASE.api.ref(FIREBASE.db, `rooms/${ONLINE.roomId}`);
 }
 
 function defaultLobbySettings() {
@@ -1172,9 +1446,9 @@ function defaultLobbySettings() {
 async function syncLobbySettingsToRoom() {
   if (!isOnlineGame() || !ONLINE.isHost || ONLINE.status !== 'lobby' || !FIREBASE.api) return;
   try {
-    await FIREBASE.api.updateDoc(getRoomRef(), {
+    await FIREBASE.api.update(getRoomRef(), {
       settings: defaultLobbySettings(),
-      updatedAt: FIREBASE.api.serverTimestamp(),
+      updatedAt: Date.now(),
     });
   } catch (err) {
     console.error(err);
@@ -1191,7 +1465,76 @@ function safeGameStateForRoom() {
 
 function hydrateRemoteGameState(raw) {
   if (!raw) return;
-  G = JSON.parse(JSON.stringify(raw));
+  const next = JSON.parse(JSON.stringify(raw));
+
+  const players = indexedObjectToArray(next.players).filter(p => p && typeof p === 'object');
+  if (!players.length) {
+    throw new Error('Remote game state is missing player data.');
+  }
+
+  next.players = players.map((p, i) => ({
+    ...p,
+    id: i,
+    name: sanitizeName(p.name, `Player ${i + 1}`),
+    token: sanitizeToken(p.token, TOKENS[i % TOKENS.length]),
+    color: sanitizeColor(p.color, TOKEN_COLORS[i % TOKEN_COLORS.length]),
+    money: Number.isFinite(Number(p.money)) ? Number(p.money) : 0,
+    pos: Number.isInteger(Number(p.pos)) ? ((Number(p.pos) % 40 + 40) % 40) : 0,
+    jailFreeCards: Math.max(0, Number(p.jailFreeCards) || 0),
+    inJail: !!p.inJail,
+    jailTurns: Math.max(0, Number(p.jailTurns) || 0),
+    bankrupt: !!p.bankrupt,
+    doublesCount: Math.max(0, Number(p.doublesCount) || 0),
+    properties: indexedObjectToArray(p.properties).filter(Number.isInteger),
+    railroads: indexedObjectToArray(p.railroads).filter(Number.isInteger),
+    utilities: indexedObjectToArray(p.utilities).filter(Number.isInteger),
+  }));
+
+  const ownable = new Set(SPACES
+    .map((s, i) => (s.type === 'property' || s.type === 'railroad' || s.type === 'utility') ? i : null)
+    .filter(i => i !== null));
+  const props = indexedObjectToArray(next.properties);
+  if (props.length < SPACES.length) props.length = SPACES.length;
+  for (let i = 0; i < SPACES.length; i++) {
+    if (!ownable.has(i)) {
+      props[i] = null;
+      continue;
+    }
+    const src = props[i] && typeof props[i] === 'object' ? props[i] : {};
+    const ownerN = Number(src.owner);
+    const owner = Number.isInteger(ownerN) && ownerN >= 0 && ownerN < next.players.length ? ownerN : null;
+    const hotel = !!src.hotel;
+    const houses = hotel ? 0 : Math.max(0, Math.min(4, Number(src.houses) || 0));
+    props[i] = {
+      id: i,
+      owner,
+      houses,
+      hotel,
+      mortgaged: !!src.mortgaged,
+    };
+  }
+  next.properties = props;
+
+  const curIdx = Number(next.currentPlayerIdx);
+  next.currentPlayerIdx = Number.isInteger(curIdx) && curIdx >= 0 && curIdx < next.players.length ? curIdx : 0;
+  next.phase = ['roll', 'action', 'end'].includes(next.phase) ? next.phase : 'roll';
+  const dice = indexedObjectToArray(next.dice).map(n => Number(n));
+  next.dice = (dice.length >= 2 && dice.every(n => Number.isInteger(n) && n >= 1 && n <= 6)) ? [dice[0], dice[1]] : [1, 1];
+
+  next.log = indexedObjectToArray(next.log).filter(Boolean);
+  next.chat = indexedObjectToArray(next.chat).filter(Boolean);
+  next.chanceDeck = indexedObjectToArray(next.chanceDeck);
+  next.communityDeck = indexedObjectToArray(next.communityDeck);
+
+  G = next;
+  if (G.auctionState) {
+    const activePlayers = indexedObjectToArray(G.auctionState.activePlayers).filter(Number.isInteger);
+    if (activePlayers.length) G.auctionState.activePlayers = activePlayers;
+    const passedRaw = indexedObjectToArray(G.auctionState.passed);
+    if (passedRaw.length) {
+      G.auctionState.passed = new Set(passedRaw.filter(Number.isInteger));
+    }
+  }
   if (G.auctionState && Array.isArray(G.auctionState.passed)) {
     G.auctionState.passed = new Set(G.auctionState.passed);
   }
@@ -1200,34 +1543,56 @@ function hydrateRemoteGameState(raw) {
 async function syncRoomState(reason = '') {
   if (!isOnlineGame() || ONLINE.isApplyingRemote || !FIREBASE.api) return;
   try {
-    const settings = defaultLobbySettings();
     ONLINE.revision += 1;
-    await FIREBASE.api.updateDoc(getRoomRef(), {
+    const updatePayload = {
       status: 'playing',
-      players: G.players.map(p => ({ uid: p.uid || null, name: p.name, token: p.token })),
-      settings,
+      players: G.players.map((p, i) => ({
+        uid: p.uid || null,
+        name: sanitizeName(p.name, `Player ${i + 1}`),
+        token: sanitizeToken(p.token, TOKENS[i % TOKENS.length]),
+      })),
+      playerUids: G.players.map(p => p.uid).filter(Boolean),
       gameState: safeGameStateForRoom(),
       revision: ONLINE.revision,
-      updatedAt: FIREBASE.api.serverTimestamp(),
+      updatedAt: Date.now(),
       lastReason: reason || 'sync',
-    });
+    };
+    if (ONLINE.isHost) {
+      updatePayload.settings = defaultLobbySettings();
+    }
+    await FIREBASE.api.update(getRoomRef(), updatePayload);
   } catch (err) {
     console.error(err);
-    toast('Failed to sync room state.', 'danger');
+    toast(firebaseErrorMessage(err, 'Failed to sync room state.'), 'danger');
   }
 }
 
 async function applyRoomSnapshot(data) {
   if (!data) return;
+  const roomVersion = Number(data.schemaVersion || 0);
+  if (roomVersion !== ROOM_SCHEMA_VERSION) {
+    throw new Error('Room is using an older game schema. Recreate the room from this version.');
+  }
   ONLINE.status = data.status || 'lobby';
   ONLINE.revision = data.revision || 0;
-  ONLINE.isHost = data.hostUid === ONLINE.localUid;
+  ONLINE.hostUid = data.hostUid || null;
+  ONLINE.visibility = data.visibility || 'open';
+  ONLINE.isHost = ONLINE.hostUid === ONLINE.localUid;
 
-  const roomPlayers = (data.players || []).map((p, i) => ({
+  const roomPlayers = indexedObjectToArray(data.players).map((p, i) => ({
     uid: p.uid || null,
     name: sanitizeName(p.name, `Player ${i + 1}`),
-    token: p.token || TOKENS[i % TOKENS.length],
+    token: sanitizeToken(p.token, TOKENS[i % TOKENS.length]),
+    ready: !!p.ready,
   }));
+
+  const localPresent = roomPlayers.some(p => p.uid === ONLINE.localUid);
+  if (isOnlineGame() && !localPresent) {
+    updateOnlineStatus('You are no longer in this room.', true);
+    leaveOnlineRoom(false);
+    toast('You were removed from the room.', 'danger');
+    return;
+  }
 
   if (roomPlayers.length) {
     lobbyPlayers = roomPlayers;
@@ -1270,14 +1635,23 @@ function attachRoomListener(roomId) {
   if (ONLINE.unsubRoom) ONLINE.unsubRoom();
   ONLINE.roomId = roomId;
   ONLINE.connected = true;
-  const ref = FIREBASE.api.doc(FIREBASE.db, 'rooms', roomId);
-  ONLINE.unsubRoom = FIREBASE.api.onSnapshot(ref, snap => {
+  const ref = FIREBASE.api.ref(FIREBASE.db, `rooms/${roomId}`);
+  ONLINE.unsubRoom = FIREBASE.api.onValue(ref, snap => {
     if (!snap.exists()) {
       updateOnlineStatus('Room closed. You are now offline.', true);
       leaveOnlineRoom(false);
       return;
     }
-    applyRoomSnapshot(snap.data());
+    applyRoomSnapshot(snap.val()).catch(err => {
+      console.error(err);
+      const msg = err?.message ? `Failed to apply room updates: ${err.message}` : 'Failed to apply room updates.';
+      updateOnlineStatus(msg, true);
+      toast(msg, 'danger');
+    });
+  }, err => {
+    console.error(err);
+    const msg = firebaseErrorMessage(err, 'Failed to subscribe to room updates.');
+    updateOnlineStatus(msg, true);
   });
 }
 
@@ -1285,15 +1659,38 @@ function updateOnlineLobbyUI() {
   const createBtn = document.getElementById('create-room-btn');
   const joinBtn = document.getElementById('join-room-btn');
   const leaveBtn = document.getElementById('leave-room-btn');
+  const readyBtn = document.getElementById('ready-btn');
+  const hostOpt = document.getElementById('host-options');
+  const joinOpt = document.getElementById('join-options');
+  const hostModeBtn = document.getElementById('mode-host-btn');
+  const joinModeBtn = document.getElementById('mode-join-btn');
+
+  if (hostModeBtn) hostModeBtn.style.background = ONLINE.mode === 'host' ? 'linear-gradient(135deg,#1e3a5f,#2563eb)' : 'rgba(255,255,255,.12)';
+  if (joinModeBtn) joinModeBtn.style.background = ONLINE.mode === 'join' ? 'linear-gradient(135deg,#1e3a5f,#2563eb)' : 'rgba(255,255,255,.12)';
+  if (hostModeBtn) hostModeBtn.disabled = ONLINE.connected;
+  if (joinModeBtn) joinModeBtn.disabled = ONLINE.connected;
+  if (hostOpt) hostOpt.style.display = ONLINE.mode === 'host' ? '' : 'none';
+  if (joinOpt) joinOpt.style.display = ONLINE.mode === 'join' ? '' : 'none';
+
   if (createBtn) createBtn.disabled = !ONLINE.ready || ONLINE.connected;
   if (joinBtn) joinBtn.disabled = !ONLINE.ready || ONLINE.connected;
   if (leaveBtn) leaveBtn.disabled = !ONLINE.connected;
+  if (readyBtn) {
+    const me = lobbyPlayers.find(p => p.uid === ONLINE.localUid);
+    readyBtn.disabled = !ONLINE.connected || !me || ONLINE.status !== 'lobby';
+    readyBtn.textContent = me?.ready ? '❌ Unready' : '✅ Ready';
+    readyBtn.style.background = me?.ready ? 'linear-gradient(135deg,#7f1d1d,#c0392b)' : 'linear-gradient(135deg,#92610e,var(--gold))';
+  }
 
   if (ONLINE.connected) {
     const myName = lobbyPlayers.find(p => p.uid === ONLINE.localUid)?.name || getOnlinePlayerName();
-    updateOnlineStatus(`Room ${ONLINE.roomId} connected as ${myName}${ONLINE.isHost ? ' (Host)' : ''}.`);
+    const playersIn = lobbyPlayers.filter(p => p.uid).length;
+    const readyIn = lobbyPlayers.filter(p => p.uid && p.ready).length;
+    const vis = ONLINE.visibility === 'closed' ? 'Closed' : 'Open';
+    updateOnlineStatus(`Room ${ONLINE.roomId} • ${vis} • ${readyIn}/${playersIn} ready • ${myName}${ONLINE.isHost ? ' (Host)' : ''}.`);
   } else if (ONLINE.ready) {
-    updateOnlineStatus('Offline mode. Create or join a room to play online.');
+    updateOnlineStatus('Offline mode. Choose Host or Join.');
+    if (ONLINE.mode === 'join') refreshOpenRoomsList();
   }
 }
 
@@ -1307,27 +1704,75 @@ async function createOnlineRoom() {
   const myName = getOnlinePlayerName();
   ONLINE.localName = myName;
   const settings = defaultLobbySettings();
-  const roomId = roomCode();
-  const roomRef = FIREBASE.api.doc(FIREBASE.db, 'rooms', roomId);
-  const me = { uid: ONLINE.localUid, name: myName, token: TOKENS[0] };
+  const visibility = document.getElementById('room-visibility')?.value === 'closed' ? 'closed' : 'open';
+  const password = String(document.getElementById('host-room-password')?.value || '').trim();
+  if (visibility === 'closed' && password.length < 4) {
+    toast('Closed room password must be at least 4 characters.', 'danger');
+    return;
+  }
 
-  await FIREBASE.api.setDoc(roomRef, {
-    status: 'lobby',
-    hostUid: ONLINE.localUid,
-    players: [me],
-    settings,
-    gameState: null,
-    revision: 0,
-    createdAt: FIREBASE.api.serverTimestamp(),
-    updatedAt: FIREBASE.api.serverTimestamp(),
-  });
+  let createdRoomId = null;
+  let me = null;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const candidateRoomId = await generateUniqueRoomId();
+    if (!candidateRoomId) break;
+
+    let passwordHash = '';
+    if (visibility === 'closed') {
+      try {
+        passwordHash = await hashRoomPassword(candidateRoomId, password);
+      } catch (err) {
+        toast(err.message || 'Unable to secure room password in this browser.', 'danger');
+        return;
+      }
+    }
+
+    const candidateRef = FIREBASE.api.ref(FIREBASE.db, `rooms/${candidateRoomId}`);
+    const candidateMe = { uid: ONLINE.localUid, name: myName, token: TOKENS[0], ready: false };
+
+    try {
+      const result = await FIREBASE.api.runTransaction(candidateRef, current => {
+        if (current) return;
+        return {
+          schemaVersion: ROOM_SCHEMA_VERSION,
+          status: 'lobby',
+          hostUid: ONLINE.localUid,
+          visibility,
+          passwordHash,
+          hasPassword: visibility === 'closed',
+          players: [candidateMe],
+          playerUids: [ONLINE.localUid],
+          settings,
+          gameState: null,
+          revision: 0,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        };
+      });
+      if (!result.committed) continue;
+      createdRoomId = candidateRoomId;
+      me = candidateMe;
+      break;
+    } catch (err) {
+      console.error(err);
+      toast(firebaseErrorMessage(err, 'Unable to create room right now.'), 'danger');
+      return;
+    }
+  }
+
+  if (!createdRoomId || !me) {
+    toast('Could not generate a unique room code. Please retry.', 'danger');
+    return;
+  }
 
   lobbyPlayers = [me];
-  attachRoomListener(roomId);
+  attachRoomListener(createdRoomId);
   const codeEl = document.getElementById('join-room-code');
-  if (codeEl) codeEl.value = roomId;
+  if (codeEl) codeEl.value = createdRoomId;
+  const hostPassEl = document.getElementById('host-room-password');
+  if (hostPassEl) hostPassEl.value = '';
   renderLobby();
-  toast(`Room created: ${roomId}`, 'gold');
+  toast(`Room created: ${createdRoomId}`, 'gold');
 }
 
 async function joinOnlineRoom() {
@@ -1338,41 +1783,108 @@ async function joinOnlineRoom() {
   if (ONLINE.connected) return;
 
   const codeEl = document.getElementById('join-room-code');
-  const roomId = (codeEl?.value || '').trim().toUpperCase();
-  if (!roomId || roomId.length < 6) {
+  const passEl = document.getElementById('join-room-password');
+  const roomId = sanitizeRoomId(codeEl?.value || '');
+  if (!isValidRoomId(roomId)) {
     toast('Enter a valid room code.', 'danger');
     return;
   }
+  if (codeEl) codeEl.value = roomId;
 
   const myName = getOnlinePlayerName();
   ONLINE.localName = myName;
-  const roomRef = FIREBASE.api.doc(FIREBASE.db, 'rooms', roomId);
+  const roomRef = FIREBASE.api.ref(FIREBASE.db, `rooms/${roomId}`);
+  const preSnap = await FIREBASE.api.get(roomRef);
+  const baseRoom = preSnap.exists() ? preSnap.val() : null;
+  if (!baseRoom) {
+    toast('Room not found', 'danger');
+    return;
+  }
+  const entered = String(passEl?.value || '').trim();
+  let enteredHash = '';
+  if (entered) {
+    try {
+      enteredHash = await hashRoomPassword(roomId, entered);
+    } catch (err) {
+      toast(err.message || 'Unable to verify room password in this browser.', 'danger');
+      return;
+    }
+  }
 
   try {
-    await FIREBASE.api.runTransaction(FIREBASE.db, async tx => {
-      const snap = await tx.get(roomRef);
-      if (!snap.exists()) throw new Error('Room not found');
-      const data = snap.data();
-      if ((data.status || 'lobby') !== 'lobby') throw new Error('Game already started');
-      let players = data.players || [];
-      const exists = players.some(p => p.uid === ONLINE.localUid);
-      if (!exists) {
-        if (players.length >= 8) throw new Error('Room is full');
-        const used = new Set(players.map(p => p.token));
-        const token = TOKENS.find(t => !used.has(t)) || TOKENS[players.length % TOKENS.length];
-        players = [...players, { uid: ONLINE.localUid, name: myName, token }];
+    let txError = '';
+    const result = await FIREBASE.api.runTransaction(roomRef, data => {
+      const roomData = (data && typeof data === 'object') ? data : baseRoom;
+      if (!roomData) {
+        throw new Error('Room not found');
       }
-      tx.update(roomRef, {
+      if (Number(roomData.schemaVersion || 0) !== ROOM_SCHEMA_VERSION) {
+        txError = 'Room is from an older version. Ask host to recreate the room.';
+        return;
+      }
+      if ((roomData.status || 'lobby') !== 'lobby') {
+        txError = 'Game already started';
+        return;
+      }
+      const isClosed = (roomData.visibility || 'open') === 'closed';
+      const requiredHash = String(roomData.passwordHash || '');
+      const requiredLegacyPassword = String(roomData.password || '');
+      let needsPasswordMigration = false;
+      if (isClosed) {
+        if (!entered) {
+          txError = 'Password required for closed room';
+          return;
+        }
+        const matchesHash = requiredHash ? enteredHash === requiredHash : false;
+        const matchesLegacy = requiredLegacyPassword ? entered === requiredLegacyPassword : false;
+        if (!matchesHash && !matchesLegacy) {
+          txError = 'Invalid room password';
+          return;
+        }
+        needsPasswordMigration = !requiredHash && !!requiredLegacyPassword && matchesLegacy;
+      }
+      let players = indexedObjectToArray(roomData.players).filter(p => p && typeof p === 'object');
+      const existingIdx = players.findIndex(p => p.uid === ONLINE.localUid);
+      if (existingIdx === -1) {
+        if (players.length >= 8) {
+          txError = 'Room is full';
+          return;
+        }
+        const token = tokenForPlayer(players, ONLINE.localUid);
+        players = [...players, { uid: ONLINE.localUid, name: myName, token, ready: false }];
+      } else {
+        const currentToken = sanitizeToken(players[existingIdx].token, TOKENS[existingIdx % TOKENS.length]);
+        const otherTokens = new Set(
+          players
+            .filter((_, idx) => idx !== existingIdx)
+            .map((p, i) => sanitizeToken(p.token, TOKENS[i % TOKENS.length]))
+        );
+        const token = otherTokens.has(currentToken)
+          ? (TOKENS.find(t => !otherTokens.has(t)) || currentToken)
+          : currentToken;
+        players[existingIdx] = {
+          uid: ONLINE.localUid,
+          name: myName,
+          token,
+          ready: false,
+        };
+      }
+      return {
+        ...roomData,
         players,
-        updatedAt: FIREBASE.api.serverTimestamp(),
-      });
+        playerUids: players.map(p => p.uid).filter(Boolean),
+        ...(needsPasswordMigration ? { passwordHash: enteredHash, password: '', hasPassword: true } : {}),
+        updatedAt: Date.now(),
+      };
     });
+    if (!result.committed) throw new Error(txError || 'Unable to join room.');
   } catch (err) {
-    toast(err.message || 'Unable to join room.', 'danger');
+    toast(firebaseErrorMessage(err, err.message || 'Unable to join room.'), 'danger');
     return;
   }
 
   attachRoomListener(roomId);
+  if (passEl) passEl.value = '';
   renderLobby();
   toast(`Joined room ${roomId}`, 'gold');
 }
@@ -1382,25 +1894,36 @@ async function leaveOnlineRoom(showToast = true) {
     ONLINE.connected = false;
     ONLINE.roomId = null;
     ONLINE.isHost = false;
+    ONLINE.hostUid = null;
+    ONLINE.visibility = 'open';
+    ONLINE.status = 'offline';
     updateOnlineLobbyUI();
     return;
   }
 
+  if (showToast && ONLINE.status === 'playing') {
+    toast('Cannot leave while a game is in progress.', 'danger');
+    return;
+  }
+
   const roomId = ONLINE.roomId;
-  const roomRef = FIREBASE.api.doc(FIREBASE.db, 'rooms', roomId);
+  const roomRef = FIREBASE.api.ref(FIREBASE.db, `rooms/${roomId}`);
   try {
-    await FIREBASE.api.runTransaction(FIREBASE.db, async tx => {
-      const snap = await tx.get(roomRef);
-      if (!snap.exists()) return;
-      const data = snap.data();
-      const players = (data.players || []).filter(p => p.uid !== ONLINE.localUid);
-      const nextHost = players.length ? players[0].uid : null;
-      tx.update(roomRef, {
+    await FIREBASE.api.runTransaction(roomRef, data => {
+      if (!data) return;
+      const players = indexedObjectToArray(data.players).filter(p => p && p.uid !== ONLINE.localUid);
+      if (!players.length) {
+        return null;
+      }
+      const nextHost = players[0].uid;
+      return {
+        ...data,
         players,
+        playerUids: players.map(p => p.uid).filter(Boolean),
         hostUid: nextHost,
-        status: players.length ? (data.status || 'lobby') : 'ended',
-        updatedAt: FIREBASE.api.serverTimestamp(),
-      });
+        status: data.status || 'lobby',
+        updatedAt: Date.now(),
+      };
     });
   } catch (err) {
     console.error(err);
@@ -1411,6 +1934,8 @@ async function leaveOnlineRoom(showToast = true) {
   ONLINE.connected = false;
   ONLINE.roomId = null;
   ONLINE.isHost = false;
+  ONLINE.hostUid = null;
+  ONLINE.visibility = 'open';
   ONLINE.status = 'offline';
   ONLINE.revision = 0;
   updateOnlineLobbyUI();
@@ -1426,14 +1951,21 @@ function renderLobby() {
   lobbyPlayers.forEach((p, i) => {
     const div = document.createElement('div');
     div.className = 'player-slot active';
-    const editable = !online;
+    const isMe = p.uid && p.uid === ONLINE.localUid;
+    const editable = !online || isMe;
     const readOnlyAttr = editable ? '' : 'readonly';
-    const removeBtn = editable && i >= 2 ? `<button class="remove-btn" onclick="removePlayer(${i})">✕</button>` : '';
+    const removeBtn = (!online && editable && i >= 2) ? `<button class="remove-btn" onclick="removePlayer(${i})">✕</button>` : '';
     const pColor = TOKEN_COLORS[i % TOKEN_COLORS.length];
     const safeName = escAttr(p.name);
+    const readyBadge = online && p.uid ? `<span style="margin-left:.3rem;font-size:.72rem;padding:.1rem .35rem;border-radius:10px;background:${p.ready?'rgba(45,160,90,.3)':'rgba(127,29,29,.3)'};color:${p.ready?'#86efac':'#fca5a5'}">${p.ready?'READY':'NOT READY'}</span>` : '';
+    const tokenControls = (online && isMe)
+      ? `<div style="display:flex;gap:.25rem"><button class="btn btn-sm" style="padding:.2rem .35rem;background:rgba(255,255,255,.12);color:#fff" onclick="cycleMyToken(-1)">◀</button><button class="btn btn-sm" style="padding:.2rem .35rem;background:rgba(255,255,255,.12);color:#fff" onclick="cycleMyToken(1)">▶</button></div>`
+      : '';
     div.innerHTML = `
       <div class="token-preview" style="color:${pColor}">${p.token}</div>
       <input class="name-input" value="${safeName}" placeholder="Player ${i+1}" onchange="onLobbyNameChange(${i}, this.value)" ${readOnlyAttr} style="color:${pColor};${editable?'':'opacity:.8;cursor:not-allowed'}">
+      ${readyBadge}
+      ${tokenControls}
       ${removeBtn}
     `;
     el.appendChild(div);
@@ -1454,13 +1986,31 @@ function renderLobby() {
   });
 
   const startBtn = document.getElementById('start-btn');
+  const connectedPlayers = lobbyPlayers.filter(p => p.uid).length;
+  const allReady = connectedPlayers >= 2 && lobbyPlayers.filter(p => p.uid).every(p => p.ready);
   if (startBtn) {
     if (online) {
-      startBtn.textContent = ONLINE.isHost ? '🎮 Start Online Game' : '⏳ Waiting for Host';
-      startBtn.disabled = !ONLINE.isHost || lobbyPlayers.length < 2;
+      startBtn.textContent = ONLINE.isHost ? (allReady ? '🚀 Launch Game' : '⏳ Waiting for Ready') : '⏳ Waiting for Host';
+      startBtn.disabled = !ONLINE.isHost || !allReady;
     } else {
       startBtn.textContent = '🎮 Start Game';
       startBtn.disabled = lobbyPlayers.length < 2;
+    }
+  }
+
+  const roomPlayersEl = document.getElementById('online-room-players');
+  if (roomPlayersEl) {
+    if (!online) {
+      roomPlayersEl.innerHTML = '';
+    } else {
+      roomPlayersEl.innerHTML = lobbyPlayers.filter(p => p.uid).map((p, i) => {
+        const mine = p.uid === ONLINE.localUid;
+        const host = p.uid === ONLINE.hostUid;
+        return `<div style="display:flex;align-items:center;justify-content:space-between;gap:.5rem;padding:.35rem .45rem;border:1px solid rgba(255,255,255,.12);border-radius:7px;background:rgba(255,255,255,.05);margin-bottom:.3rem">
+          <div style="font-size:.82rem;color:#fff;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(p.token || '🎲')} ${escHtml(p.name)}${host?' (Host)':''}${mine?' (You)':''}</div>
+          <div style="font-size:.72rem;color:${p.ready?'#86efac':'#fca5a5'}">${p.ready?'READY':'NOT READY'}</div>
+        </div>`;
+      }).join('');
     }
   }
 
@@ -1469,7 +2019,14 @@ function renderLobby() {
 }
 
 function onLobbyNameChange(i, value) {
-  lobbyPlayers[i].name = sanitizeName(value, `Player ${i + 1}`);
+  const clean = sanitizeName(value, `Player ${i + 1}`);
+  lobbyPlayers[i].name = clean;
+  if (isOnlineGame() && lobbyPlayers[i].uid === ONLINE.localUid) {
+    updateLocalPlayerProfile({ name: clean, ready: false }).catch(err => {
+      console.error(err);
+      toast('Could not update name right now.', 'danger');
+    });
+  }
 }
 
 function addPlayerSlot() {
@@ -1493,7 +2050,8 @@ async function startGame() {
   const names = lobbyPlayers.map((p, i) => ({
     uid: p.uid || null,
     name: sanitizeName(document.querySelectorAll('.name-input')[i]?.value || p.name, `Player ${i + 1}`),
-    token: p.token
+    token: sanitizeToken(p.token, TOKENS[i % TOKENS.length]),
+    ready: !!p.ready,
   }));
 
   if (isOnlineGame()) {
@@ -1501,10 +2059,35 @@ async function startGame() {
       toast('Only host can start the online game.', 'danger');
       return;
     }
-    if (names.length < 2) {
+    const snap = await FIREBASE.api.get(getRoomRef());
+    if (!snap.exists()) {
+      toast('Room no longer exists.', 'danger');
+      return;
+    }
+    const serverRoom = snap.val() || {};
+    if ((serverRoom.hostUid || null) !== ONLINE.localUid) {
+      toast('Host changed. Only current host can start.', 'danger');
+      return;
+    }
+    const serverPlayers = (serverRoom.players || []).filter(p => p.uid);
+    const allReady = serverPlayers.length >= 2 && serverPlayers.every(p => !!p.ready);
+    if (!allReady) {
+      toast('All players must be ready before launch.', 'danger');
+      return;
+    }
+    if (serverPlayers.length < 2) {
       toast('At least 2 players are required.', 'danger');
       return;
     }
+    names.length = 0;
+    serverPlayers.forEach((p, i) => {
+      names.push({
+        uid: p.uid || null,
+        name: sanitizeName(p.name, `Player ${i + 1}`),
+        token: sanitizeToken(p.token, TOKENS[i % TOKENS.length]),
+        ready: !!p.ready,
+      });
+    });
   }
 
   const startMoney = parseInt(document.getElementById('starting-money').value) || 15000;
@@ -1618,8 +2201,8 @@ function renderChatLog() {
   const el = document.getElementById('chat-log');
   if (!el || !G.chat) return;
   el.innerHTML = G.chat.map(m => {
-    const whoColor = m.color || '#ffffff';
-    const token = m.token || '💬';
+    const whoColor = sanitizeColor(m.color, '#ffffff');
+    const token = escHtml(String(m.token || '💬'));
     const who = escHtml(m.name || 'Player');
     const text = escHtml(m.text || '');
     return `<div class="chat-msg"><span class="chat-who" style="color:${whoColor}">${token} ${who}:</span><span class="chat-text">${text}</span></div>`;
@@ -1721,14 +2304,11 @@ function updateActionButtons() {
   const onProp = G.properties[p.pos];
   const sp = SPACES[p.pos];
   const turnOwnedByMe = canLocalControlTurn();
-  const canBuy = G.phase === 'action' && onProp && onProp.owner === null && sp.type !== 'railroad' && sp.type !== 'utility' || 
-                  G.phase === 'action' && (sp.type === 'railroad' || sp.type === 'utility') && onProp && onProp.owner === null;
   const canBuyAny = G.phase === 'action' && onProp && onProp.owner === null;
   const canBuild = G.phase === 'action' && buildableGroups(p).length > 0;
   const canMortgage = G.phase === 'action' && (p.properties.length > 0 || p.railroads.length > 0 || p.utilities.length > 0);
   const canTrade = G.phase === 'action' && G.players.filter(x => !x.bankrupt).length > 1;
   const canEnd = G.phase === 'action' || G.phase === 'end';
-  const canRoll = G.phase === 'roll' && !p.inJail;
   const inJail = p.inJail;
 
   ['btn-buy','mb-buy'].forEach(id => { const el = document.getElementById(id); if(el) el.disabled = !turnOwnedByMe || !canBuyAny; });
@@ -2716,7 +3296,7 @@ function fmtCurrency(n) {
 }
 function shuffle(arr) { for (let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]]}; return arr; }
 function removeFrom(arr, val) { const i = arr.indexOf(val); if (i >= 0) arr.splice(i, 1); }
-function escHtml(t) { return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function escHtml(t) { return String(t ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function escAttr(t) { return escHtml(String(t)).replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
 function rolledDoublesThisTurn() { return G.lastDoubles; }
 
@@ -2862,6 +3442,8 @@ function installOnlineMutationHooks() {
 function installLobbyEvents() {
   const nameInput = document.getElementById('online-player-name');
   const codeInput = document.getElementById('join-room-code');
+  const passInput = document.getElementById('join-room-password');
+  const visSelect = document.getElementById('room-visibility');
   const startMoney = document.getElementById('starting-money');
   const timerSelect = document.getElementById('lobby-timer');
 
@@ -2878,8 +3460,25 @@ function installLobbyEvents() {
 
   if (codeInput) {
     codeInput.addEventListener('input', () => {
-      codeInput.value = codeInput.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
+      codeInput.value = sanitizeRoomId(codeInput.value);
     });
+  }
+
+  if (passInput) {
+    passInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') joinOnlineRoom();
+    });
+  }
+
+  if (visSelect) {
+    visSelect.addEventListener('change', () => {
+      const pass = document.getElementById('host-room-password');
+      if (!pass) return;
+      const closed = visSelect.value === 'closed';
+      pass.disabled = !closed;
+      pass.placeholder = closed ? 'Set password' : 'Not needed for open room';
+    });
+    visSelect.dispatchEvent(new Event('change'));
   }
 
   if (startMoney) {
@@ -2893,6 +3492,10 @@ function installLobbyEvents() {
       syncLobbySettingsToRoom();
     });
   }
+
+  setInterval(() => {
+    if (!isOnlineGame() && ONLINE.mode === 'join' && ONLINE.ready) refreshOpenRoomsList();
+  }, 8000);
 }
 
 // ═══════════════════════════════════════════════
