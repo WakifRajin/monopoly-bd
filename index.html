@@ -1,0 +1,2907 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>🎲 Bangladeshi Monopoly</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --green: #1a7a3c;
+  --green-light: #2da05a;
+  --green-pale: #e8f5ed;
+  --board-bg: #b8dfc0;
+  --gold: #c9971c;
+  --gold-light: #f0c040;
+  --red: #c0392b;
+  --blue: #2563eb;
+  --purple: #7c3aed;
+  --orange: #ea580c;
+  --navy: #1e3a5f;
+  --card-shadow: 0 4px 24px rgba(0,0,0,0.13);
+  --radius: 12px;
+  --font-display: 'Playfair Display', Georgia, serif;
+  --font-body: 'DM Sans', system-ui, sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{font-family:var(--font-body);background:#0f2318;color:#1a1a1a;overscroll-behavior:none;-webkit-tap-highlight-color:transparent}
+
+/* ── SCREENS ── */
+.screen{position:fixed;inset:0;display:flex;flex-direction:column;transition:opacity .35s,transform .35s;will-change:opacity}
+.screen.hidden{opacity:0;pointer-events:none;transform:scale(.97)}
+
+/* ── LOBBY ── */
+#lobby-screen{background:linear-gradient(145deg,#0a1f10 0%,#1a3d25 50%,#0d2b1a 100%);overflow-y:auto}
+.lobby-header{text-align:center;padding:2.5rem 1rem 1rem;position:relative}
+.lobby-logo{font-family:var(--font-display);font-size:clamp(2rem,6vw,3.2rem);font-weight:900;color:#fff;line-height:1;text-shadow:0 4px 20px rgba(0,0,0,.5)}
+.lobby-logo span{color:var(--gold-light)}
+.lobby-subtitle{color:rgba(255,255,255,.6);font-size:.95rem;margin-top:.4rem;letter-spacing:.05em}
+.lobby-tagline{display:inline-block;background:rgba(201,151,28,.2);border:1px solid rgba(201,151,28,.4);color:var(--gold-light);font-size:.8rem;padding:.3rem .9rem;border-radius:20px;margin-top:.8rem;letter-spacing:.1em;text-transform:uppercase}
+
+.lobby-body{flex:1;padding:1rem 1rem 2rem;max-width:700px;margin:0 auto;width:100%}
+
+.card{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:var(--radius);padding:1.5rem;margin-bottom:1rem;backdrop-filter:blur(10px)}
+.card h2{font-family:var(--font-display);font-size:1.3rem;color:#fff;margin-bottom:1rem}
+.card h3{font-size:1rem;font-weight:600;color:rgba(255,255,255,.8);margin-bottom:.7rem}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;font-family:var(--font-body);font-weight:600;border:none;border-radius:8px;cursor:pointer;transition:all .2s;font-size:.95rem;padding:.75rem 1.5rem;line-height:1}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:linear-gradient(135deg,var(--green),var(--green-light));color:#fff;box-shadow:0 4px 15px rgba(26,122,60,.4)}
+.btn-primary:hover{box-shadow:0 6px 20px rgba(26,122,60,.55);transform:translateY(-1px)}
+.btn-secondary{background:linear-gradient(135deg,#1e3a5f,#2563eb);color:#fff;box-shadow:0 4px 15px rgba(37,99,235,.3)}
+.btn-secondary:hover{box-shadow:0 6px 20px rgba(37,99,235,.45);transform:translateY(-1px)}
+.btn-danger{background:linear-gradient(135deg,#7f1d1d,#c0392b);color:#fff}
+.btn-danger:hover{filter:brightness(1.1)}
+.btn-gold{background:linear-gradient(135deg,#92610e,var(--gold));color:#fff}
+.btn-sm{padding:.5rem 1rem;font-size:.85rem}
+.btn-lg{padding:1rem 2rem;font-size:1.05rem}
+.btn-full{width:100%}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none!important;box-shadow:none!important}
+
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:.75rem}
+
+.input-group{margin-bottom:1rem}
+.input-group label{display:block;color:rgba(255,255,255,.7);font-size:.85rem;margin-bottom:.4rem;font-weight:500}
+.input-group input,.input-group select{width:100%;padding:.7rem 1rem;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:8px;color:#fff;font-family:var(--font-body);font-size:.95rem;outline:none;transition:border .2s}
+.input-group input::placeholder{color:rgba(255,255,255,.35)}
+.input-group input:focus,.input-group select:focus{border-color:var(--green-light)}
+.input-group select option{background:#1a3d25;color:#fff}
+
+.player-slot{display:flex;align-items:center;gap:.8rem;padding:.75rem;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;margin-bottom:.6rem;transition:all .2s}
+.player-slot.active{border-color:var(--green-light);background:rgba(45,160,90,.15)}
+.player-slot .token-preview{font-size:1.6rem;width:2.5rem;text-align:center}
+.player-slot .name-input{flex:1;background:transparent;border:none;border-bottom:1px solid rgba(255,255,255,.2);color:#fff;font-size:.95rem;padding:.2rem .4rem;outline:none;font-family:var(--font-body)}
+.player-slot .name-input::placeholder{color:rgba(255,255,255,.3)}
+.player-slot .name-input:focus{border-bottom-color:var(--green-light)}
+.player-slot .remove-btn{background:rgba(192,57,43,.3);border:none;color:#ff6b6b;width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center}
+
+.how-to{list-style:none;color:rgba(255,255,255,.65);font-size:.9rem;line-height:1.8}
+.how-to li::before{content:'🎯 ';margin-right:.3rem}
+
+/* ── GAME SCREEN ── */
+#game-screen{background:#0f2318;display:grid;grid-template-rows:auto 1fr auto}
+
+/* Top bar */
+.game-topbar{background:rgba(0,0,0,.4);border-bottom:1px solid rgba(255,255,255,.08);padding:.5rem 1rem;display:flex;align-items:center;justify-content:space-between;gap:.5rem;flex-shrink:0;min-height:52px}
+.game-topbar .turn-badge{font-weight:700;color:#fff;font-size:.9rem;display:flex;align-items:center;gap:.5rem}
+.game-topbar .turn-badge .token{font-size:1.2rem}
+.topbar-actions{display:flex;gap:.5rem}
+
+/* Main game area */
+.game-main{display:grid;overflow:hidden}
+
+/* Board area */
+.board-wrapper{display:flex;align-items:center;justify-content:center;overflow:hidden;padding:.5rem;position:relative}
+
+/* ── BOARD ── */
+.board{
+  display:grid;
+  grid-template-columns:1.65fr repeat(9,1fr) 1.65fr;
+  grid-template-rows:1.65fr repeat(9,1fr) 1.65fr;
+  background:#cde6d0;
+  border:3px solid #111;
+  box-shadow:0 0 0 8px #1a3d25,0 0 0 10px #111,0 20px 60px rgba(0,0,0,.7);
+  position:relative;
+  aspect-ratio:1/1;
+  flex-shrink:0;
+}
+
+.space{
+  border:1px solid #111;
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:space-between;
+  text-align:center;
+  font-size:clamp(.52rem,1.1vmin,.85rem);
+  overflow:hidden;
+  cursor:pointer;
+  transition:filter .15s;
+  background:#cde6d0;
+  padding:3px;
+  line-height:1.1;
+}
+.space:hover{filter:brightness(1.06) contrast(1.05)}
+.space.highlighted{box-shadow:inset 0 0 0 2px #f0c040;z-index:5}
+
+.space .color-bar{width:100%;flex-shrink:0;border-bottom:1px solid #111;display:flex;align-items:center;justify-content:center;font-size:.6em;font-weight:800;color:rgba(0,0,0,.75)}
+.space .sp-name{font-weight:700;padding:2px 0;flex-grow:1;display:flex;align-items:center;justify-content:center;flex-direction:column;width:100%;word-break:break-word;color:#111;font-family:'Times New Roman',Georgia,serif}
+.space .sp-price{font-size:.78em;color:#333;font-weight:700;flex-shrink:0;margin-top:auto}
+.space .sp-icon{font-size:1.3em;line-height:1}
+
+/* Corner spaces */
+.space.corner{font-size:clamp(.55rem,1.1vmin,.85rem)}
+#sp0{grid-area:11/11} /* GO */
+#sp10{grid-area:11/1}  /* JAIL */
+#sp20{grid-area:1/1}   /* FREE */
+#sp30{grid-area:1/11}  /* GO TO JAIL */
+
+/* Bottom row left→right (spaces 1-9) */
+#sp1{grid-area:11/10}#sp2{grid-area:11/9}#sp3{grid-area:11/8}#sp4{grid-area:11/7}
+#sp5{grid-area:11/6}#sp6{grid-area:11/5}#sp7{grid-area:11/4}#sp8{grid-area:11/3}#sp9{grid-area:11/2}
+/* Left col bottom→top (11-19) */
+#sp11{grid-area:10/1}#sp12{grid-area:9/1}#sp13{grid-area:8/1}#sp14{grid-area:7/1}
+#sp15{grid-area:6/1}#sp16{grid-area:5/1}#sp17{grid-area:4/1}#sp18{grid-area:3/1}#sp19{grid-area:2/1}
+/* Top row left→right (21-29) */
+#sp21{grid-area:1/2}#sp22{grid-area:1/3}#sp23{grid-area:1/4}#sp24{grid-area:1/5}
+#sp25{grid-area:1/6}#sp26{grid-area:1/7}#sp27{grid-area:1/8}#sp28{grid-area:1/9}#sp29{grid-area:1/10}
+/* Right col top→bottom (31-39) */
+#sp31{grid-area:2/11}#sp32{grid-area:3/11}#sp33{grid-area:4/11}#sp34{grid-area:5/11}
+#sp35{grid-area:6/11}#sp36{grid-area:7/11}#sp37{grid-area:8/11}#sp38{grid-area:9/11}#sp39{grid-area:10/11}
+
+/* Space rotations for sides */
+#sp11,#sp12,#sp13,#sp14,#sp15,#sp16,#sp17,#sp18,#sp19{
+  flex-direction:row;writing-mode:vertical-rl;transform:rotate(180deg);
+}
+#sp11 .color-bar,#sp12 .color-bar,#sp13 .color-bar,#sp14 .color-bar,
+#sp15 .color-bar,#sp16 .color-bar,#sp17 .color-bar,#sp18 .color-bar,#sp19 .color-bar{
+  width:auto;height:100%;writing-mode:horizontal-tb;transform:rotate(180deg);
+}
+#sp21,#sp22,#sp23,#sp24,#sp25,#sp26,#sp27,#sp28,#sp29{
+  flex-direction:column-reverse;
+}
+#sp21 .color-bar,#sp22 .color-bar,#sp23 .color-bar,#sp24 .color-bar,
+#sp25 .color-bar,#sp26 .color-bar,#sp27 .color-bar,#sp28 .color-bar,#sp29 .color-bar{
+  order:1;
+}
+#sp31,#sp32,#sp33,#sp34,#sp35,#sp36,#sp37,#sp38,#sp39{
+  flex-direction:row-reverse;writing-mode:vertical-rl;
+}
+#sp31 .color-bar,#sp32 .color-bar,#sp33 .color-bar,#sp34 .color-bar,
+#sp35 .color-bar,#sp36 .color-bar,#sp37 .color-bar,#sp38 .color-bar,#sp39 .color-bar{
+  width:auto;height:100%;writing-mode:horizontal-tb;
+}
+
+.center-area{
+  grid-area:2/2/11/11;
+  background:#a4d1a8;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  border:1px solid #111;padding:.5rem;position:relative;overflow:hidden;
+}
+.center-title{font-family:'Times New Roman',Georgia,serif;font-size:clamp(1rem,3vmin,2rem);font-weight:900;color:#0a3d0a;letter-spacing:.05em;margin-bottom:.1rem}
+.center-sub{font-size:clamp(.5rem,1.2vmin,.75rem);color:#1a5c1a;font-weight:700;letter-spacing:.15em;text-transform:uppercase;margin-bottom:.5rem}
+
+/* Dice */
+.dice-row{display:flex;gap:8px;margin:.4rem 0}
+.die{width:clamp(28px,4vmin,42px);height:clamp(28px,4vmin,42px);background:#fff;border:1.5px solid #333;border-radius:5px;display:grid;padding:4px;
+  grid-template-areas:"a . c""e g f""d . b";
+  box-shadow:inset 0 3px #fff,inset 0 -3px #bbb,inset 3px 0 #d7d7d7,inset -3px 0 #d7d7d7;
+  transition:transform .1s}
+.die.rolling{animation:rollDie .4s ease}
+@keyframes rollDie{0%,100%{transform:rotate(0deg)}25%{transform:rotate(-20deg)}75%{transform:rotate(20deg)}}
+.dot{display:block;align-self:center;justify-self:center;width:clamp(5px,0.8vmin,8px);height:clamp(5px,0.8vmin,8px);border-radius:50%;background:#222;visibility:hidden}
+.dot:nth-child(1){grid-area:a}.dot:nth-child(2){grid-area:b}.dot:nth-child(3){grid-area:c}
+.dot:nth-child(4){grid-area:d}.dot:nth-child(5){grid-area:e}.dot:nth-child(6){grid-area:f}.dot:nth-child(7){grid-area:g}
+.die[data-v="1"] .dot:nth-child(7){visibility:visible}
+.die[data-v="2"] .dot:nth-child(1),.die[data-v="2"] .dot:nth-child(2){visibility:visible}
+.die[data-v="3"] .dot:nth-child(1),.die[data-v="3"] .dot:nth-child(2),.die[data-v="3"] .dot:nth-child(7){visibility:visible}
+.die[data-v="4"] .dot:nth-child(1),.die[data-v="4"] .dot:nth-child(2),.die[data-v="4"] .dot:nth-child(3),.die[data-v="4"] .dot:nth-child(4){visibility:visible}
+.die[data-v="5"] .dot:nth-child(1),.die[data-v="5"] .dot:nth-child(2),.die[data-v="5"] .dot:nth-child(3),.die[data-v="5"] .dot:nth-child(4),.die[data-v="5"] .dot:nth-child(7){visibility:visible}
+.die[data-v="6"] .dot:nth-child(1),.die[data-v="6"] .dot:nth-child(2),.die[data-v="6"] .dot:nth-child(3),.die[data-v="6"] .dot:nth-child(4),.die[data-v="6"] .dot:nth-child(5),.die[data-v="6"] .dot:nth-child(6){visibility:visible}
+
+#roll-btn{background:linear-gradient(135deg,#c0392b,#e74c3c);color:#fff;border:none;border-radius:8px;padding:.5rem 1.2rem;font-weight:700;cursor:pointer;font-family:var(--font-body);font-size:clamp(.7rem,1.5vmin,.9rem);box-shadow:0 4px 12px rgba(192,57,43,.5);transition:all .2s;margin-top:.3rem}
+#roll-btn:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(192,57,43,.6)}
+#roll-btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+
+/* Player markers on board */
+.pmarker{position:absolute;border-radius:50%;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;font-size:clamp(8px,1.4vmin,14px);z-index:10;transition:all .5s cubic-bezier(.34,1.56,.64,1);pointer-events:none;width:clamp(14px,2.2vmin,22px);height:clamp(14px,2.2vmin,22px)}
+
+/* Ownership/building markers */
+.own-dot{position:absolute;top:1px;left:1px;width:10px;height:10px;border-radius:2px;border:1px solid rgba(255,255,255,.7);z-index:2}
+.bldg-badge{position:absolute;bottom:1px;right:1px;background:rgba(0,0,0,.75);color:#fff;font-size:.55em;padding:0 2px;border-radius:2px;z-index:3;line-height:1.4}
+
+/* ── PANELS ── */
+.panel{background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.1);border-radius:var(--radius);overflow:hidden;display:flex;flex-direction:column}
+.panel-header{padding:.6rem 1rem;font-weight:700;font-size:.85rem;color:rgba(255,255,255,.8);border-bottom:1px solid rgba(255,255,255,.08);flex-shrink:0}
+.panel-body{flex:1;overflow-y:auto;padding:.5rem}
+.panel-body::-webkit-scrollbar{width:4px}
+.panel-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:2px}
+
+/* Player cards in sidebar */
+.pcard{padding:.6rem .8rem;border-radius:8px;border:2px solid transparent;background:rgba(255,255,255,.05);margin-bottom:.4rem;transition:all .25s;cursor:pointer}
+.pcard:hover{background:rgba(255,255,255,.1)}
+.pcard.active-turn{border-color:var(--gold);background:rgba(201,151,28,.15);box-shadow:0 0 12px rgba(201,151,28,.25)}
+.pcard.bankrupt{opacity:.4;filter:grayscale(1)}
+.pcard .prow1{display:flex;align-items:center;gap:.5rem}
+.pcard .ptoken{font-size:1.3rem}
+.pcard .pname{font-weight:700;color:#fff;font-size:.9rem;flex:1}
+.pcard .pmoney{font-weight:700;color:var(--gold-light);font-size:.9rem}
+.pcard .ppos{font-size:.75rem;color:rgba(255,255,255,.5);margin-top:.2rem;padding-left:1.8rem}
+.pcard .pprops{display:flex;flex-wrap:wrap;gap:3px;padding-left:1.8rem;margin-top:.3rem}
+.pcard .pprop-dot{width:10px;height:10px;border-radius:2px;border:1px solid rgba(255,255,255,.3)}
+
+/* Action buttons sidebar */
+.action-grid{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;padding:.5rem}
+.act-btn{padding:.55rem .4rem;border:none;border-radius:7px;font-family:var(--font-body);font-size:.78rem;font-weight:600;cursor:pointer;transition:all .2s;text-align:center;line-height:1.3}
+.act-btn:disabled{opacity:.35;cursor:not-allowed}
+.act-btn:active{transform:scale(.96)}
+.act-buy{background:linear-gradient(135deg,#1a5c2a,var(--green-light));color:#fff}
+.act-build{background:linear-gradient(135deg,#1e3a5f,#3b82f6);color:#fff}
+.act-mortgage{background:linear-gradient(135deg,#78350f,#d97706);color:#fff}
+.act-trade{background:linear-gradient(135deg,#581c87,#9333ea);color:#fff}
+.act-end{background:linear-gradient(135deg,#7f1d1d,#dc2626);color:#fff;grid-column:span 2}
+.act-jail{background:linear-gradient(135deg,#0f4c75,#1a7a9a);color:#fff;grid-column:span 2}
+
+/* Log */
+.log-entry{font-size:.78rem;color:rgba(255,255,255,.7);padding:.25rem 0;border-bottom:1px solid rgba(255,255,255,.05)}
+.log-entry .log-time{color:rgba(255,255,255,.3);font-size:.7rem;margin-right:.3rem}
+.log-entry.log-important{color:#f0c040;font-weight:600}
+.log-entry.log-danger{color:#ff7675}
+.log-entry.log-success{color:#55efc4}
+
+/* Chat */
+.chat-msg{padding:.3rem 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:.8rem}
+.chat-msg .chat-who{font-weight:700;margin-right:.3rem}
+.chat-msg .chat-text{color:rgba(255,255,255,.75)}
+.chat-input-row{display:flex;gap:.4rem;padding:.5rem;border-top:1px solid rgba(255,255,255,.08)}
+.chat-input-row input{flex:1;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:6px;padding:.4rem .6rem;color:#fff;font-size:.82rem;font-family:var(--font-body);outline:none}
+.chat-input-row input::placeholder{color:rgba(255,255,255,.3)}
+.chat-input-row button{background:var(--green);border:none;color:#fff;border-radius:6px;padding:.4rem .7rem;cursor:pointer;font-size:.8rem;font-weight:600}
+
+/* Bottom action bar for mobile */
+.mobile-action-bar{display:none;background:rgba(0,0,0,.7);border-top:1px solid rgba(255,255,255,.1);padding:.4rem;gap:.3rem;flex-wrap:wrap;justify-content:center}
+
+/* ── MODALS ── */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);z-index:200;display:flex;align-items:center;justify-content:center;padding:1rem;opacity:0;transition:opacity .25s;pointer-events:none}
+.overlay.show{opacity:1;pointer-events:all}
+.modal{background:linear-gradient(145deg,#1a3d25,#0f2318);border:1px solid rgba(255,255,255,.15);border-radius:16px;padding:1.5rem;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;transform:scale(.92);transition:transform .25s;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+.modal::-webkit-scrollbar{width:4px}
+.modal::-webkit-scrollbar-thumb{background:rgba(255,255,255,.2);border-radius:2px}
+.overlay.show .modal{transform:scale(1)}
+.modal h2{font-family:var(--font-display);color:#fff;margin-bottom:1rem;font-size:1.4rem}
+.modal h3{color:rgba(255,255,255,.85);font-size:1.1rem;margin-bottom:.75rem}
+.modal p{color:rgba(255,255,255,.7);font-size:.9rem;line-height:1.6;margin-bottom:.75rem}
+.modal-actions{display:flex;gap:.75rem;margin-top:1rem;flex-wrap:wrap}
+.modal hr{border:none;border-top:1px solid rgba(255,255,255,.1);margin:.75rem 0}
+
+/* Property card modal */
+.prop-color-header{height:60px;border-radius:8px 8px 0 0;margin:-1.5rem -1.5rem 1rem;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:1.1rem;font-weight:700;color:#fff;text-shadow:1px 1px 3px rgba(0,0,0,.5)}
+.prop-table{width:100%;border-collapse:collapse;font-size:.85rem}
+.prop-table td{padding:.3rem .5rem;border-bottom:1px solid rgba(255,255,255,.08);color:rgba(255,255,255,.75)}
+.prop-table td:first-child{color:rgba(255,255,255,.45);font-size:.8rem}
+.prop-table td:last-child{text-align:right;font-weight:600;color:#fff}
+
+/* Trade modal */
+.trade-sides{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.trade-side h4{color:rgba(255,255,255,.6);font-size:.8rem;margin-bottom:.5rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+.trade-prop-list{display:flex;flex-direction:column;gap:.3rem;max-height:150px;overflow-y:auto}
+.trade-prop-item{padding:.3rem .5rem;background:rgba(255,255,255,.07);border-radius:5px;cursor:pointer;font-size:.8rem;color:rgba(255,255,255,.7);display:flex;align-items:center;gap:.4rem;border:1px solid transparent;transition:all .15s}
+.trade-prop-item:hover{background:rgba(255,255,255,.12)}
+.trade-prop-item.selected{border-color:var(--gold);background:rgba(201,151,28,.2);color:#fff}
+.trade-prop-item .tprop-dot{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+
+/* Auction */
+.auction-display{text-align:center;padding:1rem;background:rgba(201,151,28,.1);border:1px solid rgba(201,151,28,.3);border-radius:10px;margin-bottom:1rem}
+.auction-prop{font-size:1.1rem;font-weight:700;color:#fff;margin-bottom:.3rem}
+.auction-bid{font-size:2rem;font-weight:900;color:var(--gold-light)}
+.auction-leader{font-size:.85rem;color:rgba(255,255,255,.6)}
+.bid-btns{display:flex;gap:.5rem;flex-wrap:wrap;justify-content:center;margin-top:.75rem}
+
+/* Toast */
+#toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(100px);background:rgba(26,62,38,.97);border:1px solid rgba(255,255,255,.2);color:#fff;padding:.75rem 1.5rem;border-radius:30px;font-size:.9rem;font-weight:600;z-index:500;transition:transform .3s cubic-bezier(.34,1.56,.64,1);pointer-events:none;white-space:nowrap;max-width:90vw;text-align:center}
+#toast.show{transform:translateX(-50%) translateY(0)}
+#toast.toast-danger{background:rgba(127,29,29,.97);border-color:rgba(220,38,38,.4)}
+#toast.toast-gold{background:rgba(120,53,15,.97);border-color:rgba(217,119,6,.4);color:#fde68a}
+
+/* ── RESPONSIVE LAYOUT ── */
+/* Desktop: 3-column layout */
+@media(min-width:900px){
+  .game-main{grid-template-columns:220px 1fr 260px;height:calc(100vh - 52px)}
+  .board-wrapper{height:100%}
+  .board{width:min(calc(100vh - 80px),calc(100vw - 520px));height:min(calc(100vh - 80px),calc(100vw - 520px))}
+  .left-panel{display:flex;flex-direction:column;gap:.5rem;padding:.5rem;overflow:hidden}
+  .right-panel{display:flex;flex-direction:column;gap:.5rem;padding:.5rem;overflow:hidden}
+  .left-panel .panel{flex:0 0 auto}
+  .left-panel .panel.grow,.right-panel .panel.grow{flex:1;min-height:0}
+  .mobile-action-bar{display:none!important}
+  .action-grid{display:grid}
+}
+/* Mobile: board + bottom panels */
+@media(max-width:899px){
+  #game-screen{grid-template-rows:auto 1fr auto;height:100vh}
+  .game-main{grid-template-rows:1fr;grid-template-columns:1fr;height:100%}
+  .board-wrapper{height:100%;max-height:calc(100vw)}
+  .board{width:min(98vw,calc(100vh - 130px));height:min(98vw,calc(100vh - 130px))}
+  .left-panel,.right-panel{display:none}
+  .mobile-action-bar{display:flex}
+  .game-topbar{flex-wrap:wrap;min-height:auto}
+  .game-bottombar{background:rgba(0,0,0,.7);border-top:1px solid rgba(255,255,255,.1);padding:.5rem .75rem;display:flex;gap:.5rem;align-items:center;overflow-x:auto;flex-shrink:0}
+}
+@media(min-width:900px){.game-bottombar{display:none}}
+
+/* Drawer for mobile */
+.drawer{position:fixed;inset:0;z-index:150;pointer-events:none}
+.drawer.open{pointer-events:all}
+.drawer-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.6);opacity:0;transition:opacity .3s}
+.drawer.open .drawer-backdrop{opacity:1}
+.drawer-panel{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(180deg,#1a3d25,#0f2318);border-radius:16px 16px 0 0;padding:1rem;max-height:65vh;overflow-y:auto;transform:translateY(100%);transition:transform .35s cubic-bezier(.34,1.56,.64,1)}
+.drawer.open .drawer-panel{transform:translateY(0)}
+.drawer-handle{width:40px;height:4px;background:rgba(255,255,255,.25);border-radius:2px;margin:0 auto .75rem}
+
+/* ── AUTO-ADVANCE TIMER ── */
+.timer-wrap{position:relative;width:36px;height:36px;flex-shrink:0}
+.timer-svg{transform:rotate(-90deg);width:36px;height:36px}
+.timer-track{fill:none;stroke:rgba(255,255,255,.12);stroke-width:3}
+.timer-arc{fill:none;stroke:var(--gold-light);stroke-width:3;stroke-linecap:round;
+  stroke-dasharray:94.25;stroke-dashoffset:0;transition:stroke .5s,stroke-dashoffset 1s linear}
+.timer-arc.danger{stroke:#ef4444}
+.timer-num{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-size:.75rem;font-weight:800;color:var(--gold-light);line-height:1}
+.timer-num.danger{color:#ef4444}
+.timer-wrap.hidden{opacity:0;pointer-events:none}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+@keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.anim-slide-up{animation:slideUp .4s ease}
+
+/* Winner screen */
+#winner-screen{background:radial-gradient(ellipse at center,#2a6e3a,#0a1a10);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:2rem}
+.winner-trophy{font-size:clamp(4rem,12vw,8rem);animation:bounceWinner 1.5s ease infinite}
+@keyframes bounceWinner{0%,100%{transform:translateY(0) rotate(-5deg)}50%{transform:translateY(-20px) rotate(5deg)}}
+.winner-name{font-family:var(--font-display);font-size:clamp(2rem,6vw,4rem);font-weight:900;color:var(--gold-light);text-shadow:0 4px 20px rgba(240,192,64,.5);margin:.5rem 0}
+.winner-sub{color:rgba(255,255,255,.7);font-size:1.1rem;margin-bottom:2rem}
+.confetti{position:absolute;pointer-events:none;font-size:1.5rem;animation:fall 3s linear infinite}
+@keyframes fall{0%{transform:translateY(-100px) rotate(0deg);opacity:1}100%{transform:translateY(110vh) rotate(720deg);opacity:0}}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ LOBBY SCREEN ═══════════════ -->
+<div class="screen" id="lobby-screen">
+  <div class="lobby-header">
+    <div class="lobby-logo">🎲 <span>Bangladeshi</span> Monopoly</div>
+    <div class="lobby-subtitle">Multiplayer Board Game • Pass & Play</div>
+    <div class="lobby-tagline">✦ Local Multiplayer ✦</div>
+  </div>
+  <div class="lobby-body">
+    <div class="card">
+      <h2>Setup Players</h2>
+      <div id="player-slots"></div>
+      <button class="btn btn-secondary btn-sm" id="add-player-btn" onclick="addPlayerSlot()">+ Add Player</button>
+    </div>
+    <div class="card">
+      <h2>🌐 Online Rooms (Firebase)</h2>
+      <div class="input-group">
+        <label>Your Online Name</label>
+        <input type="text" id="online-player-name" maxlength="24" placeholder="Enter your name">
+      </div>
+      <div class="two-col">
+        <button class="btn btn-secondary btn-sm" id="create-room-btn" onclick="createOnlineRoom()">Create Room</button>
+        <button class="btn btn-danger btn-sm" id="leave-room-btn" onclick="leaveOnlineRoom()" disabled>Leave Room</button>
+      </div>
+      <div class="input-group" style="margin-top:.75rem">
+        <label>Room Code</label>
+        <input type="text" id="join-room-code" maxlength="6" placeholder="ABC123" style="text-transform:uppercase">
+      </div>
+      <button class="btn btn-primary btn-sm btn-full" id="join-room-btn" onclick="joinOnlineRoom()">Join Room</button>
+      <div id="online-room-status" style="margin-top:.75rem;color:rgba(255,255,255,.65);font-size:.82rem;line-height:1.5">
+        Offline mode. Create or join a room to play online.
+      </div>
+    </div>
+    <div class="card">
+      <h2>🗺️ Choose Board Theme</h2>
+      <div id="board-theme-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:.5rem"></div>
+    </div>
+    <div class="card">
+      <h3>Game Settings</h3>
+      <div class="two-col">
+        <div class="input-group">
+          <label>Starting Money (৳)</label>
+          <input type="number" id="starting-money" value="15000" min="5000" max="50000" step="1000">
+        </div>
+        <div class="input-group">
+          <label>Max Houses/Property</label>
+          <select id="max-houses">
+            <option value="4" selected>4 Houses</option>
+            <option value="5">5 Houses</option>
+          </select>
+        </div>
+      </div>
+      <div class="input-group">
+        <label>⏱ Auto-advance timer (after move)</label>
+        <select id="lobby-timer">
+          <option value="0">Off — manual End Turn only</option>
+          <option value="10">10 seconds</option>
+          <option value="20">20 seconds</option>
+          <option value="30" selected>30 seconds</option>
+          <option value="45">45 seconds</option>
+          <option value="60">60 seconds</option>
+        </select>
+      </div>
+    </div>
+    <div class="card">
+      <h3>How to Play</h3>
+      <ul class="how-to">
+        <li>Roll dice to move around the Bangladeshi board</li>
+        <li>Buy properties and collect rent from rivals</li>
+        <li>Build houses & hotels to multiply your rent</li>
+        <li>Trade properties with other players</li>
+        <li>Last player standing wins — avoid bankruptcy!</li>
+      </ul>
+    </div>
+    <button class="btn btn-primary btn-lg btn-full" onclick="startGame()" id="start-btn" style="margin-top:.5rem">🎮 Start Game</button>
+  </div>
+</div>
+
+<!-- ═══════════════ GAME SCREEN ═══════════════ -->
+<div class="screen hidden" id="game-screen">
+  <!-- Top bar -->
+  <div class="game-topbar">
+    <div class="turn-badge">
+      <span class="token" id="tb-token">🎩</span>
+      <span id="tb-name">Player 1</span>'s Turn
+      <span id="tb-jail-tag" style="display:none;background:#c0392b;color:#fff;font-size:.7rem;padding:.1rem .4rem;border-radius:4px;margin-left:.3rem">JAIL</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:.5rem">
+      <!-- Auto-advance timer ring -->
+      <div class="timer-wrap hidden" id="timer-wrap" title="Auto-advance timer">
+        <svg class="timer-svg" viewBox="0 0 36 36">
+          <circle class="timer-track" cx="18" cy="18" r="15"/>
+          <circle class="timer-arc" id="timer-arc" cx="18" cy="18" r="15"/>
+        </svg>
+        <div class="timer-num" id="timer-num">30</div>
+      </div>
+      <span id="tb-money" style="color:var(--gold-light);font-weight:700">৳15,000</span>
+      <button class="btn btn-sm" style="background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2);padding:.3rem .6rem;font-size:.75rem" onclick="openDrawer('log')">📋 Log</button>
+      <button class="btn btn-sm" style="background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2);padding:.3rem .6rem;font-size:.75rem" onclick="openDrawer('chat')">💬</button>
+      <button class="btn btn-sm" style="background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2);padding:.3rem .6rem;font-size:.75rem" onclick="openDrawer('settings')" title="Timer settings">⚙️</button>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="game-main">
+    <!-- Left panel (desktop) -->
+    <div class="left-panel">
+      <div class="panel">
+        <div class="panel-header">👥 Players <span style="font-size:.7rem;font-weight:400;opacity:.5;margin-left:.3rem">tap to view</span></div>
+        <div class="panel-body" id="player-cards"></div>
+      </div>
+      <div class="panel grow">
+        <div class="panel-header">🎮 Actions</div>
+        <div class="action-grid" id="action-grid">
+          <button class="act-btn act-buy" id="btn-buy" onclick="actionBuy()" disabled>🏠 Buy</button>
+          <button class="act-btn act-build" id="btn-build" onclick="openBuildModal()" disabled>🏗 Build</button>
+          <button class="act-btn act-mortgage" id="btn-mortgage" onclick="openMortgageModal()" disabled>💰 Mortgage</button>
+          <button class="act-btn act-trade" id="btn-trade" onclick="openTradeModal()" disabled>🤝 Trade</button>
+          <button class="act-btn act-jail" id="btn-pay-jail" onclick="payBailout()" style="display:none">💳 Pay ৳500 Bail</button>
+          <button class="act-btn act-end" id="btn-end" onclick="endTurn()" disabled>⏩ End Turn</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Board -->
+    <div class="board-wrapper">
+      <div class="board" id="game-board"></div>
+    </div>
+
+    <!-- Right panel (desktop) -->
+    <div class="right-panel">
+      <div class="panel" style="flex:0 0 auto;max-height:45%">
+        <div class="panel-header">📋 Game Log</div>
+        <div class="panel-body" id="game-log"></div>
+      </div>
+      <div class="panel grow" style="display:flex;flex-direction:column">
+        <div class="panel-header">💬 Chat</div>
+        <div class="panel-body" id="chat-log" style="flex:1"></div>
+        <div class="chat-input-row">
+          <input type="text" id="chat-input" placeholder="Message..." maxlength="120" onkeydown="if(event.key==='Enter')sendChat()">
+          <button onclick="sendChat()">Send</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom bar mobile -->
+  <div class="game-bottombar">
+    <button class="act-btn act-buy" id="mb-buy" onclick="actionBuy()" disabled style="flex-shrink:0;padding:.45rem .7rem;font-size:.78rem">🏠 Buy</button>
+    <button class="act-btn act-build" id="mb-build" onclick="openBuildModal()" disabled style="flex-shrink:0;padding:.45rem .7rem;font-size:.78rem">🏗 Build</button>
+    <button class="act-btn act-mortgage" id="mb-mortgage" onclick="openMortgageModal()" disabled style="flex-shrink:0;padding:.45rem .7rem;font-size:.78rem">💰 Mortg</button>
+    <button class="act-btn act-trade" id="mb-trade" onclick="openTradeModal()" disabled style="flex-shrink:0;padding:.45rem .7rem;font-size:.78rem">🤝 Trade</button>
+    <button class="act-btn act-jail" id="mb-pay-jail" onclick="payBailout()" style="display:none;flex-shrink:0;padding:.45rem .7rem;font-size:.78rem">💳 Bail</button>
+    <button class="act-btn act-end" id="mb-end" onclick="endTurn()" disabled style="flex-shrink:0;padding:.45rem .7rem;font-size:.78rem">⏩ End</button>
+  </div>
+</div>
+
+<!-- ═══════════════ WINNER SCREEN ═══════════════ -->
+<div class="screen hidden" id="winner-screen">
+  <div id="confetti-container"></div>
+  <div class="winner-trophy" id="winner-trophy">🏆</div>
+  <div class="winner-name" id="winner-name">Champion!</div>
+  <div class="winner-sub" id="winner-sub">Congratulations!</div>
+  <button class="btn btn-primary btn-lg" onclick="restartGame()">🔄 Play Again</button>
+</div>
+
+<!-- ═══════════════ OVERLAYS / MODALS ═══════════════ -->
+
+<!-- Property details -->
+<div class="overlay" id="prop-overlay" onclick="if(event.target===this)closeOverlay('prop-overlay')">
+  <div class="modal" id="prop-modal"></div>
+</div>
+
+<!-- Buy prompt -->
+<div class="overlay" id="buy-overlay">
+  <div class="modal">
+    <h2 id="buy-title">Buy Property?</h2>
+    <p id="buy-desc"></p>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="confirmBuy()">✅ Buy</button>
+      <button class="btn btn-gold" onclick="startAuction()">🔨 Auction</button>
+      <button class="btn" style="background:rgba(255,255,255,.1);color:#fff" onclick="closeOverlay('buy-overlay')">Skip</button>
+    </div>
+  </div>
+</div>
+
+<!-- Auction modal -->
+<div class="overlay" id="auction-overlay">
+  <div class="modal">
+    <h2>🔨 Property Auction</h2>
+    <div class="auction-display">
+      <div class="auction-prop" id="auc-prop-name"></div>
+      <div style="color:rgba(255,255,255,.5);font-size:.8rem;margin:.2rem 0">Current Bid</div>
+      <div class="auction-bid">৳<span id="auc-bid">0</span></div>
+      <div class="auction-leader">Leader: <span id="auc-leader">None</span></div>
+    </div>
+    <div style="color:rgba(255,255,255,.7);font-size:.85rem;margin-bottom:.5rem">
+      Bidding: <strong id="auc-bidder" style="color:#fff"></strong> (৳<span id="auc-bidder-money"></span>)
+    </div>
+    <div class="bid-btns" id="bid-btns">
+      <button class="btn btn-sm btn-secondary" onclick="placeBid(100)">+৳100</button>
+      <button class="btn btn-sm btn-secondary" onclick="placeBid(200)">+৳200</button>
+      <button class="btn btn-sm btn-secondary" onclick="placeBid(500)">+৳500</button>
+      <button class="btn btn-sm btn-secondary" onclick="placeBid(1000)">+৳1000</button>
+      <button class="btn btn-sm btn-danger" onclick="passAuction()">Pass</button>
+    </div>
+  </div>
+</div>
+
+<!-- Rent notification -->
+<div class="overlay" id="rent-overlay">
+  <div class="modal" style="text-align:center">
+    <div style="font-size:2.5rem;margin-bottom:.5rem">💸</div>
+    <h2 id="rent-title">Rent Due!</h2>
+    <p id="rent-desc"></p>
+    <button class="btn btn-primary btn-full" onclick="closeOverlay('rent-overlay')">Pay Rent</button>
+  </div>
+</div>
+
+<!-- Card (chance/community chest) -->
+<div class="overlay" id="card-overlay">
+  <div class="modal" style="text-align:center">
+    <div style="font-size:2.5rem;margin-bottom:.5rem" id="card-icon">📋</div>
+    <h2 id="card-title">Community Chest</h2>
+    <p id="card-desc" style="font-size:1rem;color:#fff;background:rgba(255,255,255,.08);padding:1rem;border-radius:8px;margin:.5rem 0"></p>
+    <button class="btn btn-primary btn-full" onclick="closeOverlay('card-overlay')">OK</button>
+  </div>
+</div>
+
+<!-- Trade modal -->
+<div class="overlay" id="trade-overlay" onclick="if(event.target===this)closeOverlay('trade-overlay')">
+  <div class="modal">
+    <h2>🤝 Trade</h2>
+    <div style="margin-bottom:.75rem">
+      <label style="color:rgba(255,255,255,.6);font-size:.8rem;display:block;margin-bottom:.3rem">Trade with:</label>
+      <select id="trade-partner" style="width:100%;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:6px;padding:.5rem;color:#fff;font-family:var(--font-body)" onchange="renderTradeProps()"></select>
+    </div>
+    <div class="trade-sides">
+      <div>
+        <h4>Your Offer</h4>
+        <div class="trade-prop-list" id="trade-my-props"></div>
+        <div style="margin-top:.5rem">
+          <label style="color:rgba(255,255,255,.5);font-size:.75rem">+ Money:</label>
+          <input type="number" id="trade-my-money" value="0" min="0" style="width:100%;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:5px;padding:.3rem .5rem;color:#fff;font-size:.85rem;margin-top:.25rem;font-family:var(--font-body)">
+        </div>
+      </div>
+      <div>
+        <h4>Their Offer</h4>
+        <div class="trade-prop-list" id="trade-their-props"></div>
+        <div style="margin-top:.5rem">
+          <label style="color:rgba(255,255,255,.5);font-size:.75rem">+ Money:</label>
+          <input type="number" id="trade-their-money" value="0" min="0" style="width:100%;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:5px;padding:.3rem .5rem;color:#fff;font-size:.85rem;margin-top:.25rem;font-family:var(--font-body)">
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="confirmTrade()">✅ Propose Trade</button>
+      <button class="btn" style="background:rgba(255,255,255,.1);color:#fff" onclick="closeOverlay('trade-overlay')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Build modal -->
+<div class="overlay" id="build-overlay" onclick="if(event.target===this)closeOverlay('build-overlay')">
+  <div class="modal">
+    <h2>🏗 Build Houses / Hotels</h2>
+    <div id="build-list"></div>
+    <button class="btn" style="background:rgba(255,255,255,.1);color:#fff;margin-top:.75rem" onclick="closeOverlay('build-overlay')">Done</button>
+  </div>
+</div>
+
+<!-- Mortgage modal -->
+<div class="overlay" id="mortgage-overlay" onclick="if(event.target===this)closeOverlay('mortgage-overlay')">
+  <div class="modal">
+    <h2>💰 Mortgage Properties</h2>
+    <p style="color:rgba(255,255,255,.5);font-size:.82rem">Mortgage to raise cash. Unmortgage to use property again (costs 10% interest).</p>
+    <div id="mortgage-list"></div>
+    <button class="btn" style="background:rgba(255,255,255,.1);color:#fff;margin-top:.75rem" onclick="closeOverlay('mortgage-overlay')">Done</button>
+  </div>
+</div>
+
+<!-- Bankruptcy modal -->
+<div class="overlay" id="bankrupt-overlay">
+  <div class="modal" style="text-align:center">
+    <div style="font-size:3rem;margin-bottom:.5rem">💀</div>
+    <h2 id="bankrupt-name">Player is Bankrupt!</h2>
+    <p id="bankrupt-desc"></p>
+    <button class="btn btn-danger btn-full" onclick="confirmBankruptcy()">Continue</button>
+  </div>
+</div>
+
+<!-- Jail modal -->
+<div class="overlay" id="jail-overlay">
+  <div class="modal" style="text-align:center">
+    <div style="font-size:3rem;margin-bottom:.5rem">🚔</div>
+    <h2>Go to Jail!</h2>
+    <p id="jail-desc">You've been sent to jail. You can pay ৳500 bail, use a Get Out of Jail Free card, or roll doubles.</p>
+    <button class="btn btn-primary btn-full" onclick="closeOverlay('jail-overlay')">OK</button>
+  </div>
+</div>
+
+<!-- Mobile drawer -->
+<div class="drawer" id="mobile-drawer" onclick="if(event.target.classList.contains('drawer-backdrop'))closeDrawer()">
+  <div class="drawer-backdrop"></div>
+  <div class="drawer-panel">
+    <div class="drawer-handle"></div>
+    <div id="drawer-content"></div>
+  </div>
+</div>
+
+<!-- Player portfolio overlay -->
+<div class="overlay" id="portfolio-overlay" onclick="if(event.target===this)closeOverlay('portfolio-overlay')">
+  <div class="modal" id="portfolio-modal"></div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyBHqtL0dCXAzP4W0GPQtAYdb39xmprz4sk",
+  authDomain: "monopoly-bd.firebaseapp.com",
+  projectId: "monopoly-bd",
+  storageBucket: "monopoly-bd.firebasestorage.app",
+  messagingSenderId: "415179857628",
+  appId: "1:415179857628:web:c7cd7db68740d358135e19",
+  measurementId: "G-QPMD9QD5H7"
+};
+
+const FIREBASE = {
+  db: null,
+  api: null,
+};
+
+const ONLINE = {
+  ready: false,
+  connected: false,
+  roomId: null,
+  isHost: false,
+  localUid: null,
+  localName: '',
+  unsubRoom: null,
+  isApplyingRemote: false,
+  status: 'offline',
+  revision: 0,
+};
+
+const ONLINE_MUTATION_FUNCS = [
+  'rollDice', 'actionBuy', 'buildHouse', 'sellHouse', 'mortgageProp', 'unmortgageProp',
+  'confirmTrade', 'payBailout', 'endTurn', 'confirmBankruptcy', 'confirmBuy',
+  'startAuction', 'placeBid', 'passAuction', 'sendChat'
+];
+
+function ensureLocalUid() {
+  const key = 'monopoly_online_uid';
+  let uid = localStorage.getItem(key);
+  if (!uid) {
+    uid = `u_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+    localStorage.setItem(key, uid);
+  }
+  ONLINE.localUid = uid;
+}
+
+function roomCode() {
+  return Math.random().toString(36).slice(2, 8).toUpperCase();
+}
+
+function sanitizeName(v, fallback = 'Player') {
+  const clean = String(v || '').trim().replace(/\s+/g, ' ');
+  return clean.slice(0, 24) || fallback;
+}
+
+async function bootstrapFirebase() {
+  try {
+    const [appMod, dbMod] = await Promise.all([
+      import('https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js'),
+      import('https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js'),
+    ]);
+    const app = appMod.initializeApp(firebaseConfig);
+    FIREBASE.db = dbMod.getFirestore(app);
+    FIREBASE.api = {
+      doc: dbMod.doc,
+      setDoc: dbMod.setDoc,
+      getDoc: dbMod.getDoc,
+      updateDoc: dbMod.updateDoc,
+      onSnapshot: dbMod.onSnapshot,
+      serverTimestamp: dbMod.serverTimestamp,
+      runTransaction: dbMod.runTransaction,
+    };
+    ONLINE.ready = true;
+    updateOnlineStatus('Firebase ready. You can create or join a room.');
+  } catch (err) {
+    console.error(err);
+    updateOnlineStatus('Firebase failed to initialize. Check internet or Firebase config.', true);
+  }
+}
+
+function updateOnlineStatus(text, isError = false) {
+  const el = document.getElementById('online-room-status');
+  if (!el) return;
+  el.textContent = text;
+  el.style.color = isError ? '#ff9ca1' : 'rgba(255,255,255,.65)';
+}
+
+function isOnlineGame() {
+  return ONLINE.connected && ONLINE.roomId;
+}
+
+function canLocalControlTurn() {
+  if (!isOnlineGame() || !G.players || !G.players.length) return true;
+  const myIdx = G.players.findIndex(p => p.uid === ONLINE.localUid);
+  return myIdx >= 0 && myIdx === G.currentPlayerIdx;
+}
+
+function requireTurnControl() {
+  if (!canLocalControlTurn()) {
+    toast(`Wait for ${curPlayer().name}'s turn.`, 'danger');
+    return false;
+  }
+  return true;
+}
+
+function getOnlinePlayerName() {
+  const input = document.getElementById('online-player-name');
+  const fallback = lobbyPlayers?.[0]?.name || 'Player';
+  return sanitizeName(input?.value, fallback);
+}
+
+ensureLocalUid();
+bootstrapFirebase();
+
+// ═══════════════════════════════════════════════
+//  BOARD THEMES (modular location sets)
+// ═══════════════════════════════════════════════
+const BOARD_THEMES = {
+  dhaka: {
+    id: 'dhaka',
+    name: 'Dhaka City',
+    flag: '🏙️',
+    desc: 'Streets of the capital',
+    currency: '৳',
+    locale: 'en-BD',
+    goSalary: 2000,
+    stations: ['Kamalapur Station','Airport Station','Sadarghat Terminal','Sayedabad Bus Stand'],
+    utilities: [{name:'DESA Power',icon:'⚡'},{name:'WASA Water',icon:'💧'}],
+    spaces: [
+      {name:'Mirpur Rd',color:'BROWN',price:600,rent:[40,200,600,1800,3200,5000],house:500,mortgage:300,group:0},
+      {name:'Gulshan Ave',color:'BROWN',price:600,rent:[40,200,600,1800,3200,5000],house:500,mortgage:300,group:0},
+      {name:'New Market',color:'LBLUE',price:1000,rent:[60,300,900,2700,4000,5500],house:500,mortgage:500,group:1},
+      {name:'Bangshal Rd',color:'LBLUE',price:1000,rent:[60,300,900,2700,4000,5500],house:500,mortgage:500,group:1},
+      {name:'Motijheel Cir',color:'LBLUE',price:1200,rent:[80,400,1000,3000,4500,6000],house:500,mortgage:600,group:1},
+      {name:'Dhanmondi Rd',color:'PINK',price:1400,rent:[100,500,1500,4500,6250,7500],house:1000,mortgage:700,group:2},
+      {name:'Elephant Rd',color:'PINK',price:1400,rent:[100,500,1500,4500,6250,7500],house:1000,mortgage:700,group:2},
+      {name:'Panthapath',color:'PINK',price:1600,rent:[120,600,1800,5000,7000,9000],house:1000,mortgage:800,group:2},
+      {name:'Bashundhara',color:'ORANGE',price:1800,rent:[140,700,2000,5500,7500,9500],house:1000,mortgage:900,group:3},
+      {name:'Uttara Sector',color:'ORANGE',price:1800,rent:[140,700,2000,5500,7500,9500],house:1000,mortgage:900,group:3},
+      {name:'Baridhara',color:'ORANGE',price:2000,rent:[160,800,2200,6000,8000,10000],house:1000,mortgage:1000,group:3},
+      {name:'Tejgaon I/A',color:'RED',price:2200,rent:[180,900,2500,7000,8750,10500],house:1500,mortgage:1100,group:4},
+      {name:'Tejgaon Rd',color:'RED',price:2200,rent:[180,900,2500,7000,8750,10500],house:1500,mortgage:1100,group:4},
+      {name:'Farmgate',color:'RED',price:2400,rent:[200,1000,3000,7500,9250,11000],house:1500,mortgage:1200,group:4},
+      {name:'Gulshan-1',color:'YELLOW',price:2600,rent:[220,1100,3300,8000,9750,11500],house:1500,mortgage:1300,group:5},
+      {name:'Gulshan-2',color:'YELLOW',price:2600,rent:[220,1100,3300,8000,9750,11500],house:1500,mortgage:1300,group:5},
+      {name:'Banani',color:'YELLOW',price:2800,rent:[240,1200,3600,8500,10250,12000],house:1500,mortgage:1400,group:5},
+      {name:'Niketan',color:'GREEN',price:3000,rent:[260,1300,3900,9000,11000,12750],house:2000,mortgage:1500,group:6},
+      {name:'Mohakhali',color:'GREEN',price:3000,rent:[260,1300,3900,9000,11000,12750],house:2000,mortgage:1500,group:6},
+      {name:'Kawran Bazar',color:'GREEN',price:3200,rent:[280,1500,4500,10000,12000,14000],house:2000,mortgage:1600,group:6},
+      {name:'Motijheel CA',color:'DBLUE',price:3500,rent:[350,1750,5000,11000,13000,15000],house:2000,mortgage:1750,group:7},
+      {name:'Karwan Bazar',color:'DBLUE',price:4000,rent:[500,2000,6000,14000,17000,20000],house:2000,mortgage:2000,group:7},
+    ],
+    taxNames: ['Income Tax','Luxury Tax'],
+    taxAmounts: [2000, 1000],
+  },
+  bangladesh: {
+    id: 'bangladesh',
+    name: 'Bangladesh',
+    flag: '🇧🇩',
+    desc: 'Cities across the nation',
+    currency: '৳',
+    locale: 'en-BD',
+    goSalary: 2000,
+    stations: ['Kamalapur Stn','Chittagong Stn','Sylhet Stn','Rajshahi Stn'],
+    utilities: [{name:'BPDB Power',icon:'⚡'},{name:'BWDB Water',icon:'💧'}],
+    spaces: [
+      {name:'Narsingdi',color:'BROWN',price:600,rent:[40,200,600,1800,3200,5000],house:500,mortgage:300,group:0},
+      {name:'Comilla',color:'BROWN',price:600,rent:[40,200,600,1800,3200,5000],house:500,mortgage:300,group:0},
+      {name:'Narayanganj',color:'LBLUE',price:1000,rent:[60,300,900,2700,4000,5500],house:500,mortgage:500,group:1},
+      {name:'Gazipur',color:'LBLUE',price:1000,rent:[60,300,900,2700,4000,5500],house:500,mortgage:500,group:1},
+      {name:'Mymensingh',color:'LBLUE',price:1200,rent:[80,400,1000,3000,4500,6000],house:500,mortgage:600,group:1},
+      {name:'Barisal',color:'PINK',price:1400,rent:[100,500,1500,4500,6250,7500],house:1000,mortgage:700,group:2},
+      {name:'Faridpur',color:'PINK',price:1400,rent:[100,500,1500,4500,6250,7500],house:1000,mortgage:700,group:2},
+      {name:'Jessore',color:'PINK',price:1600,rent:[120,600,1800,5000,7000,9000],house:1000,mortgage:800,group:2},
+      {name:'Khulna',color:'ORANGE',price:1800,rent:[140,700,2000,5500,7500,9500],house:1000,mortgage:900,group:3},
+      {name:'Rajshahi',color:'ORANGE',price:1800,rent:[140,700,2000,5500,7500,9500],house:1000,mortgage:900,group:3},
+      {name:'Bogra',color:'ORANGE',price:2000,rent:[160,800,2200,6000,8000,10000],house:1000,mortgage:1000,group:3},
+      {name:'Rangpur',color:'RED',price:2200,rent:[180,900,2500,7000,8750,10500],house:1500,mortgage:1100,group:4},
+      {name:'Dinajpur',color:'RED',price:2200,rent:[180,900,2500,7000,8750,10500],house:1500,mortgage:1100,group:4},
+      {name:"Cox's Bazar",color:'RED',price:2400,rent:[200,1000,3000,7500,9250,11000],house:1500,mortgage:1200,group:4},
+      {name:'Bandarbans',color:'YELLOW',price:2600,rent:[220,1100,3300,8000,9750,11500],house:1500,mortgage:1300,group:5},
+      {name:'Rangamati',color:'YELLOW',price:2600,rent:[220,1100,3300,8000,9750,11500],house:1500,mortgage:1300,group:5},
+      {name:'Khagrachhari',color:'YELLOW',price:2800,rent:[240,1200,3600,8500,10250,12000],house:1500,mortgage:1400,group:5},
+      {name:'Sylhet',color:'GREEN',price:3000,rent:[260,1300,3900,9000,11000,12750],house:2000,mortgage:1500,group:6},
+      {name:'Srimangal',color:'GREEN',price:3000,rent:[260,1300,3900,9000,11000,12750],house:2000,mortgage:1500,group:6},
+      {name:'Sunamganj',color:'GREEN',price:3200,rent:[280,1500,4500,10000,12000,14000],house:2000,mortgage:1600,group:6},
+      {name:'Chittagong',color:'DBLUE',price:3500,rent:[350,1750,5000,11000,13000,15000],house:2000,mortgage:1750,group:7},
+      {name:'Dhaka',color:'DBLUE',price:4000,rent:[500,2000,6000,14000,17000,20000],house:2000,mortgage:2000,group:7},
+    ],
+    taxNames: ['Income Tax','Luxury Tax'],
+    taxAmounts: [2000, 1000],
+  },
+  world: {
+    id: 'world',
+    name: 'World Tour',
+    flag: '🌍',
+    desc: 'Cities of the globe',
+    currency: '$',
+    locale: 'en-US',
+    goSalary: 200,
+    stations: ['Heathrow Airport','JFK Airport','Dubai Airport','Tokyo Airport'],
+    utilities: [{name:'Global Power',icon:'⚡'},{name:'City Water',icon:'💧'}],
+    spaces: [
+      {name:'Cairo',color:'BROWN',price:60,rent:[4,20,60,180,320,450],house:50,mortgage:30,group:0},
+      {name:'Lagos',color:'BROWN',price:60,rent:[4,20,60,180,320,450],house:50,mortgage:30,group:0},
+      {name:'Istanbul',color:'LBLUE',price:100,rent:[6,30,90,270,400,550],house:50,mortgage:50,group:1},
+      {name:'Bangkok',color:'LBLUE',price:100,rent:[6,30,90,270,400,550],house:50,mortgage:50,group:1},
+      {name:'Mexico City',color:'LBLUE',price:120,rent:[8,40,100,300,450,600],house:50,mortgage:60,group:1},
+      {name:'Buenos Aires',color:'PINK',price:140,rent:[10,50,150,450,625,750],house:100,mortgage:70,group:2},
+      {name:'Mumbai',color:'PINK',price:140,rent:[10,50,150,450,625,750],house:100,mortgage:70,group:2},
+      {name:'Toronto',color:'PINK',price:160,rent:[12,60,180,500,700,900],house:100,mortgage:80,group:2},
+      {name:'Sydney',color:'ORANGE',price:180,rent:[14,70,200,550,750,950],house:100,mortgage:90,group:3},
+      {name:'Amsterdam',color:'ORANGE',price:180,rent:[14,70,200,550,750,950],house:100,mortgage:90,group:3},
+      {name:'Rome',color:'ORANGE',price:200,rent:[16,80,220,600,800,1000],house:100,mortgage:100,group:3},
+      {name:'Berlin',color:'RED',price:220,rent:[18,90,250,700,875,1050],house:150,mortgage:110,group:4},
+      {name:'Madrid',color:'RED',price:220,rent:[18,90,250,700,875,1050],house:150,mortgage:110,group:4},
+      {name:'Paris',color:'RED',price:240,rent:[20,100,300,750,925,1100],house:150,mortgage:120,group:4},
+      {name:'Singapore',color:'YELLOW',price:260,rent:[22,110,330,800,975,1150],house:150,mortgage:130,group:5},
+      {name:'Seoul',color:'YELLOW',price:260,rent:[22,110,330,800,975,1150],house:150,mortgage:130,group:5},
+      {name:'Shanghai',color:'YELLOW',price:280,rent:[24,120,360,850,1025,1200],house:150,mortgage:140,group:5},
+      {name:'Tokyo',color:'GREEN',price:300,rent:[26,130,390,900,1100,1275],house:200,mortgage:150,group:6},
+      {name:'Hong Kong',color:'GREEN',price:300,rent:[26,130,390,900,1100,1275],house:200,mortgage:150,group:6},
+      {name:'Los Angeles',color:'GREEN',price:320,rent:[28,150,450,1000,1200,1400],house:200,mortgage:160,group:6},
+      {name:'London',color:'DBLUE',price:350,rent:[35,175,500,1100,1300,1500],house:200,mortgage:175,group:7},
+      {name:'New York',color:'DBLUE',price:400,rent:[50,200,600,1400,1700,2000],house:200,mortgage:200,group:7},
+    ],
+    taxNames: ['VAT Tax','Luxury Tax'],
+    taxAmounts: [200, 100],
+  },
+  ancient: {
+    id: 'ancient',
+    name: 'Ancient Wonders',
+    flag: '🏛️',
+    desc: 'Empires of antiquity',
+    currency: '⚜',
+    locale: 'en-US',
+    goSalary: 2000,
+    stations: ['Silk Road','Spice Route','Maritime Trail','Grand Bazaar'],
+    utilities: [{name:'Aqueduct',icon:'🌊'},{name:'Lighthouse',icon:'🔦'}],
+    spaces: [
+      {name:'Memphis',color:'BROWN',price:600,rent:[40,200,600,1800,3200,5000],house:500,mortgage:300,group:0},
+      {name:'Carthage',color:'BROWN',price:600,rent:[40,200,600,1800,3200,5000],house:500,mortgage:300,group:0},
+      {name:'Babylon',color:'LBLUE',price:1000,rent:[60,300,900,2700,4000,5500],house:500,mortgage:500,group:1},
+      {name:'Persepolis',color:'LBLUE',price:1000,rent:[60,300,900,2700,4000,5500],house:500,mortgage:500,group:1},
+      {name:'Nineveh',color:'LBLUE',price:1200,rent:[80,400,1000,3000,4500,6000],house:500,mortgage:600,group:1},
+      {name:'Sparta',color:'PINK',price:1400,rent:[100,500,1500,4500,6250,7500],house:1000,mortgage:700,group:2},
+      {name:'Corinth',color:'PINK',price:1400,rent:[100,500,1500,4500,6250,7500],house:1000,mortgage:700,group:2},
+      {name:'Olympia',color:'PINK',price:1600,rent:[120,600,1800,5000,7000,9000],house:1000,mortgage:800,group:2},
+      {name:'Alexandria',color:'ORANGE',price:1800,rent:[140,700,2000,5500,7500,9500],house:1000,mortgage:900,group:3},
+      {name:'Antioch',color:'ORANGE',price:1800,rent:[140,700,2000,5500,7500,9500],house:1000,mortgage:900,group:3},
+      {name:'Ephesus',color:'ORANGE',price:2000,rent:[160,800,2200,6000,8000,10000],house:1000,mortgage:1000,group:3},
+      {name:'Carthage II',color:'RED',price:2200,rent:[180,900,2500,7000,8750,10500],house:1500,mortgage:1100,group:4},
+      {name:'Thebes',color:'RED',price:2200,rent:[180,900,2500,7000,8750,10500],house:1500,mortgage:1100,group:4},
+      {name:'Troy',color:'RED',price:2400,rent:[200,1000,3000,7500,9250,11000],house:1500,mortgage:1200,group:4},
+      {name:'Petra',color:'YELLOW',price:2600,rent:[220,1100,3300,8000,9750,11500],house:1500,mortgage:1300,group:5},
+      {name:'Palmyra',color:'YELLOW',price:2600,rent:[220,1100,3300,8000,9750,11500],house:1500,mortgage:1300,group:5},
+      {name:'Damascus',color:'YELLOW',price:2800,rent:[240,1200,3600,8500,10250,12000],house:1500,mortgage:1400,group:5},
+      {name:'Constantinople',color:'GREEN',price:3000,rent:[260,1300,3900,9000,11000,12750],house:2000,mortgage:1500,group:6},
+      {name:'Athens',color:'GREEN',price:3000,rent:[260,1300,3900,9000,11000,12750],house:2000,mortgage:1500,group:6},
+      {name:'Jerusalem',color:'GREEN',price:3200,rent:[280,1500,4500,10000,12000,14000],house:2000,mortgage:1600,group:6},
+      {name:'Rome',color:'DBLUE',price:3500,rent:[350,1750,5000,11000,13000,15000],house:2000,mortgage:1750,group:7},
+      {name:'Chang\'an',color:'DBLUE',price:4000,rent:[500,2000,6000,14000,17000,20000],house:2000,mortgage:2000,group:7},
+    ],
+    taxNames: ['Tribute Tax','Imperial Tax'],
+    taxAmounts: [2000, 1000],
+  },
+};
+
+let selectedThemeId = 'dhaka';
+
+function buildSpacesFromTheme(themeId) {
+  const t = BOARD_THEMES[themeId];
+  const propSpaces = t.spaces;
+  let pi = 0; // property index
+  let si = 0; // station index
+  let ui = 0; // utility index
+
+  // We interleave properties, stations, utilities into the 40 fixed slots
+  // Fixed layout: 0=GO, 2=community, 4=tax, 7=chance, 10=jail, 17=community, 20=parking, 22=chance, 30=gotojail, 33=community, 36=chance, 38=tax
+  // Stations at: 5, 15, 25, 35
+  // Utilities at: 12, 28
+  const fixed = {
+    0:  {id:0,name:'GO',type:'go',icon:'🏁',desc:`Collect ${t.currency}${t.goSalary} salary each time you pass`},
+    2:  {id:2,name:'Community Chest',type:'community',icon:'📦'},
+    4:  {id:4,name:t.taxNames[0],type:'tax',icon:'💸',amount:t.taxAmounts[0],desc:`Pay ${t.currency}${t.taxAmounts[0]} ${t.taxNames[0]}`},
+    5:  {id:5,name:t.stations[0],type:'railroad',price:2000,rent:[250,500,1000,2000],mortgage:1000},
+    7:  {id:7,name:'Chance',type:'chance',icon:'❓'},
+    10: {id:10,name:'Jail / Visit',type:'jail',icon:'⛓️',desc:'Just visiting or in jail'},
+    12: {id:12,name:t.utilities[0].name,type:'utility',icon:t.utilities[0].icon,price:1500,mortgage:750},
+    15: {id:15,name:t.stations[1],type:'railroad',price:2000,rent:[250,500,1000,2000],mortgage:1000},
+    17: {id:17,name:'Community Chest',type:'community',icon:'📦'},
+    20: {id:20,name:'Free Parking',type:'parking',icon:'🅿️',desc:'Free parking — take the pot!'},
+    22: {id:22,name:'Chance',type:'chance',icon:'❓'},
+    25: {id:25,name:t.stations[2],type:'railroad',price:2000,rent:[250,500,1000,2000],mortgage:1000},
+    28: {id:28,name:t.utilities[1].name,type:'utility',icon:t.utilities[1].icon,price:1500,mortgage:750},
+    30: {id:30,name:'Go to Jail',type:'gotojail',icon:'🚔'},
+    33: {id:33,name:'Community Chest',type:'community',icon:'📦'},
+    35: {id:35,name:t.stations[3],type:'railroad',price:2000,rent:[250,500,1000,2000],mortgage:1000},
+    36: {id:36,name:'Chance',type:'chance',icon:'❓'},
+    38: {id:38,name:t.taxNames[1],type:'tax',icon:'👑',amount:t.taxAmounts[1],desc:`Pay ${t.currency}${t.taxAmounts[1]} ${t.taxNames[1]}`},
+  };
+
+  // Slots for properties (all 40 positions not in fixed)
+  const propSlots = [];
+  for (let i=0;i<40;i++) if (!fixed[i]) propSlots.push(i);
+
+  // Sort property slots in board order
+  const result = [];
+  let pIdx = 0;
+  for (let i=0;i<40;i++) {
+    if (fixed[i]) {
+      result.push(fixed[i]);
+    } else {
+      const s = propSpaces[pIdx] || {name:'—',type:'property',color:'BROWN',price:600,rent:[40,200,600,1800,3200,5000],house:500,mortgage:300,group:0};
+      result.push({...s, id:i, type:'property'});
+      pIdx++;
+    }
+  }
+  return result;
+}
+
+function renderBoardThemeSelector() {
+  const el = document.getElementById('board-theme-grid');
+  if (!el) return;
+  el.innerHTML = '';
+  const hostCanEditTheme = !isOnlineGame() || ONLINE.isHost;
+  Object.values(BOARD_THEMES).forEach(t => {
+    const btn = document.createElement('div');
+    const active = t.id === selectedThemeId;
+    btn.style.cssText = `padding:.75rem;border-radius:9px;cursor:${hostCanEditTheme?'pointer':'not-allowed'};border:2px solid ${active?'var(--gold-light)':'rgba(255,255,255,.15)'};background:${active?'rgba(201,151,28,.2)':'rgba(255,255,255,.06)'};transition:all .2s;${hostCanEditTheme?'':'opacity:.65'}`;
+    btn.innerHTML = `<div style="font-size:1.5rem;margin-bottom:.3rem">${t.flag}</div>
+      <div style="font-weight:700;color:#fff;font-size:.9rem">${t.name}</div>
+      <div style="font-size:.75rem;color:rgba(255,255,255,.5);margin-top:.15rem">${t.desc}</div>`;
+    btn.onclick = async () => {
+      if (!hostCanEditTheme) return;
+      selectedThemeId = t.id;
+      renderBoardThemeSelector();
+      await syncLobbySettingsToRoom();
+    };
+    el.appendChild(btn);
+  });
+}
+
+
+const COLOR = {
+  BROWN:'#8B4513', LBLUE:'#87CEEB', PINK:'#FF69B4', ORANGE:'#FF8C00',
+  RED:'#DC143C', YELLOW:'#FFD700', GREEN:'#228B22', DBLUE:'#00008B',
+  RAILROAD:'#333', UTILITY:'#666', TAX:'#444', SPECIAL:'#1a5c2a'
+};
+
+const SPACES = [
+  {id:0,  name:'GO',              type:'go',         icon:'🏁', desc:'Collect ৳2000 salary each time you pass'},
+  {id:1,  name:'Mirpur Rd',       type:'property',   color:'BROWN', price:600,  rent:[40,200,600,1800,3200,5000],  house:500,  mortgage:300,  group:0},
+  {id:2,  name:'Community Chest', type:'community',  icon:'📦'},
+  {id:3,  name:'Gulshan Ave',     type:'property',   color:'BROWN', price:600,  rent:[40,200,600,1800,3200,5000],  house:500,  mortgage:300,  group:0},
+  {id:4,  name:'Income Tax',      type:'tax',        icon:'💸', amount:2000, desc:'Pay ৳2,000 income tax'},
+  {id:5,  name:'Dhaka Station',   type:'railroad',   price:2000, rent:[250,500,1000,2000], mortgage:1000},
+  {id:6,  name:'New Market',      type:'property',   color:'LBLUE', price:1000, rent:[60,300,900,2700,4000,5500], house:500,  mortgage:500,  group:1},
+  {id:7,  name:'Chance',          type:'chance',     icon:'❓'},
+  {id:8,  name:'Bangshal Rd',     type:'property',   color:'LBLUE', price:1000, rent:[60,300,900,2700,4000,5500], house:500,  mortgage:500,  group:1},
+  {id:9,  name:'Motijheel Cir',   type:'property',   color:'LBLUE', price:1200, rent:[80,400,1000,3000,4500,6000],house:500,  mortgage:600,  group:1},
+  {id:10, name:'Jail / Visit',    type:'jail',       icon:'⛓️',  desc:'Just visiting or in jail'},
+  {id:11, name:'Dhanmondi Rd',    type:'property',   color:'PINK', price:1400, rent:[100,500,1500,4500,6250,7500],house:1000, mortgage:700,  group:2},
+  {id:12, name:'DESA',            type:'utility',    icon:'⚡', price:1500, mortgage:750},
+  {id:13, name:'Elephant Rd',     type:'property',   color:'PINK', price:1400, rent:[100,500,1500,4500,6250,7500],house:1000, mortgage:700,  group:2},
+  {id:14, name:'Panthapath',      type:'property',   color:'PINK', price:1600, rent:[120,600,1800,5000,7000,9000],house:1000, mortgage:800,  group:2},
+  {id:15, name:'Ctg Station',     type:'railroad',   price:2000, rent:[250,500,1000,2000], mortgage:1000},
+  {id:16, name:'Bashundhara',     type:'property',   color:'ORANGE', price:1800, rent:[140,700,2000,5500,7500,9500],house:1000,mortgage:900,  group:3},
+  {id:17, name:'Community Chest', type:'community',  icon:'📦'},
+  {id:18, name:'Uttara Sector',   type:'property',   color:'ORANGE', price:1800, rent:[140,700,2000,5500,7500,9500],house:1000,mortgage:900,  group:3},
+  {id:19, name:'Baridhara',       type:'property',   color:'ORANGE', price:2000, rent:[160,800,2200,6000,8000,10000],house:1000,mortgage:1000,group:3},
+  {id:20, name:'Free Parking',    type:'parking',    icon:'🅿️',  desc:'Free parking — take the pot!'},
+  {id:21, name:'Tejgaon I/A',     type:'property',   color:'RED', price:2200, rent:[180,900,2500,7000,8750,10500],house:1500,mortgage:1100,group:4},
+  {id:22, name:'Chance',          type:'chance',     icon:'❓'},
+  {id:23, name:'Tejgaon Rd',      type:'property',   color:'RED', price:2200, rent:[180,900,2500,7000,8750,10500],house:1500,mortgage:1100,group:4},
+  {id:24, name:'Farmgate',        type:'property',   color:'RED', price:2400, rent:[200,1000,3000,7500,9250,11000],house:1500,mortgage:1200,group:4},
+  {id:25, name:'Sylhet Station',  type:'railroad',   price:2000, rent:[250,500,1000,2000], mortgage:1000},
+  {id:26, name:'Gulshan-1',       type:'property',   color:'YELLOW', price:2600, rent:[220,1100,3300,8000,9750,11500],house:1500,mortgage:1300,group:5},
+  {id:27, name:'Gulshan-2',       type:'property',   color:'YELLOW', price:2600, rent:[220,1100,3300,8000,9750,11500],house:1500,mortgage:1300,group:5},
+  {id:28, name:'WASA',            type:'utility',    icon:'💧', price:1500, mortgage:750},
+  {id:29, name:'Banani',          type:'property',   color:'YELLOW', price:2800, rent:[240,1200,3600,8500,10250,12000],house:1500,mortgage:1400,group:5},
+  {id:30, name:'Go to Jail',      type:'gotojail',   icon:'🚔'},
+  {id:31, name:'Niketan',         type:'property',   color:'GREEN', price:3000, rent:[260,1300,3900,9000,11000,12750],house:2000,mortgage:1500,group:6},
+  {id:32, name:'Mohakhali',       type:'property',   color:'GREEN', price:3000, rent:[260,1300,3900,9000,11000,12750],house:2000,mortgage:1500,group:6},
+  {id:33, name:'Community Chest', type:'community',  icon:'📦'},
+  {id:34, name:'Kawran Bazar',    type:'property',   color:'GREEN', price:3200, rent:[280,1500,4500,10000,12000,14000],house:2000,mortgage:1600,group:6},
+  {id:35, name:'Rajshahi Stn',    type:'railroad',   price:2000, rent:[250,500,1000,2000], mortgage:1000},
+  {id:36, name:'Chance',          type:'chance',     icon:'❓'},
+  {id:37, name:'Motijheel CA',    type:'property',   color:'DBLUE', price:3500, rent:[350,1750,5000,11000,13000,15000],house:2000,mortgage:1750,group:7},
+  {id:38, name:'Luxury Tax',      type:'tax',        icon:'👑', amount:1000, desc:'Pay ৳1,000 luxury tax'},
+  {id:39, name:'Karwan Bazar',    type:'property',   color:'DBLUE', price:4000, rent:[500,2000,6000,14000,17000,20000],house:2000,mortgage:2000,group:7},
+];
+
+const CHANCE_CARDS = [
+  {text:'Advance to GO. Collect ৳2000.',action:'goto',value:0},
+  {text:'Bank pays you dividend of ৳500.',action:'money',value:500},
+  {text:'Go to Jail. Do not collect ৳2000.',action:'jail',value:0},
+  {text:'Make general repairs: ৳500 per house, ৳2000 per hotel.',action:'repairs',value:{house:500,hotel:2000}},
+  {text:'Pay school fees of ৳1500.',action:'money',value:-1500},
+  {text:'Speeding fine — pay ৳500.',action:'money',value:-500},
+  {text:'Advance to nearest Railway Station.',action:'nearest',value:'railroad'},
+  {text:'Your building won a prize! Collect ৳1500.',action:'money',value:1500},
+  {text:'Get out of Jail free.',action:'jailcard',value:0},
+  {text:'Bank error in your favour — collect ৳2000.',action:'money',value:2000},
+  {text:'Doctor fees — pay ৳1000.',action:'money',value:-1000},
+  {text:'You are assessed street repairs: ৳400 per house, ৳1500 per hotel.',action:'repairs',value:{house:400,hotel:1500}},
+];
+
+const COMMUNITY_CARDS = [
+  {text:'Bank error in your favour. Collect ৳2000.',action:'money',value:2000},
+  {text:'Doctor fees. Pay ৳500.',action:'money',value:-500},
+  {text:'Go to Jail. Do not collect ৳2000.',action:'jail',value:0},
+  {text:'From sale of stock — collect ৳500.',action:'money',value:500},
+  {text:'Collect ৳1000 consultancy fee.',action:'money',value:1000},
+  {text:'Pay hospital fees of ৳1000.',action:'money',value:-1000},
+  {text:'Get out of Jail free.',action:'jailcard',value:0},
+  {text:'Advance to GO. Collect ৳2000.',action:'goto',value:0},
+  {text:'Life insurance matures — collect ৳1000.',action:'money',value:1000},
+  {text:'Pay school fees of ৳1500.',action:'money',value:-1500},
+  {text:'Income tax refund — collect ৳500.',action:'money',value:500},
+  {text:'It is your birthday! Collect ৳1000 from each player.',action:'birthday',value:1000},
+];
+
+const TOKENS = ['🎩','🚗','🐶','👢','🛳️','♟️','🏎️','🦁'];
+const TOKEN_COLORS = ['#e74c3c','#3498db','#2ecc71','#f39c12','#9b59b6','#1abc9c','#e67e22','#e91e63'];
+
+// ═══════════════════════════════════════════════
+//  GAME STATE
+// ═══════════════════════════════════════════════
+let G = {};  // global game state
+
+function initGameState(players, startMoney) {
+  const shuffledChance = shuffle([...CHANCE_CARDS]);
+  const shuffledComm = shuffle([...COMMUNITY_CARDS]);
+  G = {
+    players: players.map((p, i) => ({
+      id: i,
+      uid: p.uid || null,
+      name: p.name,
+      token: p.token,
+      color: TOKEN_COLORS[i % TOKEN_COLORS.length],
+      money: startMoney, pos: 0, properties: [], railroads: [], utilities: [],
+      jailFreeCards: 0, inJail: false, jailTurns: 0, bankrupt: false,
+      doublesCount: 0
+    })),
+    properties: SPACES.map(s => s.type === 'property' || s.type === 'railroad' || s.type === 'utility'
+      ? {id: s.id, owner: null, houses: 0, hotel: false, mortgaged: false}
+      : null),
+    currentPlayerIdx: 0,
+    phase: 'roll', // roll | action | end
+    dice: [1, 1],
+    lastDoubles: false,
+    chanceIdx: 0,
+    communityIdx: 0,
+    chanceDeck: shuffledChance,
+    communityDeck: shuffledComm,
+    parkingPot: 0,
+    log: [],
+    chat: [],
+    pendingBuy: null,
+    auctionState: null,
+    gameOver: false,
+  };
+}
+
+// ═══════════════════════════════════════════════
+//  LOBBY SETUP
+// ═══════════════════════════════════════════════
+let lobbyPlayers = [
+  {uid: ONLINE.localUid, name:'Player 1', token:TOKENS[0]},
+  {uid: null, name:'Player 2', token:TOKENS[1]}
+];
+
+function getRoomRef() {
+  return FIREBASE.api.doc(FIREBASE.db, 'rooms', ONLINE.roomId);
+}
+
+function defaultLobbySettings() {
+  return {
+    startMoney: parseInt(document.getElementById('starting-money')?.value, 10) || 15000,
+    timerDuration: parseInt(document.getElementById('lobby-timer')?.value, 10) || 0,
+    themeId: selectedThemeId,
+  };
+}
+
+async function syncLobbySettingsToRoom() {
+  if (!isOnlineGame() || !ONLINE.isHost || ONLINE.status !== 'lobby' || !FIREBASE.api) return;
+  try {
+    await FIREBASE.api.updateDoc(getRoomRef(), {
+      settings: defaultLobbySettings(),
+      updatedAt: FIREBASE.api.serverTimestamp(),
+    });
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+function safeGameStateForRoom() {
+  const raw = JSON.parse(JSON.stringify(G || {}));
+  if (raw.auctionState && raw.auctionState.passed && !Array.isArray(raw.auctionState.passed)) {
+    raw.auctionState.passed = Array.from(raw.auctionState.passed);
+  }
+  return raw;
+}
+
+function hydrateRemoteGameState(raw) {
+  if (!raw) return;
+  G = JSON.parse(JSON.stringify(raw));
+  if (G.auctionState && Array.isArray(G.auctionState.passed)) {
+    G.auctionState.passed = new Set(G.auctionState.passed);
+  }
+}
+
+async function syncRoomState(reason = '') {
+  if (!isOnlineGame() || ONLINE.isApplyingRemote || !FIREBASE.api) return;
+  try {
+    const settings = defaultLobbySettings();
+    ONLINE.revision += 1;
+    await FIREBASE.api.updateDoc(getRoomRef(), {
+      status: 'playing',
+      players: G.players.map(p => ({ uid: p.uid || null, name: p.name, token: p.token })),
+      settings,
+      gameState: safeGameStateForRoom(),
+      revision: ONLINE.revision,
+      updatedAt: FIREBASE.api.serverTimestamp(),
+      lastReason: reason || 'sync',
+    });
+  } catch (err) {
+    console.error(err);
+    toast('Failed to sync room state.', 'danger');
+  }
+}
+
+async function applyRoomSnapshot(data) {
+  if (!data) return;
+  ONLINE.status = data.status || 'lobby';
+  ONLINE.revision = data.revision || 0;
+  ONLINE.isHost = data.hostUid === ONLINE.localUid;
+
+  const roomPlayers = (data.players || []).map((p, i) => ({
+    uid: p.uid || null,
+    name: sanitizeName(p.name, `Player ${i + 1}`),
+    token: p.token || TOKENS[i % TOKENS.length],
+  }));
+
+  if (roomPlayers.length) {
+    lobbyPlayers = roomPlayers;
+  }
+
+  const settings = data.settings || {};
+  if (settings.themeId && BOARD_THEMES[settings.themeId]) {
+    selectedThemeId = settings.themeId;
+    window.ACTIVE_THEME = BOARD_THEMES[selectedThemeId];
+  }
+  if (typeof settings.startMoney === 'number') {
+    const sm = document.getElementById('starting-money');
+    if (sm) sm.value = settings.startMoney;
+  }
+  if (typeof settings.timerDuration === 'number') {
+    const lt = document.getElementById('lobby-timer');
+    if (lt) lt.value = settings.timerDuration;
+    TIMER.duration = settings.timerDuration;
+  }
+
+  if (ONLINE.status === 'playing' && data.gameState) {
+    ONLINE.isApplyingRemote = true;
+    try {
+      hydrateRemoteGameState(data.gameState);
+      buildBoard();
+      renderAll();
+      showScreen('game-screen');
+      updateActionButtons();
+    } finally {
+      ONLINE.isApplyingRemote = false;
+    }
+  } else if (ONLINE.status === 'lobby') {
+    renderLobby();
+  }
+
+  updateOnlineLobbyUI();
+}
+
+function attachRoomListener(roomId) {
+  if (ONLINE.unsubRoom) ONLINE.unsubRoom();
+  ONLINE.roomId = roomId;
+  ONLINE.connected = true;
+  const ref = FIREBASE.api.doc(FIREBASE.db, 'rooms', roomId);
+  ONLINE.unsubRoom = FIREBASE.api.onSnapshot(ref, snap => {
+    if (!snap.exists()) {
+      updateOnlineStatus('Room closed. You are now offline.', true);
+      leaveOnlineRoom(false);
+      return;
+    }
+    applyRoomSnapshot(snap.data());
+  });
+}
+
+function updateOnlineLobbyUI() {
+  const createBtn = document.getElementById('create-room-btn');
+  const joinBtn = document.getElementById('join-room-btn');
+  const leaveBtn = document.getElementById('leave-room-btn');
+  if (createBtn) createBtn.disabled = !ONLINE.ready || ONLINE.connected;
+  if (joinBtn) joinBtn.disabled = !ONLINE.ready || ONLINE.connected;
+  if (leaveBtn) leaveBtn.disabled = !ONLINE.connected;
+
+  if (ONLINE.connected) {
+    const myName = lobbyPlayers.find(p => p.uid === ONLINE.localUid)?.name || getOnlinePlayerName();
+    updateOnlineStatus(`Room ${ONLINE.roomId} connected as ${myName}${ONLINE.isHost ? ' (Host)' : ''}.`);
+  } else if (ONLINE.ready) {
+    updateOnlineStatus('Offline mode. Create or join a room to play online.');
+  }
+}
+
+async function createOnlineRoom() {
+  if (!ONLINE.ready || !FIREBASE.api) {
+    toast('Firebase is not ready yet.', 'danger');
+    return;
+  }
+  if (ONLINE.connected) return;
+
+  const myName = getOnlinePlayerName();
+  ONLINE.localName = myName;
+  const settings = defaultLobbySettings();
+  const roomId = roomCode();
+  const roomRef = FIREBASE.api.doc(FIREBASE.db, 'rooms', roomId);
+  const me = { uid: ONLINE.localUid, name: myName, token: TOKENS[0] };
+
+  await FIREBASE.api.setDoc(roomRef, {
+    status: 'lobby',
+    hostUid: ONLINE.localUid,
+    players: [me],
+    settings,
+    gameState: null,
+    revision: 0,
+    createdAt: FIREBASE.api.serverTimestamp(),
+    updatedAt: FIREBASE.api.serverTimestamp(),
+  });
+
+  lobbyPlayers = [me];
+  attachRoomListener(roomId);
+  const codeEl = document.getElementById('join-room-code');
+  if (codeEl) codeEl.value = roomId;
+  renderLobby();
+  toast(`Room created: ${roomId}`, 'gold');
+}
+
+async function joinOnlineRoom() {
+  if (!ONLINE.ready || !FIREBASE.api) {
+    toast('Firebase is not ready yet.', 'danger');
+    return;
+  }
+  if (ONLINE.connected) return;
+
+  const codeEl = document.getElementById('join-room-code');
+  const roomId = (codeEl?.value || '').trim().toUpperCase();
+  if (!roomId || roomId.length < 6) {
+    toast('Enter a valid room code.', 'danger');
+    return;
+  }
+
+  const myName = getOnlinePlayerName();
+  ONLINE.localName = myName;
+  const roomRef = FIREBASE.api.doc(FIREBASE.db, 'rooms', roomId);
+
+  try {
+    await FIREBASE.api.runTransaction(FIREBASE.db, async tx => {
+      const snap = await tx.get(roomRef);
+      if (!snap.exists()) throw new Error('Room not found');
+      const data = snap.data();
+      if ((data.status || 'lobby') !== 'lobby') throw new Error('Game already started');
+      let players = data.players || [];
+      const exists = players.some(p => p.uid === ONLINE.localUid);
+      if (!exists) {
+        if (players.length >= 8) throw new Error('Room is full');
+        const used = new Set(players.map(p => p.token));
+        const token = TOKENS.find(t => !used.has(t)) || TOKENS[players.length % TOKENS.length];
+        players = [...players, { uid: ONLINE.localUid, name: myName, token }];
+      }
+      tx.update(roomRef, {
+        players,
+        updatedAt: FIREBASE.api.serverTimestamp(),
+      });
+    });
+  } catch (err) {
+    toast(err.message || 'Unable to join room.', 'danger');
+    return;
+  }
+
+  attachRoomListener(roomId);
+  renderLobby();
+  toast(`Joined room ${roomId}`, 'gold');
+}
+
+async function leaveOnlineRoom(showToast = true) {
+  if (!ONLINE.connected || !FIREBASE.api) {
+    ONLINE.connected = false;
+    ONLINE.roomId = null;
+    ONLINE.isHost = false;
+    updateOnlineLobbyUI();
+    return;
+  }
+
+  const roomId = ONLINE.roomId;
+  const roomRef = FIREBASE.api.doc(FIREBASE.db, 'rooms', roomId);
+  try {
+    await FIREBASE.api.runTransaction(FIREBASE.db, async tx => {
+      const snap = await tx.get(roomRef);
+      if (!snap.exists()) return;
+      const data = snap.data();
+      const players = (data.players || []).filter(p => p.uid !== ONLINE.localUid);
+      const nextHost = players.length ? players[0].uid : null;
+      tx.update(roomRef, {
+        players,
+        hostUid: nextHost,
+        status: players.length ? (data.status || 'lobby') : 'ended',
+        updatedAt: FIREBASE.api.serverTimestamp(),
+      });
+    });
+  } catch (err) {
+    console.error(err);
+  }
+
+  if (ONLINE.unsubRoom) ONLINE.unsubRoom();
+  ONLINE.unsubRoom = null;
+  ONLINE.connected = false;
+  ONLINE.roomId = null;
+  ONLINE.isHost = false;
+  ONLINE.status = 'offline';
+  ONLINE.revision = 0;
+  updateOnlineLobbyUI();
+  renderLobby();
+  showScreen('lobby-screen');
+  if (showToast) toast('Left online room.', 'gold');
+}
+
+function renderLobby() {
+  const el = document.getElementById('player-slots');
+  el.innerHTML = '';
+  const online = isOnlineGame();
+  lobbyPlayers.forEach((p, i) => {
+    const div = document.createElement('div');
+    div.className = 'player-slot active';
+    const editable = !online;
+    const readOnlyAttr = editable ? '' : 'readonly';
+    const removeBtn = editable && i >= 2 ? `<button class="remove-btn" onclick="removePlayer(${i})">✕</button>` : '';
+    const pColor = TOKEN_COLORS[i % TOKEN_COLORS.length];
+    const safeName = escAttr(p.name);
+    div.innerHTML = `
+      <div class="token-preview" style="color:${pColor}">${p.token}</div>
+      <input class="name-input" value="${safeName}" placeholder="Player ${i+1}" onchange="onLobbyNameChange(${i}, this.value)" ${readOnlyAttr} style="color:${pColor};${editable?'':'opacity:.8;cursor:not-allowed'}">
+      ${removeBtn}
+    `;
+    el.appendChild(div);
+  });
+
+  const addBtn = document.getElementById('add-player-btn');
+  if (addBtn) addBtn.style.display = (online || lobbyPlayers.length >= 8) ? 'none' : '';
+
+  const onlineNameInput = document.getElementById('online-player-name');
+  if (onlineNameInput && !onlineNameInput.value) {
+    onlineNameInput.value = lobbyPlayers[0]?.name || 'Player 1';
+  }
+
+  const hostEditable = !online || ONLINE.isHost;
+  ['starting-money', 'max-houses', 'lobby-timer'].forEach(id => {
+    const input = document.getElementById(id);
+    if (input) input.disabled = !hostEditable;
+  });
+
+  const startBtn = document.getElementById('start-btn');
+  if (startBtn) {
+    if (online) {
+      startBtn.textContent = ONLINE.isHost ? '🎮 Start Online Game' : '⏳ Waiting for Host';
+      startBtn.disabled = !ONLINE.isHost || lobbyPlayers.length < 2;
+    } else {
+      startBtn.textContent = '🎮 Start Game';
+      startBtn.disabled = lobbyPlayers.length < 2;
+    }
+  }
+
+  updateOnlineLobbyUI();
+  renderBoardThemeSelector();
+}
+
+function onLobbyNameChange(i, value) {
+  lobbyPlayers[i].name = sanitizeName(value, `Player ${i + 1}`);
+}
+
+function addPlayerSlot() {
+  if (isOnlineGame()) {
+    toast('In online mode, players join with room code.', 'danger');
+    return;
+  }
+  if (lobbyPlayers.length >= 8) return;
+  const i = lobbyPlayers.length;
+  lobbyPlayers.push({uid: null, name:`Player ${i+1}`, token:TOKENS[i]});
+  renderLobby();
+}
+
+function removePlayer(i) {
+  if (isOnlineGame()) return;
+  lobbyPlayers.splice(i, 1);
+  renderLobby();
+}
+
+async function startGame() {
+  const names = lobbyPlayers.map((p, i) => ({
+    uid: p.uid || null,
+    name: sanitizeName(document.querySelectorAll('.name-input')[i]?.value || p.name, `Player ${i + 1}`),
+    token: p.token
+  }));
+
+  if (isOnlineGame()) {
+    if (!ONLINE.isHost) {
+      toast('Only host can start the online game.', 'danger');
+      return;
+    }
+    if (names.length < 2) {
+      toast('At least 2 players are required.', 'danger');
+      return;
+    }
+  }
+
+  const startMoney = parseInt(document.getElementById('starting-money').value) || 15000;
+  TIMER.duration = parseInt(document.getElementById('lobby-timer').value) || 0;
+
+  // Apply selected theme
+  const themeSpaces = buildSpacesFromTheme(selectedThemeId);
+  for (let i=0;i<40;i++) SPACES[i] = themeSpaces[i];
+  const t = BOARD_THEMES[selectedThemeId];
+  window.ACTIVE_THEME = t;
+
+  initGameState(names, startMoney);
+  buildBoard();
+  renderAll();
+  showScreen('game-screen');
+  addLog(`Game started with ${G.players.length} players! ${t.currency}${fmt(startMoney)} starting money. Board: ${t.flag} ${t.name}`, 'important');
+  if (TIMER.duration > 0) addLog(`⏱ Auto-advance timer: ${TIMER.duration}s`, 'important');
+  updateActionButtons();
+
+  if (isOnlineGame()) {
+    await syncRoomState('host-start');
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  BOARD BUILDER
+// ═══════════════════════════════════════════════
+function buildBoard() {
+  const board = document.getElementById('game-board');
+  board.innerHTML = '';
+
+  SPACES.forEach(s => {
+    const el = document.createElement('div');
+    el.className = 'space';
+    el.id = `sp${s.id}`;
+    el.onclick = () => showSpaceInfo(s.id);
+
+    let inner = '';
+    if (s.type === 'property') {
+      const c = COLOR[s.color];
+      inner = `<div class="color-bar" style="background:${c};height:18%"></div>
+               <div class="sp-name">${s.name}</div>
+               <div class="sp-price">${fmtCurrency(s.price)}</div>`;
+    } else if (s.type === 'railroad') {
+      inner = `<div class="sp-icon">🚂</div><div class="sp-name">${s.name}</div><div class="sp-price">${fmtCurrency(s.price)}</div>`;
+    } else if (s.type === 'utility') {
+      inner = `<div class="sp-icon">${s.icon}</div><div class="sp-name">${s.name}</div><div class="sp-price">${fmtCurrency(s.price)}</div>`;
+    } else if (s.type === 'go') {
+      inner = `<div class="sp-name"><div style="font-size:1.6em">🏁</div><div style="color:#c0392b;font-weight:900;font-size:1.1em;font-family:'Times New Roman',Georgia,serif">GO</div><div style="font-size:.65em;color:#1a5c1a">Collect ${(window.ACTIVE_THEME||BOARD_THEMES.dhaka).currency}${(window.ACTIVE_THEME||BOARD_THEMES.dhaka).goSalary}</div></div>`;
+    } else if (s.type === 'jail') {
+      inner = `<div class="sp-name"><div style="font-size:1.2em">⛓️</div><div style="font-family:'Times New Roman',Georgia,serif;font-weight:700">JAIL</div><div style="font-size:.75em">Just Visiting</div></div>`;
+    } else if (s.type === 'parking') {
+      inner = `<div class="sp-name"><div style="font-size:1.5em">🅿️</div><div style="font-family:'Times New Roman',Georgia,serif;font-weight:700">FREE</div><div style="font-size:.75em">Parking</div></div>`;
+    } else if (s.type === 'gotojail') {
+      inner = `<div class="sp-name"><div style="font-size:1.3em">🚔</div><div style="color:#c0392b;font-size:.9em;font-family:'Times New Roman',Georgia,serif">GO TO</div><div style="color:#c0392b;font-weight:900;font-family:'Times New Roman',Georgia,serif">JAIL</div></div>`;
+    } else if (s.type === 'chance') {
+      inner = `<div class="sp-name"><div style="font-size:1.5em">❓</div><div style="color:#e67e22;font-weight:700;font-family:'Times New Roman',Georgia,serif">CHANCE</div></div>`;
+    } else if (s.type === 'community') {
+      inner = `<div class="sp-name"><div style="font-size:1.3em">📦</div><div style="font-size:.75em;color:#2563eb;font-weight:700;font-family:'Times New Roman',Georgia,serif">COMMUNITY</div><div style="font-size:.7em;color:#2563eb;font-family:'Times New Roman',Georgia,serif">CHEST</div></div>`;
+    } else if (s.type === 'tax') {
+      inner = `<div class="sp-name"><div style="font-size:1.3em">${s.icon}</div><div style="font-size:.8em;font-family:'Times New Roman',Georgia,serif;font-weight:700">${s.name}</div><div class="sp-price">${fmtCurrency(s.amount)}</div></div>`;
+    }
+    el.innerHTML = inner;
+    board.appendChild(el);
+  });
+
+  // Center area
+  const center = document.createElement('div');
+  center.className = 'center-area';
+  const t = window.ACTIVE_THEME || BOARD_THEMES.dhaka;
+  center.innerHTML = `
+    <div class="center-title">MONOPOLY</div>
+    <div class="center-sub">${t.flag} ${t.name.toUpperCase()} EDITION</div>
+    <div class="dice-row">
+      <div class="die" id="die1" data-v="1">${'<span class="dot"></span>'.repeat(7)}</div>
+      <div class="die" id="die2" data-v="1">${'<span class="dot"></span>'.repeat(7)}</div>
+    </div>
+    <button id="roll-btn" onclick="rollDice()">🎲 Roll Dice</button>
+    <div id="center-msg" style="font-size:clamp(.6rem,1.2vmin,.8rem);color:#1a5c1a;margin-top:.3rem;font-weight:700;font-family:'Times New Roman',Georgia,serif"></div>
+  `;
+  board.appendChild(center);
+}
+
+// ═══════════════════════════════════════════════
+//  RENDER
+// ═══════════════════════════════════════════════
+function renderAll() {
+  renderPlayerCards();
+  renderMarkers();
+  renderBoardOwnership();
+  renderGameLog();
+  renderChatLog();
+  updateTopBar();
+  updateActionButtons();
+}
+
+function renderGameLog() {
+  const el = document.getElementById('game-log');
+  if (!el || !G.log) return;
+  el.innerHTML = G.log.map(l => {
+    const ts = l.time ? new Date(l.time) : new Date();
+    const hh = ts.getHours().toString().padStart(2, '0');
+    const mm = ts.getMinutes().toString().padStart(2, '0');
+    const cls = l.type ? ` log-${l.type}` : '';
+    return `<div class="log-entry${cls}"><span class="log-time">${hh}:${mm}</span>${escHtml(l.text || '')}</div>`;
+  }).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+function renderChatLog() {
+  const el = document.getElementById('chat-log');
+  if (!el || !G.chat) return;
+  el.innerHTML = G.chat.map(m => {
+    const whoColor = m.color || '#ffffff';
+    const token = m.token || '💬';
+    const who = escHtml(m.name || 'Player');
+    const text = escHtml(m.text || '');
+    return `<div class="chat-msg"><span class="chat-who" style="color:${whoColor}">${token} ${who}:</span><span class="chat-text">${text}</span></div>`;
+  }).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+function renderPlayerCards() {
+  const el = document.getElementById('player-cards');
+  el.innerHTML = '';
+  G.players.forEach((p, i) => {
+    const active = i === G.currentPlayerIdx;
+    const div = document.createElement('div');
+    div.className = 'pcard' + (active ? ' active-turn' : '') + (p.bankrupt ? ' bankrupt' : '');
+    const propDots = p.properties.map(pid => {
+      const sp = SPACES[pid];
+      return `<div class="pprop-dot" style="background:${COLOR[sp.color]}" title="${sp.name}"></div>`;
+    }).join('') + p.railroads.map(() => `<div class="pprop-dot" style="background:#333" title="Railroad"></div>`).join('');
+    div.innerHTML = `
+      <div class="prow1">
+        <div class="ptoken" style="color:${p.color}">${p.token}</div>
+        <div class="pname">${p.name}${p.bankrupt ? ' 💀' : ''}</div>
+        <div class="pmoney">${fmtCurrency(p.money)}</div>
+      </div>
+      <div class="ppos">${p.inJail ? '⛓️ In Jail' : `📍 ${SPACES[p.pos].name}`}</div>
+      ${propDots ? `<div class="pprops">${propDots}</div>` : ''}
+    `;
+    div.title = `Tap to view ${p.name}'s properties`;
+    div.onclick = () => showPlayerPortfolio(i);
+    el.appendChild(div);
+  });
+}
+
+function renderMarkers() {
+  // Remove old markers
+  document.querySelectorAll('.pmarker').forEach(m => m.remove());
+  // Group players by position
+  const byPos = {};
+  G.players.forEach((p, i) => {
+    if (p.bankrupt) return;
+    const pos = p.inJail ? 10 : p.pos;
+    if (!byPos[pos]) byPos[pos] = [];
+    byPos[pos].push({p, i});
+  });
+  G.players.forEach((p, i) => {
+    if (p.bankrupt) return;
+    const pos = p.inJail ? 10 : p.pos;
+    const spEl = document.getElementById(`sp${pos}`);
+    if (!spEl) return;
+    const group = byPos[pos];
+    const idx = group.findIndex(x => x.i === i);
+    const marker = document.createElement('div');
+    marker.className = 'pmarker';
+    marker.id = `pmarker-${i}`;
+    marker.textContent = p.token;
+    marker.style.background = p.color;
+    // Offset multiple players
+    const offsets = [{top:'10%',left:'10%'},{top:'10%',left:'50%'},{top:'50%',left:'10%'},{top:'50%',left:'50%'},{top:'30%',left:'30%'},{top:'70%',left:'70%'},{top:'70%',left:'10%'},{top:'10%',left:'70%'}];
+    const off = offsets[idx % offsets.length];
+    marker.style.top = off.top;
+    marker.style.left = off.left;
+    spEl.appendChild(marker);
+  });
+}
+
+function renderBoardOwnership() {
+  // Clear old dots
+  document.querySelectorAll('.own-dot,.bldg-badge').forEach(e => e.remove());
+  G.properties.forEach((prop, id) => {
+    if (!prop || prop.owner === null) return;
+    const spEl = document.getElementById(`sp${id}`);
+    if (!spEl) return;
+    const owner = G.players[prop.owner];
+    const dot = document.createElement('div');
+    dot.className = 'own-dot';
+    dot.style.background = owner.color;
+    dot.style.opacity = prop.mortgaged ? '.4' : '1';
+    spEl.appendChild(dot);
+    if (prop.houses > 0 || prop.hotel) {
+      const badge = document.createElement('div');
+      badge.className = 'bldg-badge';
+      badge.textContent = prop.hotel ? '🏨' : '🏠'.repeat(prop.houses);
+      spEl.appendChild(badge);
+    }
+  });
+}
+
+function updateTopBar() {
+  const p = curPlayer();
+  document.getElementById('tb-token').textContent = p.token;
+  document.getElementById('tb-name').textContent = p.name;
+  document.getElementById('tb-money').textContent = fmtCurrency(p.money);
+  const jailTag = document.getElementById('tb-jail-tag');
+  jailTag.style.display = p.inJail ? '' : 'none';
+}
+
+function updateActionButtons() {
+  const p = curPlayer();
+  const onProp = G.properties[p.pos];
+  const sp = SPACES[p.pos];
+  const turnOwnedByMe = canLocalControlTurn();
+  const canBuy = G.phase === 'action' && onProp && onProp.owner === null && sp.type !== 'railroad' && sp.type !== 'utility' || 
+                  G.phase === 'action' && (sp.type === 'railroad' || sp.type === 'utility') && onProp && onProp.owner === null;
+  const canBuyAny = G.phase === 'action' && onProp && onProp.owner === null;
+  const canBuild = G.phase === 'action' && buildableGroups(p).length > 0;
+  const canMortgage = G.phase === 'action' && (p.properties.length > 0 || p.railroads.length > 0 || p.utilities.length > 0);
+  const canTrade = G.phase === 'action' && G.players.filter(x => !x.bankrupt).length > 1;
+  const canEnd = G.phase === 'action' || G.phase === 'end';
+  const canRoll = G.phase === 'roll' && !p.inJail;
+  const inJail = p.inJail;
+
+  ['btn-buy','mb-buy'].forEach(id => { const el = document.getElementById(id); if(el) el.disabled = !turnOwnedByMe || !canBuyAny; });
+  ['btn-build','mb-build'].forEach(id => { const el = document.getElementById(id); if(el) el.disabled = !turnOwnedByMe || !canBuild; });
+  ['btn-mortgage','mb-mortgage'].forEach(id => { const el = document.getElementById(id); if(el) el.disabled = !turnOwnedByMe || !canMortgage; });
+  ['btn-trade','mb-trade'].forEach(id => { const el = document.getElementById(id); if(el) el.disabled = !turnOwnedByMe || !canTrade; });
+  ['btn-end','mb-end'].forEach(id => { const el = document.getElementById(id); if(el) el.disabled = !turnOwnedByMe || !canEnd; });
+  
+  const rollBtn = document.getElementById('roll-btn');
+  if (rollBtn) {
+    rollBtn.disabled = G.phase !== 'roll' || !turnOwnedByMe;
+    rollBtn.textContent = !turnOwnedByMe
+      ? `⏳ ${p.name} is playing`
+      : (inJail && G.phase === 'roll' ? '🎲 Roll for Doubles' : '🎲 Roll Dice');
+  }
+
+  // Jail bail button
+  const bailVis = turnOwnedByMe && inJail && G.phase === 'roll' && p.money >= 500;
+  ['btn-pay-jail','mb-pay-jail'].forEach(id => { const el = document.getElementById(id); if(el) el.style.display = bailVis ? '' : 'none'; });
+
+  // Center message
+  const cm = document.getElementById('center-msg');
+  if (cm) {
+    if (!turnOwnedByMe) cm.textContent = `Watching ${p.name}'s turn`;
+    else if (inJail && G.phase === 'roll') cm.textContent = `Roll doubles or pay ৳500 bail`;
+    else if (G.phase === 'roll') cm.textContent = `${p.name}'s turn to roll`;
+    else if (G.phase === 'action') cm.textContent = `Landed on ${sp.name}`;
+    else cm.textContent = TIMER.duration > 0 ? `Auto-advancing in ${TIMER.duration}s…` : `End turn when ready`;
+  }
+
+  // Start auto-advance timer when player enters the 'end' phase (move done, can end turn)
+  if (G.phase === 'end' && !G.gameOver && turnOwnedByMe) {
+    startTimer();
+  } else {
+    stopTimer();
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  DICE & MOVEMENT
+// ═══════════════════════════════════════════════
+function rollDice() {
+  if (!requireTurnControl()) return;
+  const p = curPlayer();
+  if (G.phase !== 'roll') return;
+
+  const d1 = rand(1,6), d2 = rand(1,6);
+  const doubles = d1 === d2;
+  G.dice = [d1, d2];
+  G.lastDoubles = doubles;
+
+  // Animate dice
+  ['die1','die2'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.classList.add('rolling'); setTimeout(() => el.classList.remove('rolling'), 400); }
+  });
+  setTimeout(() => {
+    document.getElementById('die1').dataset.v = d1;
+    document.getElementById('die2').dataset.v = d2;
+  }, 200);
+
+  addLog(`${p.name} rolled ${d1}+${d2}=${d1+d2}${doubles ? ' (DOUBLES! 🎲🎲)' : ''}`);
+
+  if (p.inJail) {
+    handleJailRoll(p, d1, d2, doubles);
+    return;
+  }
+
+  if (doubles) {
+    p.doublesCount++;
+    if (p.doublesCount >= 3) {
+      addLog(`${p.name} rolled 3 doubles in a row — Go to Jail!`, 'danger');
+      sendToJail(p);
+      G.phase = 'action';
+      renderAll();
+      updateActionButtons();
+      return;
+    }
+  } else {
+    p.doublesCount = 0;
+  }
+
+  movePlayer(p, d1 + d2, doubles);
+}
+
+function handleJailRoll(p, d1, d2, doubles) {
+  if (doubles) {
+    p.inJail = false;
+    p.jailTurns = 0;
+    p.doublesCount = 0;
+    addLog(`${p.name} rolled doubles — released from jail!`, 'success');
+    movePlayer(p, d1 + d2, false);
+  } else {
+    p.jailTurns++;
+    if (p.jailTurns >= 3) {
+      // Force pay
+      addLog(`${p.name} must pay ৳500 to leave jail after 3 turns.`, 'danger');
+      chargeMoney(p, 500);
+      p.inJail = false;
+      p.jailTurns = 0;
+      movePlayer(p, d1 + d2, false);
+    } else {
+      addLog(`${p.name} failed to roll doubles. Jail turn ${p.jailTurns}/3.`);
+      G.phase = 'end';
+      renderAll();
+      updateActionButtons();
+    }
+  }
+}
+
+function movePlayer(p, steps, rolledDoubles) {
+  const oldPos = p.pos;
+  const newPos = (p.pos + steps) % 40;
+  // Pass GO
+  if (newPos < oldPos || (oldPos === 0 && steps > 0)) {
+    if (newPos !== 0 || steps > 0) {
+      p.money += 2000;
+      addLog(`${p.name} passed GO! Collected ৳2000`, 'success');
+    }
+  }
+  p.pos = newPos;
+  G.phase = 'action';
+  renderAll();
+  setTimeout(() => landOn(p, rolledDoubles), 300);
+}
+
+function movePlayerTo(p, target, collectGo=true) {
+  const oldPos = p.pos;
+  if (collectGo && target < oldPos) {
+    p.money += 2000;
+    addLog(`${p.name} passed GO! Collected ৳2000`, 'success');
+  }
+  p.pos = target;
+  renderAll();
+  setTimeout(() => landOn(p, false), 300);
+}
+
+function landOn(p, rolledDoubles) {
+  const sp = SPACES[p.pos];
+  addLog(`${p.name} landed on ${sp.name}`);
+
+  if (sp.type === 'go') {
+    addLog(`${p.name} landed on GO — collect ৳2000!`, 'success');
+    p.money += 2000;
+    G.phase = 'end';
+  } else if (sp.type === 'jail') {
+    addLog(`${p.name} is just visiting jail.`);
+    G.phase = 'end';
+  } else if (sp.type === 'parking') {
+    const pot = G.parkingPot;
+    if (pot > 0) {
+      p.money += pot;
+      G.parkingPot = 0;
+      addLog(`${p.name} collected Free Parking pot of ৳${fmt(pot)}! 🎉`, 'success');
+      toast(`🅿️ Jackpot! ৳${fmt(pot)}!`, 'gold');
+    } else {
+      addLog(`${p.name} enjoys free parking.`);
+    }
+    G.phase = 'end';
+  } else if (sp.type === 'gotojail') {
+    sendToJail(p);
+    G.phase = 'end';
+  } else if (sp.type === 'chance') {
+    drawCard('chance', p);
+    return;
+  } else if (sp.type === 'community') {
+    drawCard('community', p);
+    return;
+  } else if (sp.type === 'tax') {
+    addLog(`${p.name} pays ৳${fmt(sp.amount)} tax.`, 'danger');
+    chargeMoney(p, sp.amount, null, true);
+    G.phase = 'end';
+  } else if (sp.type === 'property' || sp.type === 'railroad' || sp.type === 'utility') {
+    const prop = G.properties[p.pos];
+    if (!prop) { G.phase = 'end'; }
+    else if (prop.mortgaged) {
+      addLog(`${sp.name} is mortgaged — no rent.`);
+      G.phase = 'end';
+    } else if (prop.owner === null) {
+      // Can buy
+      G.pendingBuy = p.pos;
+      promptBuy(p, sp);
+      renderAll();
+      updateActionButtons();
+      return;
+    } else if (prop.owner === p.id) {
+      addLog(`${p.name} owns ${sp.name}.`);
+      G.phase = 'end';
+    } else {
+      // Pay rent
+      const rent = calcRent(sp, prop);
+      const owner = G.players[prop.owner];
+      addLog(`${p.name} pays ৳${fmt(rent)} rent to ${owner.name} for ${sp.name}.`, 'danger');
+      showRentModal(p, owner, sp.name, rent);
+      chargeMoney(p, rent, owner);
+      G.phase = 'end';
+    }
+  }
+
+  // If rolled doubles and not in jail, get another roll
+  if (rolledDoubles && !p.inJail && !G.gameOver) {
+    addLog(`${p.name} rolled doubles — roll again!`, 'success');
+    G.phase = 'roll';
+  }
+
+  renderAll();
+  updateActionButtons();
+  checkBankruptcy();
+}
+
+// ═══════════════════════════════════════════════
+//  RENT CALCULATION
+// ═══════════════════════════════════════════════
+function calcRent(sp, prop) {
+  if (prop.mortgaged) return 0;
+  if (sp.type === 'railroad') {
+    const owner = G.players[prop.owner];
+    const rrCount = owner.railroads.length;
+    return sp.rent[rrCount - 1];
+  }
+  if (sp.type === 'utility') {
+    const owner = G.players[prop.owner];
+    const utilCount = owner.utilities.length;
+    const diceTotal = G.dice[0] + G.dice[1];
+    return utilCount === 2 ? diceTotal * 10 : diceTotal * 4;
+  }
+  if (prop.hotel) return sp.rent[5];
+  if (prop.houses > 0) return sp.rent[prop.houses];
+  // Check monopoly
+  const owner = G.players[prop.owner];
+  const groupIds = SPACES.filter(s => s.type === 'property' && s.group === sp.group).map(s => s.id);
+  const monopoly = groupIds.every(id => G.properties[id]?.owner === prop.owner);
+  return monopoly ? sp.rent[0] * 2 : sp.rent[0];
+}
+
+// ═══════════════════════════════════════════════
+//  CARDS
+// ═══════════════════════════════════════════════
+function drawCard(type, p) {
+  let card;
+  if (type === 'chance') {
+    card = G.chanceDeck[G.chanceIdx % G.chanceDeck.length];
+    G.chanceIdx++;
+  } else {
+    card = G.communityDeck[G.communityIdx % G.communityDeck.length];
+    G.communityIdx++;
+  }
+  addLog(`${p.name} drew ${type === 'chance' ? 'Chance' : 'Community Chest'}: ${card.text}`);
+
+  document.getElementById('card-icon').textContent = type === 'chance' ? '❓' : '📦';
+  document.getElementById('card-title').textContent = type === 'chance' ? 'Chance Card' : 'Community Chest';
+  document.getElementById('card-desc').textContent = card.text;
+
+  const apply = () => {
+    if (card.action === 'money') {
+      if (card.value > 0) {
+        p.money += card.value;
+        toast(`+৳${fmt(card.value)}`, 'gold');
+      } else {
+        chargeMoney(p, -card.value, null, true);
+      }
+    } else if (card.action === 'goto') {
+      movePlayerTo(p, card.value, card.value < p.pos);
+    } else if (card.action === 'jail') {
+      sendToJail(p);
+    } else if (card.action === 'jailcard') {
+      p.jailFreeCards++;
+      addLog(`${p.name} got a Get Out of Jail Free card!`, 'success');
+    } else if (card.action === 'nearest') {
+      const nearest = nearestRailroad(p.pos);
+      movePlayerTo(p, nearest);
+      return;
+    } else if (card.action === 'repairs') {
+      let cost = 0;
+      p.properties.forEach(id => {
+        const pr = G.properties[id];
+        if (pr.hotel) cost += card.value.hotel;
+        else cost += pr.houses * card.value.house;
+      });
+      if (cost > 0) { chargeMoney(p, cost, null, true); addLog(`${p.name} paid ৳${fmt(cost)} for repairs.`, 'danger'); }
+    } else if (card.action === 'birthday') {
+      G.players.forEach((op, oi) => {
+        if (oi !== p.id && !op.bankrupt) {
+          op.money -= card.value;
+          p.money += card.value;
+        }
+      });
+      addLog(`${p.name} collected ৳${card.value} from each player for birthday!`, 'success');
+    }
+    G.phase = rolledDoublesThisTurn() ? 'roll' : 'end';
+    renderAll();
+    updateActionButtons();
+    checkBankruptcy();
+  };
+
+  closeOverlay('card-overlay');
+  openOverlay('card-overlay');
+  document.querySelector('#card-overlay .btn').onclick = () => { closeOverlay('card-overlay'); apply(); };
+}
+
+function nearestRailroad(pos) {
+  const rrs = [5, 15, 25, 35];
+  let nearest = rrs[0], minDist = 40;
+  rrs.forEach(r => {
+    const dist = r > pos ? r - pos : 40 - pos + r;
+    if (dist < minDist) { minDist = dist; nearest = r; }
+  });
+  return nearest;
+}
+
+// ═══════════════════════════════════════════════
+//  BUY / AUCTION
+// ═══════════════════════════════════════════════
+function promptBuy(p, sp) {
+  if (p.money < sp.price) {
+    // Can't afford — auto auction
+    document.getElementById('buy-title').textContent = `Can't Afford — Auction!`;
+    document.getElementById('buy-desc').textContent = `${sp.name} costs ${fmtCurrency(sp.price)} but you only have ${fmtCurrency(p.money)}. It goes to auction.`;
+    openOverlay('buy-overlay');
+    document.querySelector('#buy-overlay .btn-primary').style.display = 'none';
+    return;
+  }
+  document.querySelector('#buy-overlay .btn-primary').style.display = '';
+  document.getElementById('buy-title').textContent = `Buy ${sp.name}?`;
+  document.getElementById('buy-desc').textContent = `Price: ${fmtCurrency(sp.price)}. You have ${fmtCurrency(p.money)}. Buy now or send to auction.`;
+  openOverlay('buy-overlay');
+}
+
+function confirmBuy() {
+  closeOverlay('buy-overlay');
+  actionBuy();
+}
+
+function actionBuy() {
+  if (!requireTurnControl()) return;
+  const p = curPlayer();
+  if (G.pendingBuy === null) return;
+  const id = G.pendingBuy;
+  const sp = SPACES[id];
+  if (p.money < sp.price) { toast('Not enough money!', 'danger'); return; }
+  p.money -= sp.price;
+  G.properties[id].owner = p.id;
+  if (sp.type === 'property') p.properties.push(id);
+  else if (sp.type === 'railroad') p.railroads.push(id);
+  else if (sp.type === 'utility') p.utilities.push(id);
+  G.pendingBuy = null;
+  addLog(`${p.name} bought ${sp.name} for ৳${fmt(sp.price)}!`, 'success');
+  toast(`🏠 Bought ${sp.name}!`, 'gold');
+  G.phase = 'end';
+  renderAll();
+  updateActionButtons();
+}
+
+function startAuction() {
+  if (!requireTurnControl()) return;
+  closeOverlay('buy-overlay');
+  const id = G.pendingBuy;
+  G.pendingBuy = null;
+  const sp = SPACES[id];
+  G.auctionState = {
+    propId: id,
+    propName: sp.name,
+    currentBid: 0,
+    highBidder: null,
+    passed: new Set(),
+    bidderIdx: G.currentPlayerIdx,
+    activePlayers: G.players.filter(p => !p.bankrupt).map(p => p.id),
+  };
+  renderAuction();
+  openOverlay('auction-overlay');
+}
+
+function renderAuction() {
+  const a = G.auctionState;
+  if (!a) return;
+  const bidder = G.players.find(p => p.id === a.activePlayers[a.bidderIdx % a.activePlayers.length]);
+  document.getElementById('auc-prop-name').textContent = a.propName;
+  document.getElementById('auc-bid').textContent = fmt(a.currentBid);
+  document.getElementById('auc-leader').textContent = a.highBidder !== null ? G.players[a.highBidder].name : 'None';
+  document.getElementById('auc-bidder').textContent = bidder?.name || '';
+  document.getElementById('auc-bidder-money').textContent = fmt(bidder?.money || 0);
+}
+
+function placeBid(amount) {
+  if (!requireTurnControl()) return;
+  const a = G.auctionState;
+  const bidder = G.players.find(p => p.id === a.activePlayers[a.bidderIdx % a.activePlayers.length]);
+  const newBid = a.currentBid + amount;
+  if (bidder.money < newBid) { toast('Not enough money!', 'danger'); return; }
+  a.currentBid = newBid;
+  a.highBidder = bidder.id;
+  addLog(`${bidder.name} bids ৳${fmt(newBid)} for ${a.propName}`);
+  a.bidderIdx++;
+  // Skip passed players
+  while (a.passed.has(a.activePlayers[a.bidderIdx % a.activePlayers.length])) a.bidderIdx++;
+  renderAuction();
+}
+
+function passAuction() {
+  if (!requireTurnControl()) return;
+  const a = G.auctionState;
+  const bidder = G.players.find(p => p.id === a.activePlayers[a.bidderIdx % a.activePlayers.length]);
+  a.passed.add(bidder.id);
+  addLog(`${bidder.name} passes the auction`);
+  // Check if only one active bidder remains
+  const remaining = a.activePlayers.filter(id => !a.passed.has(id));
+  if (remaining.length === 0 || (remaining.length === 1 && a.highBidder !== null)) {
+    closeOverlay('auction-overlay');
+    // Award property
+    if (a.highBidder !== null && a.currentBid > 0) {
+      const winner = G.players[a.highBidder];
+      winner.money -= a.currentBid;
+      const sp = SPACES[a.propId];
+      G.properties[a.propId].owner = winner.id;
+      if (sp.type === 'property') winner.properties.push(a.propId);
+      else if (sp.type === 'railroad') winner.railroads.push(a.propId);
+      else if (sp.type === 'utility') winner.utilities.push(a.propId);
+      addLog(`${winner.name} wins auction for ${sp.name} at ৳${fmt(a.currentBid)}!`, 'success');
+    } else {
+      addLog(`No bids — ${a.propName} remains unsold.`);
+    }
+    G.auctionState = null;
+    G.phase = 'end';
+    renderAll();
+    updateActionButtons();
+    return;
+  }
+  a.bidderIdx++;
+  while (a.passed.has(a.activePlayers[a.bidderIdx % a.activePlayers.length])) a.bidderIdx++;
+  renderAuction();
+}
+
+// ═══════════════════════════════════════════════
+//  BUILDING
+// ═══════════════════════════════════════════════
+function buildableGroups(p) {
+  const groups = {};
+  p.properties.forEach(id => {
+    const sp = SPACES[id];
+    if (!groups[sp.group]) groups[sp.group] = [];
+    groups[sp.group].push(id);
+  });
+  const buildable = [];
+  Object.keys(groups).forEach(g => {
+    const groupIds = SPACES.filter(s => s.type === 'property' && s.group === parseInt(g)).map(s => s.id);
+    const monopoly = groupIds.every(id => G.properties[id]?.owner === p.id);
+    if (monopoly) buildable.push(groupIds);
+  });
+  return buildable;
+}
+
+function openBuildModal() {
+  const p = curPlayer();
+  const groups = buildableGroups(p);
+  const el = document.getElementById('build-list');
+  el.innerHTML = '';
+  if (groups.length === 0) { el.innerHTML = '<p style="color:rgba(255,255,255,.5);font-size:.85rem">No complete color groups to build on.</p>'; }
+  groups.forEach(ids => {
+    ids.forEach(id => {
+      const sp = SPACES[id];
+      const prop = G.properties[id];
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:.7rem;padding:.6rem;background:rgba(255,255,255,.06);border-radius:7px;margin-bottom:.4rem';
+      const c = COLOR[sp.color];
+      const houseCost = sp.house;
+      const canBuildMore = !prop.hotel && prop.houses < 4 && p.money >= houseCost;
+      const canBuildHotel = prop.houses === 4 && !prop.hotel && p.money >= houseCost;
+      const canSell = prop.houses > 0 || prop.hotel;
+      row.innerHTML = `
+        <div style="width:10px;height:10px;border-radius:2px;background:${c};flex-shrink:0"></div>
+        <div style="flex:1;color:#fff;font-size:.85rem;font-weight:600">${sp.name}</div>
+        <div style="color:rgba(255,255,255,.5);font-size:.78rem">${prop.hotel ? '🏨' : '🏠'.repeat(prop.houses) || '—'}</div>
+        <button onclick="buildHouse(${id})" ${canBuildMore && !prop.hotel ? '' : canBuildHotel ? '' : 'disabled'} style="background:${canBuildMore||canBuildHotel?'#2ecc71':'rgba(255,255,255,.1)'};border:none;color:#fff;border-radius:5px;padding:.3rem .5rem;cursor:pointer;font-size:.75rem">${prop.houses===4&&!prop.hotel?'🏨 Hotel (৳'+fmt(houseCost)+')':'🏠 Build (৳'+fmt(houseCost)+')'}</button>
+        <button onclick="sellHouse(${id})" ${canSell ? '' : 'disabled'} style="background:${canSell?'#e74c3c':'rgba(255,255,255,.1)'};border:none;color:#fff;border-radius:5px;padding:.3rem .5rem;cursor:pointer;font-size:.75rem">Sell (৳${fmt(Math.floor(houseCost/2))})</button>
+      `;
+      el.appendChild(row);
+    });
+  });
+  openOverlay('build-overlay');
+}
+
+function buildHouse(propId) {
+  if (!requireTurnControl()) return;
+  const p = curPlayer();
+  const sp = SPACES[propId];
+  const prop = G.properties[propId];
+  const cost = sp.house;
+  if (p.money < cost) { toast('Not enough money!', 'danger'); return; }
+  p.money -= cost;
+  if (prop.houses === 4) { prop.hotel = true; prop.houses = 0; addLog(`${p.name} built a hotel on ${sp.name}!`, 'success'); }
+  else { prop.houses++; addLog(`${p.name} built house #${prop.houses} on ${sp.name}.`, 'success'); }
+  renderAll();
+  openBuildModal(); // refresh
+  updateTopBar();
+}
+
+function sellHouse(propId) {
+  if (!requireTurnControl()) return;
+  const p = curPlayer();
+  const sp = SPACES[propId];
+  const prop = G.properties[propId];
+  const refund = Math.floor(sp.house / 2);
+  p.money += refund;
+  if (prop.hotel) { prop.hotel = false; prop.houses = 4; addLog(`${p.name} sold hotel on ${sp.name} for ৳${fmt(refund)}.`); }
+  else { prop.houses--; addLog(`${p.name} sold house on ${sp.name} for ৳${fmt(refund)}.`); }
+  renderAll();
+  openBuildModal();
+  updateTopBar();
+}
+
+// ═══════════════════════════════════════════════
+//  MORTGAGE
+// ═══════════════════════════════════════════════
+function openMortgageModal() {
+  const p = curPlayer();
+  const el = document.getElementById('mortgage-list');
+  el.innerHTML = '';
+  const allProps = [...p.properties, ...p.railroads, ...p.utilities];
+  if (allProps.length === 0) {
+    el.innerHTML = '<p style="color:rgba(255,255,255,.5);font-size:.85rem">You own no properties.</p>';
+  }
+  allProps.forEach(id => {
+    const sp = SPACES[id];
+    const prop = G.properties[id];
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:.7rem;padding:.6rem;background:rgba(255,255,255,.06);border-radius:7px;margin-bottom:.4rem';
+    const color = sp.type === 'property' ? COLOR[sp.color] : '#666';
+    const canMortgage = !prop.mortgaged && prop.houses === 0 && !prop.hotel;
+    const unmortgageCost = Math.floor(sp.mortgage * 1.1);
+    const canUnmortgage = prop.mortgaged && p.money >= unmortgageCost;
+    row.innerHTML = `
+      <div style="width:10px;height:10px;border-radius:2px;background:${color};flex-shrink:0"></div>
+      <div style="flex:1;color:${prop.mortgaged?'rgba(255,255,255,.4)':'#fff'};font-size:.85rem;font-weight:600">${sp.name}${prop.mortgaged?' (mortgaged)':''}</div>
+      ${!prop.mortgaged ? `<button onclick="mortgageProp(${id})" ${canMortgage?'':'disabled'} style="background:${canMortgage?'#d97706':'rgba(255,255,255,.1)'};border:none;color:#fff;border-radius:5px;padding:.3rem .5rem;cursor:pointer;font-size:.75rem">Mortgage ৳${fmt(sp.mortgage)}</button>` : 
+      `<button onclick="unmortgageProp(${id})" ${canUnmortgage?'':'disabled'} style="background:${canUnmortgage?'#2ecc71':'rgba(255,255,255,.1)'};border:none;color:#fff;border-radius:5px;padding:.3rem .5rem;cursor:pointer;font-size:.75rem">Unmortgage ৳${fmt(unmortgageCost)}</button>`}
+    `;
+    el.appendChild(row);
+  });
+  openOverlay('mortgage-overlay');
+}
+
+function mortgageProp(id) {
+  if (!requireTurnControl()) return;
+  const p = curPlayer();
+  const sp = SPACES[id];
+  const prop = G.properties[id];
+  if (prop.mortgaged || prop.houses > 0 || prop.hotel) return;
+  prop.mortgaged = true;
+  p.money += sp.mortgage;
+  addLog(`${p.name} mortgaged ${sp.name} for ৳${fmt(sp.mortgage)}.`);
+  renderAll();
+  openMortgageModal();
+  updateTopBar();
+}
+
+function unmortgageProp(id) {
+  if (!requireTurnControl()) return;
+  const p = curPlayer();
+  const sp = SPACES[id];
+  const prop = G.properties[id];
+  const cost = Math.floor(sp.mortgage * 1.1);
+  if (p.money < cost) { toast('Not enough money!', 'danger'); return; }
+  prop.mortgaged = false;
+  p.money -= cost;
+  addLog(`${p.name} unmortgaged ${sp.name} for ৳${fmt(cost)}.`);
+  renderAll();
+  openMortgageModal();
+  updateTopBar();
+}
+
+// ═══════════════════════════════════════════════
+//  TRADE
+// ═══════════════════════════════════════════════
+let tradeSelected = {mine: [], theirs: []};
+
+function openTradeModal() {
+  const p = curPlayer();
+  const sel = document.getElementById('trade-partner');
+  sel.innerHTML = '';
+  G.players.forEach((op, i) => {
+    if (i !== p.id && !op.bankrupt) {
+      const opt = document.createElement('option');
+      opt.value = i;
+      opt.textContent = `${op.token} ${op.name}`;
+      sel.appendChild(opt);
+    }
+  });
+  tradeSelected = {mine: [], theirs: []};
+  document.getElementById('trade-my-money').value = 0;
+  document.getElementById('trade-their-money').value = 0;
+  renderTradeProps();
+  openOverlay('trade-overlay');
+}
+
+function renderTradeProps() {
+  const p = curPlayer();
+  const partnerId = parseInt(document.getElementById('trade-partner').value);
+  const partner = G.players[partnerId];
+
+  const renderList = (el, props, isMyList) => {
+    el.innerHTML = '';
+    props.forEach(id => {
+      const sp = SPACES[id];
+      const selected = tradeSelected[isMyList ? 'mine' : 'theirs'].includes(id);
+      const item = document.createElement('div');
+      item.className = 'trade-prop-item' + (selected ? ' selected' : '');
+      const c = sp.type === 'property' ? COLOR[sp.color] : '#666';
+      item.innerHTML = `<div class="tprop-dot" style="background:${c}"></div>${sp.name}`;
+      item.onclick = () => {
+        const list = tradeSelected[isMyList ? 'mine' : 'theirs'];
+        const idx = list.indexOf(id);
+        if (idx >= 0) list.splice(idx, 1); else list.push(id);
+        renderTradeProps();
+      };
+      el.appendChild(item);
+    });
+    if (props.length === 0) el.innerHTML = '<div style="color:rgba(255,255,255,.3);font-size:.8rem;padding:.3rem">No properties</div>';
+  };
+
+  const myAll = [...p.properties, ...p.railroads, ...p.utilities];
+  const theirAll = partner ? [...partner.properties, ...partner.railroads, ...partner.utilities] : [];
+  renderList(document.getElementById('trade-my-props'), myAll, true);
+  renderList(document.getElementById('trade-their-props'), theirAll, false);
+}
+
+function confirmTrade() {
+  if (!requireTurnControl()) return;
+  const p = curPlayer();
+  const partnerId = parseInt(document.getElementById('trade-partner').value);
+  const partner = G.players[partnerId];
+  const myMoney = parseInt(document.getElementById('trade-my-money').value) || 0;
+  const theirMoney = parseInt(document.getElementById('trade-their-money').value) || 0;
+
+  if (myMoney > p.money) { toast('You don\'t have that much money!', 'danger'); return; }
+  if (theirMoney > partner.money) { toast(`${partner.name} doesn\'t have that much!`, 'danger'); return; }
+
+  // Transfer properties
+  tradeSelected.mine.forEach(id => {
+    const sp = SPACES[id];
+    G.properties[id].owner = partner.id;
+    removeFrom(p.properties, id); removeFrom(p.railroads, id); removeFrom(p.utilities, id);
+    if (sp.type === 'property') partner.properties.push(id);
+    else if (sp.type === 'railroad') partner.railroads.push(id);
+    else partner.utilities.push(id);
+  });
+  tradeSelected.theirs.forEach(id => {
+    const sp = SPACES[id];
+    G.properties[id].owner = p.id;
+    removeFrom(partner.properties, id); removeFrom(partner.railroads, id); removeFrom(partner.utilities, id);
+    if (sp.type === 'property') p.properties.push(id);
+    else if (sp.type === 'railroad') p.railroads.push(id);
+    else p.utilities.push(id);
+  });
+  p.money = p.money - myMoney + theirMoney;
+  partner.money = partner.money - theirMoney + myMoney;
+
+  addLog(`${p.name} traded with ${partner.name}!`, 'success');
+  closeOverlay('trade-overlay');
+  renderAll();
+  updateActionButtons();
+  toast('Trade complete! 🤝', 'gold');
+}
+
+// ═══════════════════════════════════════════════
+//  JAIL
+// ═══════════════════════════════════════════════
+function sendToJail(p) {
+  p.inJail = true;
+  p.jailTurns = 0;
+  p.pos = 10;
+  p.doublesCount = 0;
+  addLog(`${p.name} goes to jail! ⛓️`, 'danger');
+  openOverlay('jail-overlay');
+  document.getElementById('jail-desc').textContent = p.jailFreeCards > 0
+    ? `You have ${p.jailFreeCards} Get Out of Jail Free card(s)!`
+    : 'Pay ৳500 bail or roll doubles to escape.';
+}
+
+function payBailout() {
+  if (!requireTurnControl()) return;
+  const p = curPlayer();
+  if (!p.inJail) return;
+  if (p.jailFreeCards > 0) {
+    p.jailFreeCards--;
+    p.inJail = false;
+    p.jailTurns = 0;
+    addLog(`${p.name} used a Get Out of Jail Free card!`, 'success');
+  } else if (p.money >= 500) {
+    chargeMoney(p, 500, null, true);
+    p.inJail = false;
+    p.jailTurns = 0;
+    addLog(`${p.name} paid ৳500 bail and is free!`, 'success');
+  } else {
+    toast('Not enough money!', 'danger'); return;
+  }
+  renderAll();
+  updateActionButtons();
+}
+
+// ═══════════════════════════════════════════════
+//  MONEY & BANKRUPTCY
+// ═══════════════════════════════════════════════
+function chargeMoney(p, amount, recipient=null, toParking=false) {
+  if (amount <= 0) { if (recipient) recipient.money += Math.abs(amount); return; }
+  const actualPay = Math.min(p.money, amount);
+  p.money -= actualPay;
+  if (recipient) recipient.money += actualPay;
+  else if (toParking) G.parkingPot += actualPay;
+}
+
+function showRentModal(payer, owner, propName, rent) {
+  document.getElementById('rent-title').textContent = `Rent for ${propName}`;
+  document.getElementById('rent-desc').textContent = `${payer.name} pays ৳${fmt(rent)} to ${owner.name}.`;
+  openOverlay('rent-overlay');
+}
+
+function checkBankruptcy() {
+  G.players.forEach(p => {
+    if (p.bankrupt || p.money >= 0) return;
+    // Check if can raise money by mortgaging everything
+    const totalMortgage = [...p.properties, ...p.railroads, ...p.utilities].reduce((s, id) => {
+      const pr = G.properties[id];
+      return s + (pr.mortgaged ? 0 : SPACES[id].mortgage);
+    }, 0);
+    if (p.money + totalMortgage < 0) {
+      declareBankruptcy(p);
+    }
+  });
+  const active = G.players.filter(p => !p.bankrupt);
+  if (active.length === 1) {
+    showWinner(active[0]);
+  }
+}
+
+function declareBankruptcy(p) {
+  p.bankrupt = true;
+  addLog(`${p.name} is BANKRUPT! 💀`, 'danger');
+  // Return all properties to bank
+  [...p.properties, ...p.railroads, ...p.utilities].forEach(id => {
+    G.properties[id].owner = null;
+    G.properties[id].houses = 0;
+    G.properties[id].hotel = false;
+    G.properties[id].mortgaged = false;
+  });
+  p.properties = []; p.railroads = []; p.utilities = [];
+  document.getElementById('bankrupt-name').textContent = `${p.name} is Bankrupt!`;
+  document.getElementById('bankrupt-desc').textContent = `${p.name} has run out of money and is eliminated.`;
+  openOverlay('bankrupt-overlay');
+}
+
+function confirmBankruptcy() {
+  closeOverlay('bankrupt-overlay');
+  G.phase = 'end';
+  renderAll();
+  updateActionButtons();
+}
+
+// ═══════════════════════════════════════════════
+//  TURN MANAGEMENT
+// ═══════════════════════════════════════════════
+function endTurn() {
+  if (!requireTurnControl()) return;
+  if (G.phase === 'roll') { toast('You must roll dice first!', 'danger'); return; }
+  stopTimer();
+  G.pendingBuy = null;
+  
+  // Advance to next non-bankrupt player
+  let next = (G.currentPlayerIdx + 1) % G.players.length;
+  let count = 0;
+  while (G.players[next].bankrupt && count < G.players.length) {
+    next = (next + 1) % G.players.length;
+    count++;
+  }
+  G.currentPlayerIdx = next;
+  G.phase = 'roll';
+  G.lastDoubles = false;
+
+  const p = curPlayer();
+  addLog(`─────── ${p.name}'s turn ───────`, 'important');
+  renderAll();
+  updateActionButtons();
+}
+
+// ═══════════════════════════════════════════════
+//  SHOW PROPERTY INFO
+// ═══════════════════════════════════════════════
+function showSpaceInfo(id) {
+  const sp = SPACES[id];
+  const prop = G.properties[id];
+  const modal = document.getElementById('prop-modal');
+
+  if (sp.type === 'property') {
+    const owner = prop?.owner !== null && prop?.owner !== undefined ? G.players[prop.owner] : null;
+    const c = COLOR[sp.color];
+    modal.innerHTML = `
+      <div class="prop-color-header" style="background:linear-gradient(135deg,${c},${c}cc)">${sp.name}</div>
+      ${owner ? `<div style="color:rgba(255,255,255,.6);font-size:.85rem;margin-bottom:.75rem">Owned by <span style="color:${owner.color};font-weight:700">${owner.token} ${owner.name}</span>${prop.mortgaged?' (Mortgaged)':''}</div>` : '<div style="color:rgba(255,255,255,.5);font-size:.82rem;margin-bottom:.75rem">For Sale — '+fmtCurrency(sp.price)+'</div>'}
+      <table class="prop-table">
+        <tr><td>Purchase Price</td><td>${fmtCurrency(sp.price)}</td></tr>
+        <tr><td>Rent</td><td>${fmtCurrency(sp.rent[0])}</td></tr>
+        <tr><td>Rent w/ Monopoly</td><td>${fmtCurrency(sp.rent[0]*2)}</td></tr>
+        <tr><td>Rent 1 House</td><td>${fmtCurrency(sp.rent[1])}</td></tr>
+        <tr><td>Rent 2 Houses</td><td>${fmtCurrency(sp.rent[2])}</td></tr>
+        <tr><td>Rent 3 Houses</td><td>${fmtCurrency(sp.rent[3])}</td></tr>
+        <tr><td>Rent 4 Houses</td><td>${fmtCurrency(sp.rent[4])}</td></tr>
+        <tr><td>Rent Hotel</td><td>${fmtCurrency(sp.rent[5])}</td></tr>
+        <tr><td>House Cost</td><td>${fmtCurrency(sp.house)}</td></tr>
+        <tr><td>Mortgage Value</td><td>${fmtCurrency(sp.mortgage)}</td></tr>
+        ${prop ? `<tr><td>Buildings</td><td>${prop.hotel?'🏨 Hotel':prop.houses>0?'🏠×'+prop.houses:'None'}</td></tr>` : ''}
+      </table>
+      <button class="btn btn-full" style="background:rgba(255,255,255,.1);color:#fff;margin-top:1rem" onclick="closeOverlay('prop-overlay')">Close</button>
+    `;
+  } else if (sp.type === 'railroad') {
+    const owner = prop?.owner !== null && prop?.owner !== undefined ? G.players[prop.owner] : null;
+    modal.innerHTML = `
+      <div class="prop-color-header" style="background:linear-gradient(135deg,#333,#555)">🚂 ${sp.name}</div>
+      ${owner ? `<div style="color:rgba(255,255,255,.6);font-size:.85rem;margin-bottom:.75rem">Owned by <span style="color:${owner.color};font-weight:700">${owner.token} ${owner.name}</span></div>` : '<div style="color:rgba(255,255,255,.5);font-size:.82rem;margin-bottom:.75rem">For Sale — '+fmtCurrency(sp.price)+'</div>'}
+      <table class="prop-table">
+        <tr><td>Price</td><td>${fmtCurrency(sp.price)}</td></tr>
+        <tr><td>Rent (1 RR)</td><td>${fmtCurrency(sp.rent[0])}</td></tr>
+        <tr><td>Rent (2 RRs)</td><td>${fmtCurrency(sp.rent[1])}</td></tr>
+        <tr><td>Rent (3 RRs)</td><td>${fmtCurrency(sp.rent[2])}</td></tr>
+        <tr><td>Rent (4 RRs)</td><td>${fmtCurrency(sp.rent[3])}</td></tr>
+        <tr><td>Mortgage</td><td>${fmtCurrency(sp.mortgage)}</td></tr>
+      </table>
+      <button class="btn btn-full" style="background:rgba(255,255,255,.1);color:#fff;margin-top:1rem" onclick="closeOverlay('prop-overlay')">Close</button>
+    `;
+  } else {
+    modal.innerHTML = `
+      <div style="font-size:2.5rem;text-align:center;margin-bottom:.75rem">${sp.icon||'📋'}</div>
+      <h2 style="color:#fff;text-align:center;margin-bottom:.5rem">${sp.name}</h2>
+      <p style="color:rgba(255,255,255,.6);text-align:center">${sp.desc||''}</p>
+      <button class="btn btn-full" style="background:rgba(255,255,255,.1);color:#fff;margin-top:1rem" onclick="closeOverlay('prop-overlay')">Close</button>
+    `;
+  }
+  openOverlay('prop-overlay');
+}
+
+// ═══════════════════════════════════════════════
+//  WINNER
+// ═══════════════════════════════════════════════
+function showWinner(p) {
+  G.gameOver = true;
+  document.getElementById('winner-trophy').textContent = p.token;
+  document.getElementById('winner-name').textContent = p.name + ' Wins!';
+  document.getElementById('winner-sub').textContent = `${p.name} is the ${(window.ACTIVE_THEME||BOARD_THEMES.dhaka).name} Monopoly champion with ${fmtCurrency(p.money)}!`;
+  // Confetti
+  const cont = document.getElementById('confetti-container');
+  cont.innerHTML = '';
+  const emojis = ['🎉','🎊','🏆','⭐','🌟','💰','🎲'];
+  for (let i = 0; i < 20; i++) {
+    const span = document.createElement('div');
+    span.className = 'confetti';
+    span.textContent = emojis[i % emojis.length];
+    span.style.left = Math.random() * 100 + 'vw';
+    span.style.animationDelay = Math.random() * 3 + 's';
+    span.style.animationDuration = (2 + Math.random() * 2) + 's';
+    cont.appendChild(span);
+  }
+  showScreen('winner-screen');
+}
+
+function restartGame() {
+  stopTimer();
+  showScreen('lobby-screen');
+}
+
+// ═══════════════════════════════════════════════
+//  CHAT & LOG
+// ═══════════════════════════════════════════════
+function addLog(text, type='') {
+  if (!G.log) G.log = [];
+  G.log.push({text, type, time: Date.now()});
+  if (G.log.length > 250) G.log = G.log.slice(-250);
+  renderGameLog();
+}
+
+function sendChat() {
+  const inp = document.getElementById('chat-input');
+  const text = inp.value.trim();
+  if (!text) return;
+  inp.value = '';
+  if (!G.chat) G.chat = [];
+  const p = isOnlineGame() ? (G.players || []).find(x => x.uid === ONLINE.localUid) : curPlayer();
+  if (!p) return;
+  G.chat.push({
+    uid: p.uid || null,
+    name: p.name,
+    token: p.token,
+    color: p.color,
+    text,
+    time: Date.now(),
+  });
+  if (G.chat.length > 120) G.chat = G.chat.slice(-120);
+  renderChatLog();
+  const dc = document.getElementById('drawer-chat');
+  if (dc) dc.innerHTML = document.getElementById('chat-log').innerHTML;
+}
+
+// ═══════════════════════════════════════════════
+//  DRAWER (mobile)
+// ═══════════════════════════════════════════════
+function openDrawer(type) {
+  const content = document.getElementById('drawer-content');
+  if (type === 'log') {
+    content.innerHTML = '<h3 style="color:#fff;margin-bottom:.75rem;font-family:var(--font-display)">📋 Game Log</h3>' +
+      G.log.slice(-30).map(l => `<div class="log-entry${l.type?' log-'+l.type:''}">${escHtml(l.text || '')}</div>`).join('');
+  } else if (type === 'chat') {
+    content.innerHTML = `
+      <h3 style="color:#fff;margin-bottom:.75rem;font-family:var(--font-display)">💬 Chat</h3>
+      <div id="drawer-chat" style="max-height:300px;overflow-y:auto"></div>
+      <div style="display:flex;gap:.5rem;margin-top:.75rem">
+        <input id="drawer-chat-input" type="text" placeholder="Message..." style="flex:1;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:6px;padding:.4rem .6rem;color:#fff;font-family:var(--font-body)">
+        <button onclick="sendChatFromDrawer()" style="background:var(--green);border:none;color:#fff;border-radius:6px;padding:.4rem .7rem;cursor:pointer;font-weight:600">Send</button>
+      </div>
+    `;
+    // Clone chat messages
+    const dc = document.getElementById('drawer-chat');
+    dc.innerHTML = document.getElementById('chat-log').innerHTML;
+  } else if (type === 'settings') {
+    const dur = TIMER.duration;
+    content.innerHTML = `
+      <h3 style="color:#fff;margin-bottom:1rem;font-family:var(--font-display)">⚙️ Timer Settings</h3>
+      <p style="color:rgba(255,255,255,.6);font-size:.85rem;margin-bottom:1rem">
+        After a player finishes their move, a countdown begins. When it hits zero, the turn automatically advances — even if they haven't clicked End Turn.
+      </p>
+      <div style="margin-bottom:1rem">
+        <label style="color:rgba(255,255,255,.7);font-size:.85rem;display:block;margin-bottom:.4rem">Auto-advance delay</label>
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+          ${[0,10,20,30,45,60].map(v => `<button onclick="setTimerDuration(${v})" style="padding:.5rem .9rem;border:1px solid ${dur===v?'var(--gold-light)':'rgba(255,255,255,.2)'};background:${dur===v?'rgba(201,151,28,.25)':'rgba(255,255,255,.07)'};color:${dur===v?'var(--gold-light)':'rgba(255,255,255,.7)'};border-radius:7px;cursor:pointer;font-family:var(--font-body);font-size:.85rem;font-weight:600">${v===0?'Off':v+'s'}</button>`).join('')}
+        </div>
+      </div>
+      <p style="color:rgba(255,255,255,.4);font-size:.78rem">Timer only runs during the "end turn" phase (after rolling & landing). It pauses while modals are open.</p>
+    `;
+  }
+  document.getElementById('mobile-drawer').classList.add('open');
+}
+
+function sendChatFromDrawer() {
+  const inp = document.getElementById('drawer-chat-input');
+  if (!inp) return;
+  document.getElementById('chat-input').value = inp.value;
+  sendChat();
+  inp.value = '';
+  const dc = document.getElementById('drawer-chat');
+  if (dc) dc.innerHTML = document.getElementById('chat-log').innerHTML;
+}
+
+function closeDrawer() {
+  document.getElementById('mobile-drawer').classList.remove('open');
+}
+
+// ═══════════════════════════════════════════════
+//  OVERLAYS
+// ═══════════════════════════════════════════════
+function openOverlay(id) {
+  document.getElementById(id).classList.add('show');
+}
+function closeOverlay(id) {
+  document.getElementById(id).classList.remove('show');
+}
+
+// ═══════════════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════════════
+let toastTimer;
+function toast(msg, type='') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = type ? `toast-${type}` : '';
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+// ═══════════════════════════════════════════════
+//  UTILITIES
+// ═══════════════════════════════════════════════
+function curPlayer() { return G.players[G.currentPlayerIdx]; }
+function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+function fmt(n) { return Math.abs(n).toLocaleString('en-BD'); }
+function fmtCurrency(n) {
+  const t = window.ACTIVE_THEME || BOARD_THEMES.dhaka;
+  return `${t.currency}${Math.abs(n).toLocaleString(t.locale)}`;
+}
+function shuffle(arr) { for (let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]]}; return arr; }
+function removeFrom(arr, val) { const i = arr.indexOf(val); if (i >= 0) arr.splice(i, 1); }
+function escHtml(t) { return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function escAttr(t) { return escHtml(String(t)).replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+function rolledDoublesThisTurn() { return G.lastDoubles; }
+
+function showPlayerPortfolio(playerIdx) {
+  const p = G.players[playerIdx];
+  const modal = document.getElementById('portfolio-modal');
+  const allProps = [...p.properties, ...p.railroads, ...p.utilities];
+  
+  // Group properties by color group
+  const groups = {};
+  allProps.forEach(id => {
+    const sp = SPACES[id];
+    const prop = G.properties[id];
+    const groupKey = sp.type === 'property' ? `prop_${sp.group}` : sp.type === 'railroad' ? 'railroad' : 'utility';
+    if (!groups[groupKey]) groups[groupKey] = [];
+    groups[groupKey].push({sp, prop, id});
+  });
+
+  const statusIcon = p.bankrupt ? '💀 BANKRUPT' : p.inJail ? '⛓️ In Jail' : `📍 ${SPACES[p.pos].name}`;
+
+  let propsHtml = '';
+  if (allProps.length === 0) {
+    propsHtml = `<div style="color:rgba(255,255,255,.4);font-size:.9rem;text-align:center;padding:1.5rem 0">No properties owned yet</div>`;
+  } else {
+    Object.values(groups).forEach(items => {
+      items.forEach(({sp, prop, id}) => {
+        const c = sp.type === 'property' ? COLOR[sp.color] : sp.type === 'railroad' ? '#444' : '#557';
+        const buildings = prop.hotel ? '🏨' : prop.houses > 0 ? '🏠'.repeat(prop.houses) : '';
+        const mortgStr = prop.mortgaged ? ' <span style="color:#f59e0b;font-size:.72rem">[Mortgaged]</span>' : '';
+        propsHtml += `
+          <div style="display:flex;align-items:center;gap:.6rem;padding:.55rem .7rem;background:rgba(255,255,255,.06);border-radius:7px;margin-bottom:.35rem;border-left:3px solid ${c}">
+            <div style="font-size:.9rem;flex:1;color:#fff;font-weight:600">${sp.name}${mortgStr}</div>
+            ${buildings ? `<div style="font-size:.9rem">${buildings}</div>` : ''}
+            <div style="font-size:.75rem;color:rgba(255,255,255,.45)">${fmtCurrency(sp.price||0)}</div>
+          </div>`;
+      });
+    });
+  }
+
+  modal.innerHTML = `
+    <div style="display:flex;align-items:center;gap:.8rem;margin-bottom:1rem">
+      <div style="font-size:2rem;color:${p.color}">${p.token}</div>
+      <div>
+        <div style="font-family:var(--font-display);font-size:1.3rem;color:#fff;font-weight:700">${p.name}${p.bankrupt?' 💀':''}</div>
+        <div style="font-size:.8rem;color:rgba(255,255,255,.5);margin-top:.15rem">${statusIcon}</div>
+      </div>
+      <div style="margin-left:auto;text-align:right">
+        <div style="font-size:1.2rem;font-weight:800;color:var(--gold-light)">${fmtCurrency(p.money)}</div>
+        <div style="font-size:.72rem;color:rgba(255,255,255,.4)">${allProps.length} ${allProps.length===1?'property':'properties'}</div>
+      </div>
+    </div>
+    ${p.jailFreeCards > 0 ? `<div style="background:rgba(201,151,28,.15);border:1px solid rgba(201,151,28,.3);border-radius:7px;padding:.5rem .8rem;margin-bottom:.75rem;color:var(--gold-light);font-size:.82rem">🎴 ${p.jailFreeCards}× Get Out of Jail Free card</div>` : ''}
+    <div style="font-size:.8rem;font-weight:700;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem">Properties</div>
+    ${propsHtml}
+    <button class="btn btn-full" style="background:rgba(255,255,255,.1);color:#fff;margin-top:1rem" onclick="closeOverlay('portfolio-overlay')">Close</button>
+  `;
+  openOverlay('portfolio-overlay');
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+  document.getElementById(id).classList.remove('hidden');
+}
+
+// ═══════════════════════════════════════════════
+//  AUTO-ADVANCE TIMER
+// ═══════════════════════════════════════════════
+const TIMER = {
+  duration: 30,   // seconds; 0 = off
+  remaining: 0,
+  intervalId: null,
+  paused: false,
+};
+
+function setTimerDuration(secs) {
+  TIMER.duration = secs;
+  stopTimer();
+  // Re-open settings with updated state
+  openDrawer('settings');
+  toast(secs === 0 ? '⏱ Timer disabled' : `⏱ Timer set to ${secs}s`, 'gold');
+  syncLobbySettingsToRoom();
+}
+
+function startTimer() {
+  if (TIMER.duration === 0) return;
+  stopTimer();
+  TIMER.remaining = TIMER.duration;
+  TIMER.paused = false;
+  updateTimerUI();
+  document.getElementById('timer-wrap').classList.remove('hidden');
+  TIMER.intervalId = setInterval(() => {
+    if (TIMER.paused) return;
+    // Pause if any overlay is open
+    const anyOpen = document.querySelector('.overlay.show');
+    if (anyOpen) return;
+    TIMER.remaining--;
+    updateTimerUI();
+    if (TIMER.remaining <= 0) {
+      stopTimer();
+      endTurn();
+    }
+  }, 1000);
+}
+
+function stopTimer() {
+  clearInterval(TIMER.intervalId);
+  TIMER.intervalId = null;
+  document.getElementById('timer-wrap').classList.add('hidden');
+}
+
+function updateTimerUI() {
+  const arc = document.getElementById('timer-arc');
+  const num = document.getElementById('timer-num');
+  if (!arc || !num) return;
+  const frac = TIMER.remaining / TIMER.duration;
+  const circumference = 94.25; // 2π×15
+  arc.style.strokeDashoffset = circumference * (1 - frac);
+  const danger = TIMER.remaining <= 5;
+  arc.classList.toggle('danger', danger);
+  num.classList.toggle('danger', danger);
+  num.textContent = TIMER.remaining;
+}
+
+function installOnlineMutationHooks() {
+  ONLINE_MUTATION_FUNCS.forEach(name => {
+    const fn = window[name];
+    if (typeof fn !== 'function' || fn.__onlineWrapped) return;
+    const wrapped = async function(...args) {
+      const result = fn.apply(this, args);
+      if (result && typeof result.then === 'function') {
+        await result;
+      }
+      if (isOnlineGame() && !ONLINE.isApplyingRemote) {
+        await syncRoomState(name);
+      }
+      return result;
+    };
+    wrapped.__onlineWrapped = true;
+    window[name] = wrapped;
+  });
+}
+
+function installLobbyEvents() {
+  const nameInput = document.getElementById('online-player-name');
+  const codeInput = document.getElementById('join-room-code');
+  const startMoney = document.getElementById('starting-money');
+  const timerSelect = document.getElementById('lobby-timer');
+
+  const rememberedName = localStorage.getItem('monopoly_online_name');
+  if (nameInput && rememberedName) nameInput.value = rememberedName;
+
+  if (nameInput) {
+    nameInput.addEventListener('change', () => {
+      const val = sanitizeName(nameInput.value, 'Player');
+      nameInput.value = val;
+      localStorage.setItem('monopoly_online_name', val);
+    });
+  }
+
+  if (codeInput) {
+    codeInput.addEventListener('input', () => {
+      codeInput.value = codeInput.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
+    });
+  }
+
+  if (startMoney) {
+    startMoney.addEventListener('change', () => {
+      syncLobbySettingsToRoom();
+    });
+  }
+
+  if (timerSelect) {
+    timerSelect.addEventListener('change', () => {
+      syncLobbySettingsToRoom();
+    });
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════
+installOnlineMutationHooks();
+installLobbyEvents();
+renderLobby();
+updateOnlineLobbyUI();
+</script>
+</body>
+</html>
