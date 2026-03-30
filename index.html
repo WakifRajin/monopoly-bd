@@ -156,11 +156,18 @@ body{font-family:var(--font-body);background:#0f2318;color:#1a1a1a;overscroll-be
 
 /* Space rotations for sides */
 #sp11,#sp12,#sp13,#sp14,#sp15,#sp16,#sp17,#sp18,#sp19{
-  flex-direction:row;writing-mode:vertical-rl;transform:rotate(180deg);
+  flex-direction:column;
+  writing-mode:horizontal-tb;
+  transform:none;
+  padding:2px;
 }
 #sp11 .color-bar,#sp12 .color-bar,#sp13 .color-bar,#sp14 .color-bar,
 #sp15 .color-bar,#sp16 .color-bar,#sp17 .color-bar,#sp18 .color-bar,#sp19 .color-bar{
-  width:auto;height:100%;writing-mode:horizontal-tb;transform:rotate(180deg);
+  width:100%;
+  height:18%;
+  min-height:7px;
+  writing-mode:horizontal-tb;
+  transform:none;
 }
 #sp21,#sp22,#sp23,#sp24,#sp25,#sp26,#sp27,#sp28,#sp29{
   flex-direction:column-reverse;
@@ -170,11 +177,28 @@ body{font-family:var(--font-body);background:#0f2318;color:#1a1a1a;overscroll-be
   order:1;
 }
 #sp31,#sp32,#sp33,#sp34,#sp35,#sp36,#sp37,#sp38,#sp39{
-  flex-direction:row-reverse;writing-mode:vertical-rl;
+  flex-direction:column;
+  writing-mode:horizontal-tb;
+  padding:2px;
 }
 #sp31 .color-bar,#sp32 .color-bar,#sp33 .color-bar,#sp34 .color-bar,
 #sp35 .color-bar,#sp36 .color-bar,#sp37 .color-bar,#sp38 .color-bar,#sp39 .color-bar{
-  width:auto;height:100%;writing-mode:horizontal-tb;
+  width:100%;
+  height:18%;
+  min-height:7px;
+  writing-mode:horizontal-tb;
+}
+
+#sp11 .sp-name,#sp12 .sp-name,#sp13 .sp-name,#sp14 .sp-name,#sp15 .sp-name,#sp16 .sp-name,#sp17 .sp-name,#sp18 .sp-name,#sp19 .sp-name,
+#sp31 .sp-name,#sp32 .sp-name,#sp33 .sp-name,#sp34 .sp-name,#sp35 .sp-name,#sp36 .sp-name,#sp37 .sp-name,#sp38 .sp-name,#sp39 .sp-name{
+  font-size:.92em;
+  line-height:1.05;
+  word-break:break-word;
+}
+
+#sp11 .sp-price,#sp12 .sp-price,#sp13 .sp-price,#sp14 .sp-price,#sp15 .sp-price,#sp16 .sp-price,#sp17 .sp-price,#sp18 .sp-price,#sp19 .sp-price,
+#sp31 .sp-price,#sp32 .sp-price,#sp33 .sp-price,#sp34 .sp-price,#sp35 .sp-price,#sp36 .sp-price,#sp37 .sp-price,#sp38 .sp-price,#sp39 .sp-price{
+  font-size:.74em;
 }
 
 .center-area{
@@ -322,6 +346,7 @@ body{font-family:var(--font-body);background:#0f2318;color:#1a1a1a;overscroll-be
 #toast.show{transform:translateX(-50%) translateY(0)}
 #toast.toast-danger{background:rgba(127,29,29,.97);border-color:rgba(220,38,38,.4)}
 #toast.toast-gold{background:rgba(120,53,15,.97);border-color:rgba(217,119,6,.4);color:#fde68a}
+#toast.toast-chat{background:rgba(17,56,100,.97);border-color:rgba(96,165,250,.45);color:#dbeafe}
 
 /* ── RESPONSIVE LAYOUT ── */
 /* Desktop: 3-column layout */
@@ -704,6 +729,11 @@ body{font-family:var(--font-body);background:#0f2318;color:#1a1a1a;overscroll-be
   </div>
 </div>
 
+<!-- Trade review modal -->
+<div class="overlay" id="trade-review-overlay" onclick="if(event.target===this)closeOverlay('trade-review-overlay')">
+  <div class="modal" id="trade-review-modal"></div>
+</div>
+
 <!-- Build modal -->
 <div class="overlay" id="build-overlay" onclick="if(event.target===this)closeOverlay('build-overlay')">
   <div class="modal">
@@ -801,7 +831,7 @@ const ONLINE = {
 
 const ONLINE_MUTATION_FUNCS = [
   'rollDice', 'actionBuy', 'buildHouse', 'sellHouse', 'mortgageProp', 'unmortgageProp',
-  'confirmTrade', 'payBailout', 'endTurn', 'confirmBankruptcy', 'confirmBuy',
+  'confirmTrade', 'respondTrade', 'cancelTradeProposal', 'payBailout', 'endTurn', 'confirmBankruptcy', 'confirmBuy',
   'startAuction', 'placeBid', 'passAuction', 'sendChat'
 ];
 
@@ -1089,15 +1119,69 @@ function isOnlineGame() {
   return ONLINE.connected && ONLINE.roomId;
 }
 
+function resolveLocalPlayerIndex() {
+  if (!G.players || !G.players.length) return -1;
+
+  const byUid = G.players.findIndex(p => p.uid && p.uid === ONLINE.localUid);
+  if (byUid >= 0) return byUid;
+
+  const lobbyMe = Array.isArray(lobbyPlayers) ? lobbyPlayers.find(p => p.uid === ONLINE.localUid) : null;
+  if (lobbyMe?.token) {
+    const byToken = G.players.findIndex(p => p.token === lobbyMe.token);
+    if (byToken >= 0) return byToken;
+  }
+
+  const targetName = sanitizeName(lobbyMe?.name || ONLINE.localName || '', '');
+  if (targetName) {
+    const byName = G.players.findIndex(p => sanitizeName(p.name, '') === targetName);
+    if (byName >= 0) return byName;
+  }
+
+  return -1;
+}
+
 function canLocalControlTurn() {
   if (!isOnlineGame() || !G.players || !G.players.length) return true;
-  const myIdx = G.players.findIndex(p => p.uid === ONLINE.localUid);
+  const myIdx = resolveLocalPlayerIndex();
   return myIdx >= 0 && myIdx === G.currentPlayerIdx;
+}
+
+function currentAuctionBidderId() {
+  const a = G.auctionState;
+  if (!a || !Array.isArray(a.activePlayers) || !a.activePlayers.length) return null;
+  const rawIdx = Number(a.bidderIdx);
+  const idx = Number.isFinite(rawIdx)
+    ? ((Math.trunc(rawIdx) % a.activePlayers.length) + a.activePlayers.length) % a.activePlayers.length
+    : 0;
+  const bidderId = Number(a.activePlayers[idx]);
+  return Number.isInteger(bidderId) ? bidderId : null;
+}
+
+function canLocalControlAuctionAction() {
+  if (!G.auctionState) return canLocalControlTurn();
+  if (!isOnlineGame()) return true;
+  const bidderId = currentAuctionBidderId();
+  if (!Number.isInteger(bidderId)) return canLocalControlTurn();
+  const bidder = G.players[bidderId];
+  if (!bidder) return canLocalControlTurn();
+  if (bidder.uid && bidder.uid === ONLINE.localUid) return true;
+  const myIdx = resolveLocalPlayerIndex();
+  return myIdx >= 0 ? myIdx === bidderId : canLocalControlTurn();
 }
 
 function requireTurnControl() {
   if (!canLocalControlTurn()) {
     toast(`Wait for ${curPlayer().name}'s turn.`, 'danger');
+    return false;
+  }
+  return true;
+}
+
+function requireAuctionControl() {
+  if (!canLocalControlAuctionAction()) {
+    const bidderId = currentAuctionBidderId();
+    const bidderName = Number.isInteger(bidderId) ? (G.players[bidderId]?.name || 'the current bidder') : 'the current bidder';
+    toast(`Waiting for ${bidderName} to bid or pass.`, 'danger');
     return false;
   }
   return true;
@@ -1429,11 +1513,17 @@ const TOKEN_COLORS = ['#e74c3c','#3498db','#2ecc71','#f39c12','#9b59b6','#1abc9c
 // ═══════════════════════════════════════════════
 let G = {};  // global game state
 let jailPromptShownKey = '';
+let tradeReviewShownKey = '';
+const CHAT_PREVIEW = {
+  lastShownKey: '',
+};
 
 function initGameState(players, startMoney) {
   const shuffledChance = shuffle([...CHANCE_CARDS]);
   const shuffledComm = shuffle([...COMMUNITY_CARDS]);
   jailPromptShownKey = '';
+  tradeReviewShownKey = '';
+  CHAT_PREVIEW.lastShownKey = '';
   G = {
     players: players.map((p, i) => ({
       id: i,
@@ -1461,6 +1551,8 @@ function initGameState(players, startMoney) {
     chat: [],
     pendingBuy: null,
     auctionState: null,
+    bankAuctionQueue: [],
+    pendingTrade: null,
     gameOver: false,
   };
 }
@@ -1567,18 +1659,76 @@ function hydrateRemoteGameState(raw) {
   next.chat = indexedObjectToArray(next.chat).filter(Boolean);
   next.chanceDeck = indexedObjectToArray(next.chanceDeck);
   next.communityDeck = indexedObjectToArray(next.communityDeck);
+  next.bankAuctionQueue = indexedObjectToArray(next.bankAuctionQueue).filter(Number.isInteger);
+
+  const pendingTradeRaw = next.pendingTrade && typeof next.pendingTrade === 'object' ? next.pendingTrade : null;
+  if (pendingTradeRaw) {
+    const fromId = Number(pendingTradeRaw.fromId);
+    const toId = Number(pendingTradeRaw.toId);
+    const fromMoney = Math.max(0, Number(pendingTradeRaw.fromMoney) || 0);
+    const toMoney = Math.max(0, Number(pendingTradeRaw.toMoney) || 0);
+    const fromProps = indexedObjectToArray(pendingTradeRaw.fromProps).filter(Number.isInteger);
+    const toProps = indexedObjectToArray(pendingTradeRaw.toProps).filter(Number.isInteger);
+    const validPlayers = Number.isInteger(fromId) && Number.isInteger(toId)
+      && fromId >= 0 && fromId < next.players.length
+      && toId >= 0 && toId < next.players.length
+      && fromId !== toId;
+
+    next.pendingTrade = validPlayers ? {
+      id: String(pendingTradeRaw.id || `tr_${Date.now().toString(36)}`),
+      fromId,
+      toId,
+      fromProps,
+      toProps,
+      fromMoney,
+      toMoney,
+      createdAt: Number(pendingTradeRaw.createdAt) || Date.now(),
+    } : null;
+  } else {
+    next.pendingTrade = null;
+  }
 
   G = next;
   if (G.auctionState) {
-    const activePlayers = indexedObjectToArray(G.auctionState.activePlayers).filter(Number.isInteger);
-    if (activePlayers.length) G.auctionState.activePlayers = activePlayers;
-    const passedRaw = indexedObjectToArray(G.auctionState.passed);
-    if (passedRaw.length) {
-      G.auctionState.passed = new Set(passedRaw.filter(Number.isInteger));
+    const activePlayersRaw = indexedObjectToArray(G.auctionState.activePlayers)
+      .map(v => Number(v))
+      .filter(v => Number.isInteger(v) && v >= 0 && v < G.players.length);
+    const fallbackActive = G.players.filter(p => !p.bankrupt).map(p => p.id);
+    const activePlayers = activePlayersRaw.length ? activePlayersRaw : fallbackActive;
+
+    if (!activePlayers.length) {
+      G.auctionState = null;
+    } else {
+      G.auctionState.activePlayers = activePlayers;
+
+      const passedRaw = indexedObjectToArray(G.auctionState.passed)
+        .map(v => Number(v))
+        .filter(v => Number.isInteger(v) && activePlayers.includes(v));
+      G.auctionState.passed = new Set(passedRaw);
+
+      const rawBidderIdx = Number(G.auctionState.bidderIdx);
+      G.auctionState.bidderIdx = Number.isFinite(rawBidderIdx)
+        ? ((Math.trunc(rawBidderIdx) % activePlayers.length) + activePlayers.length) % activePlayers.length
+        : 0;
+
+      const rawHighBidder = Number(G.auctionState.highBidder);
+      G.auctionState.highBidder = Number.isInteger(rawHighBidder) && rawHighBidder >= 0 && rawHighBidder < G.players.length
+        ? rawHighBidder
+        : null;
+
+      const rawBid = Number(G.auctionState.currentBid);
+      G.auctionState.currentBid = Number.isFinite(rawBid) && rawBid >= 0 ? Math.floor(rawBid) : 0;
+
+      const rawPropId = Number(G.auctionState.propId);
+      const propValid = Number.isInteger(rawPropId) && !!SPACES[rawPropId] && !!G.properties[rawPropId];
+      if (!propValid) {
+        G.auctionState = null;
+      } else {
+        G.auctionState.propId = rawPropId;
+        G.auctionState.propName = String(G.auctionState.propName || SPACES[rawPropId].name || 'Property');
+        G.auctionState.source = G.auctionState.source === 'bank' ? 'bank' : 'market';
+      }
     }
-  }
-  if (G.auctionState && Array.isArray(G.auctionState.passed)) {
-    G.auctionState.passed = new Set(G.auctionState.passed);
   }
 }
 
@@ -1611,6 +1761,7 @@ async function syncRoomState(reason = '') {
 
 async function applyRoomSnapshot(data) {
   if (!data) return;
+  const prevLastChatKey = chatMessageKey(getLastChatMessage());
   const roomVersion = Number(data.schemaVersion || 0);
   if (roomVersion !== ROOM_SCHEMA_VERSION) {
     throw new Error('Room is using an older game schema. Recreate the room from this version.');
@@ -1663,6 +1814,10 @@ async function applyRoomSnapshot(data) {
       renderAll();
       showScreen('game-screen');
       updateActionButtons();
+      const nextLast = getLastChatMessage();
+      if (prevLastChatKey && chatMessageKey(nextLast) !== prevLastChatKey) {
+        showChatPreview(nextLast);
+      }
     } finally {
       ONLINE.isApplyingRemote = false;
     }
@@ -1686,7 +1841,8 @@ function attachRoomListener(roomId) {
     }
     applyRoomSnapshot(snap.val()).catch(err => {
       console.error(err);
-      const msg = err?.message ? `Failed to apply room updates: ${err.message}` : 'Failed to apply room updates.';
+      const detail = err?.message || err?.name || 'Unknown error';
+      const msg = `Failed to apply room updates: ${detail}`;
       updateOnlineStatus(msg, true);
       toast(msg, 'danger');
     });
@@ -2222,8 +2378,21 @@ function renderAll() {
   renderBoardOwnership();
   renderGameLog();
   renderChatLog();
+  syncAuctionOverlay();
   updateTopBar();
   updateActionButtons();
+}
+
+function syncAuctionOverlay() {
+  const overlay = document.getElementById('auction-overlay');
+  if (!overlay) return;
+
+  if (G.auctionState) {
+    renderAuction();
+    openOverlay('auction-overlay');
+  } else {
+    closeOverlay('auction-overlay');
+  }
 }
 
 function renderGameLog() {
@@ -2369,10 +2538,13 @@ function updateActionButtons() {
   const onProp = G.properties[p.pos];
   const sp = SPACES[p.pos];
   const turnOwnedByMe = canLocalControlTurn();
+  const postRollPhase = G.phase === 'action' || G.phase === 'end';
+  const actionLocked = !!G.pendingBuy || !!G.auctionState;
+  const tradePending = !!G.pendingTrade;
   const canBuyAny = G.phase === 'action' && onProp && onProp.owner === null;
-  const canBuild = G.phase === 'action' && buildableGroups(p).length > 0;
-  const canMortgage = G.phase === 'action' && (p.properties.length > 0 || p.railroads.length > 0 || p.utilities.length > 0);
-  const canTrade = G.phase === 'action' && G.players.filter(x => !x.bankrupt).length > 1;
+  const canBuild = postRollPhase && !actionLocked && buildableGroups(p).length > 0;
+  const canMortgage = postRollPhase && !actionLocked && (p.properties.length > 0 || p.railroads.length > 0 || p.utilities.length > 0);
+  const canTrade = postRollPhase && !actionLocked && !tradePending && G.players.filter(x => !x.bankrupt).length > 1;
   const canEnd = G.phase === 'action' || G.phase === 'end';
   const inJail = p.inJail;
 
@@ -2421,6 +2593,8 @@ function updateActionButtons() {
       showJailPrompt(p, 'turn');
     }
   }
+
+  maybeShowPendingTradeReview();
 
   // Start auto-advance timer when player enters the 'end' phase (move done, can end turn)
   if (G.phase === 'end' && !G.gameOver && turnOwnedByMe) {
@@ -2490,6 +2664,13 @@ function handleJailRoll(p, d1, d2, doubles) {
       // Force pay
       addLog(`${p.name} must pay ৳500 to leave jail after 3 turns.`, 'danger');
       chargeMoney(p, 500);
+      if (p.bankrupt) {
+        G.phase = 'end';
+        renderAll();
+        updateActionButtons();
+        checkBankruptcy();
+        return;
+      }
       p.inJail = false;
       p.jailTurns = 0;
       movePlayer(p, d1 + d2, false);
@@ -2750,35 +2931,90 @@ function startAuction() {
   closeOverlay('buy-overlay');
   const id = G.pendingBuy;
   G.pendingBuy = null;
-  const sp = SPACES[id];
+  if (!beginAuction(id, { source: 'market', bidderStartIdx: G.currentPlayerIdx })) {
+    addLog('Auction could not start (no eligible bidders).', 'danger');
+    G.phase = 'end';
+    renderAll();
+    updateActionButtons();
+  }
+}
+
+function beginAuction(propId, { source = 'market', bidderStartIdx = 0 } = {}) {
+  const sp = SPACES[propId];
+  const prop = G.properties[propId];
+  if (!sp || !prop || prop.owner !== null) return false;
+  const activePlayers = G.players.filter(p => !p.bankrupt).map(p => p.id);
+  if (!activePlayers.length) return false;
+  const startPos = activePlayers.includes(bidderStartIdx)
+    ? activePlayers.indexOf(bidderStartIdx)
+    : 0;
+
   G.auctionState = {
-    propId: id,
+    propId,
     propName: sp.name,
     currentBid: 0,
     highBidder: null,
     passed: new Set(),
-    bidderIdx: G.currentPlayerIdx,
-    activePlayers: G.players.filter(p => !p.bankrupt).map(p => p.id),
+    bidderIdx: startPos,
+    activePlayers,
+    source,
   };
   renderAuction();
   openOverlay('auction-overlay');
+  return true;
+}
+
+function queueBankAuctions(propIds = []) {
+  if (!Array.isArray(G.bankAuctionQueue)) G.bankAuctionQueue = [];
+  propIds.forEach(id => {
+    if (!Number.isInteger(id)) return;
+    if (!G.bankAuctionQueue.includes(id)) G.bankAuctionQueue.push(id);
+  });
+}
+
+function launchNextBankAuction() {
+  if (G.auctionState) return true;
+  if (!Array.isArray(G.bankAuctionQueue)) G.bankAuctionQueue = [];
+
+  while (G.bankAuctionQueue.length) {
+    const nextId = G.bankAuctionQueue.shift();
+    const prop = G.properties[nextId];
+    if (!prop || prop.owner !== null) continue;
+    const started = beginAuction(nextId, { source: 'bank', bidderStartIdx: 0 });
+    if (started) {
+      addLog(`Bank auction started for ${SPACES[nextId].name}.`, 'important');
+      return true;
+    }
+  }
+  return false;
 }
 
 function renderAuction() {
   const a = G.auctionState;
   if (!a) return;
-  const bidder = G.players.find(p => p.id === a.activePlayers[a.bidderIdx % a.activePlayers.length]);
+  const bidderId = currentAuctionBidderId();
+  const bidder = Number.isInteger(bidderId) ? G.players[bidderId] : null;
+  const leader = Number.isInteger(a.highBidder) ? G.players[a.highBidder] : null;
   document.getElementById('auc-prop-name').textContent = a.propName;
   document.getElementById('auc-bid').textContent = fmt(a.currentBid);
-  document.getElementById('auc-leader').textContent = a.highBidder !== null ? G.players[a.highBidder].name : 'None';
-  document.getElementById('auc-bidder').textContent = bidder?.name || '';
+  document.getElementById('auc-leader').textContent = leader?.name || 'None';
+  document.getElementById('auc-bidder').textContent = bidder?.name || 'Waiting for bidder sync...';
   document.getElementById('auc-bidder-money').textContent = fmt(bidder?.money || 0);
+
+  const canAct = canLocalControlAuctionAction();
+  document.querySelectorAll('#bid-btns button').forEach(btn => {
+    btn.disabled = !canAct;
+  });
 }
 
 function placeBid(amount) {
-  if (!requireTurnControl()) return;
+  if (!requireAuctionControl()) return;
   const a = G.auctionState;
-  const bidder = G.players.find(p => p.id === a.activePlayers[a.bidderIdx % a.activePlayers.length]);
+  if (!a) return;
+  const bidderId = currentAuctionBidderId();
+  if (!Number.isInteger(bidderId)) return;
+  const bidder = G.players[bidderId];
+  if (!bidder || bidder.bankrupt) return;
   const newBid = a.currentBid + amount;
   if (bidder.money < newBid) { toast('Not enough money!', 'danger'); return; }
   a.currentBid = newBid;
@@ -2791,14 +3027,19 @@ function placeBid(amount) {
 }
 
 function passAuction() {
-  if (!requireTurnControl()) return;
+  if (!requireAuctionControl()) return;
   const a = G.auctionState;
-  const bidder = G.players.find(p => p.id === a.activePlayers[a.bidderIdx % a.activePlayers.length]);
+  if (!a) return;
+  const bidderId = currentAuctionBidderId();
+  if (!Number.isInteger(bidderId)) return;
+  const bidder = G.players[bidderId];
+  if (!bidder) return;
   a.passed.add(bidder.id);
   addLog(`${bidder.name} passes the auction`);
   // Check if only one active bidder remains
   const remaining = a.activePlayers.filter(id => !a.passed.has(id));
   if (remaining.length === 0 || (remaining.length === 1 && a.highBidder !== null)) {
+    const source = a.source || 'market';
     closeOverlay('auction-overlay');
     // Award property
     if (a.highBidder !== null && a.currentBid > 0) {
@@ -2806,14 +3047,25 @@ function passAuction() {
       winner.money -= a.currentBid;
       const sp = SPACES[a.propId];
       G.properties[a.propId].owner = winner.id;
-      if (sp.type === 'property') winner.properties.push(a.propId);
-      else if (sp.type === 'railroad') winner.railroads.push(a.propId);
-      else if (sp.type === 'utility') winner.utilities.push(a.propId);
+      G.properties[a.propId].houses = 0;
+      G.properties[a.propId].hotel = false;
+      addOwnedAsset(winner, a.propId);
       addLog(`${winner.name} wins auction for ${sp.name} at ৳${fmt(a.currentBid)}!`, 'success');
     } else {
       addLog(`No bids — ${a.propName} remains unsold.`);
     }
     G.auctionState = null;
+
+    if (source === 'bank') {
+      if (launchNextBankAuction()) {
+        renderAll();
+        updateActionButtons();
+        return;
+      }
+      addLog('Bank auction series completed.', 'important');
+      checkBankruptcy();
+    }
+
     G.phase = 'end';
     renderAll();
     updateActionButtons();
@@ -2905,6 +3157,32 @@ function sellHouse(propId) {
 // ═══════════════════════════════════════════════
 //  MORTGAGE
 // ═══════════════════════════════════════════════
+function propertyHasBuildings(id) {
+  const prop = G.properties[id];
+  return !!(prop && (prop.houses > 0 || prop.hotel));
+}
+
+function mortgageValueForSpace(sp) {
+  return Math.floor((Number(sp?.price) || 0) / 2);
+}
+
+function canMortgageAsset(player, id) {
+  const sp = SPACES[id];
+  const prop = G.properties[id];
+  if (!sp || !prop || prop.owner !== player.id || prop.mortgaged) return false;
+  if (propertyHasBuildings(id)) return false;
+
+  // Monopoly rule: cannot mortgage a color property while any property in that color group has buildings.
+  if (sp.type === 'property') {
+    const groupIds = SPACES
+      .filter(s => s.type === 'property' && s.group === sp.group)
+      .map(s => s.id);
+    const groupHasBuildings = groupIds.some(gid => propertyHasBuildings(gid));
+    if (groupHasBuildings) return false;
+  }
+  return true;
+}
+
 function openMortgageModal() {
   const p = curPlayer();
   const el = document.getElementById('mortgage-list');
@@ -2919,13 +3197,14 @@ function openMortgageModal() {
     const row = document.createElement('div');
     row.style.cssText = 'display:flex;align-items:center;gap:.7rem;padding:.6rem;background:rgba(255,255,255,.06);border-radius:7px;margin-bottom:.4rem';
     const color = sp.type === 'property' ? COLOR[sp.color] : '#666';
-    const canMortgage = !prop.mortgaged && prop.houses === 0 && !prop.hotel;
-    const unmortgageCost = Math.floor(sp.mortgage * 1.1);
+    const canMortgage = canMortgageAsset(p, id);
+    const mortgageValue = mortgageValueForSpace(sp);
+    const unmortgageCost = Math.floor(mortgageValue * 1.1);
     const canUnmortgage = prop.mortgaged && p.money >= unmortgageCost;
     row.innerHTML = `
       <div style="width:10px;height:10px;border-radius:2px;background:${color};flex-shrink:0"></div>
       <div style="flex:1;color:${prop.mortgaged?'rgba(255,255,255,.4)':'#fff'};font-size:.85rem;font-weight:600">${sp.name}${prop.mortgaged?' (mortgaged)':''}</div>
-      ${!prop.mortgaged ? `<button onclick="mortgageProp(${id})" ${canMortgage?'':'disabled'} style="background:${canMortgage?'#d97706':'rgba(255,255,255,.1)'};border:none;color:#fff;border-radius:5px;padding:.3rem .5rem;cursor:pointer;font-size:.75rem">Mortgage ৳${fmt(sp.mortgage)}</button>` : 
+      ${!prop.mortgaged ? `<button onclick="mortgageProp(${id})" ${canMortgage?'':'disabled'} style="background:${canMortgage?'#d97706':'rgba(255,255,255,.1)'};border:none;color:#fff;border-radius:5px;padding:.3rem .5rem;cursor:pointer;font-size:.75rem">Mortgage ৳${fmt(mortgageValue)}</button>` : 
       `<button onclick="unmortgageProp(${id})" ${canUnmortgage?'':'disabled'} style="background:${canUnmortgage?'#2ecc71':'rgba(255,255,255,.1)'};border:none;color:#fff;border-radius:5px;padding:.3rem .5rem;cursor:pointer;font-size:.75rem">Unmortgage ৳${fmt(unmortgageCost)}</button>`}
     `;
     el.appendChild(row);
@@ -2938,10 +3217,14 @@ function mortgageProp(id) {
   const p = curPlayer();
   const sp = SPACES[id];
   const prop = G.properties[id];
-  if (prop.mortgaged || prop.houses > 0 || prop.hotel) return;
+  if (!canMortgageAsset(p, id)) {
+    toast('Sell buildings in this color group before mortgaging.', 'danger');
+    return;
+  }
+  const mortgageValue = mortgageValueForSpace(sp);
   prop.mortgaged = true;
-  p.money += sp.mortgage;
-  addLog(`${p.name} mortgaged ${sp.name} for ৳${fmt(sp.mortgage)}.`);
+  p.money += mortgageValue;
+  addLog(`${p.name} mortgaged ${sp.name} for ৳${fmt(mortgageValue)}.`);
   renderAll();
   openMortgageModal();
   updateTopBar();
@@ -2952,7 +3235,7 @@ function unmortgageProp(id) {
   const p = curPlayer();
   const sp = SPACES[id];
   const prop = G.properties[id];
-  const cost = Math.floor(sp.mortgage * 1.1);
+  const cost = Math.floor(mortgageValueForSpace(sp) * 1.1);
   if (p.money < cost) { toast('Not enough money!', 'danger'); return; }
   prop.mortgaged = false;
   p.money -= cost;
@@ -2967,7 +3250,181 @@ function unmortgageProp(id) {
 // ═══════════════════════════════════════════════
 let tradeSelected = {mine: [], theirs: []};
 
+function getLocalPlayerIndex() {
+  if (!isOnlineGame()) return G.currentPlayerIdx;
+  return resolveLocalPlayerIndex();
+}
+
+function getPendingTradeRole() {
+  if (!G.pendingTrade) return 'none';
+  if (!isOnlineGame()) return 'offline';
+  const me = getLocalPlayerIndex();
+  if (me === G.pendingTrade.toId) return 'recipient';
+  if (me === G.pendingTrade.fromId) return 'proposer';
+  return 'spectator';
+}
+
+function tradeOfferPropsHtml(ids) {
+  if (!Array.isArray(ids) || !ids.length) {
+    return '<div style="color:rgba(255,255,255,.4);font-size:.82rem">No properties</div>';
+  }
+  return ids.map(id => {
+    const sp = SPACES[id];
+    if (!sp) return '';
+    const c = sp.type === 'property' ? COLOR[sp.color] : '#666';
+    return `<div class="trade-prop-item" style="cursor:default"><div class="tprop-dot" style="background:${c}"></div>${escHtml(sp.name)}</div>`;
+  }).join('');
+}
+
+function renderTradeReviewModal() {
+  const modal = document.getElementById('trade-review-modal');
+  const trade = G.pendingTrade;
+  if (!modal) return;
+  if (!trade) {
+    modal.innerHTML = '<h2>🤝 Trade</h2><p style="color:rgba(255,255,255,.6)">No pending trade proposal.</p>';
+    return;
+  }
+
+  const from = G.players[trade.fromId];
+  const to = G.players[trade.toId];
+  if (!from || !to) {
+    modal.innerHTML = '<h2>🤝 Trade</h2><p style="color:#ff9ca1">This trade is no longer valid.</p>';
+    return;
+  }
+
+  const role = getPendingTradeRole();
+  const canRespond = role === 'recipient' || role === 'offline';
+  const canCancel = role === 'proposer' || role === 'offline';
+  const statusLabel = role === 'recipient'
+    ? '📨 Your response is needed'
+    : role === 'proposer'
+      ? `⏳ Waiting for ${to.name}`
+      : role === 'offline'
+        ? '🧪 Local trade review mode'
+        : 'ℹ️ Trade in progress';
+  const statusStyle = role === 'recipient'
+    ? 'background:rgba(22,163,74,.2);border:1px solid rgba(74,222,128,.45);color:#b7f7cb;'
+    : role === 'proposer'
+      ? 'background:rgba(37,99,235,.25);border:1px solid rgba(125,211,252,.45);color:#d8ecff;'
+      : role === 'offline'
+        ? 'background:rgba(217,119,6,.2);border:1px solid rgba(252,211,77,.45);color:#ffe9b8;'
+        : 'background:rgba(148,163,184,.2);border:1px solid rgba(203,213,225,.45);color:#e2e8f0;';
+  const roleText = role === 'recipient'
+    ? 'You received this trade offer.'
+    : role === 'proposer'
+      ? `Waiting for ${to.name} to respond.`
+      : role === 'offline'
+        ? `${from.name} offered this trade to ${to.name}.`
+        : 'Trade in progress.';
+
+  modal.innerHTML = `
+    <h2>🤝 Trade Proposal</h2>
+    <div style="display:inline-flex;align-items:center;padding:.28rem .62rem;border-radius:999px;font-size:.74rem;font-weight:700;letter-spacing:.02em;margin-bottom:.55rem;${statusStyle}">${escHtml(statusLabel)}</div>
+    <p style="color:rgba(255,255,255,.62);font-size:.82rem;margin-bottom:.75rem">${escHtml(roleText)}</p>
+    <div class="trade-sides">
+      <div>
+        <h4>${escHtml(from.name)} gives</h4>
+        <div class="trade-prop-list">${tradeOfferPropsHtml(trade.fromProps)}</div>
+        <div style="margin-top:.5rem;color:rgba(255,255,255,.7);font-size:.82rem">Money: ${fmtCurrency(trade.fromMoney || 0)}</div>
+      </div>
+      <div>
+        <h4>${escHtml(to.name)} gives</h4>
+        <div class="trade-prop-list">${tradeOfferPropsHtml(trade.toProps)}</div>
+        <div style="margin-top:.5rem;color:rgba(255,255,255,.7);font-size:.82rem">Money: ${fmtCurrency(trade.toMoney || 0)}</div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="respondTrade(true)" ${canRespond ? '' : 'disabled'}>✅ Accept</button>
+      <button class="btn btn-danger" onclick="respondTrade(false)" ${canRespond ? '' : 'disabled'}>❌ Decline</button>
+      <button class="btn" style="background:rgba(255,255,255,.1);color:#fff" onclick="cancelTradeProposal()" ${canCancel ? '' : 'disabled'}>Cancel Proposal</button>
+    </div>
+  `;
+}
+
+function maybeShowPendingTradeReview() {
+  const overlay = document.getElementById('trade-review-overlay');
+  if (!overlay) return;
+  if (!G.pendingTrade) {
+    tradeReviewShownKey = '';
+    closeOverlay('trade-review-overlay');
+    return;
+  }
+
+  const role = getPendingTradeRole();
+  if (role === 'spectator') {
+    closeOverlay('trade-review-overlay');
+    return;
+  }
+
+  renderTradeReviewModal();
+  const key = `${G.pendingTrade.id || 'trade'}:${role}`;
+  if (!overlay.classList.contains('show') || tradeReviewShownKey !== key) {
+    tradeReviewShownKey = key;
+    const activeOverlay = document.querySelector('.overlay.show');
+    if (!activeOverlay || activeOverlay.id === 'trade-review-overlay') {
+      openOverlay('trade-review-overlay');
+    }
+  }
+}
+
+function validatePendingTrade(trade) {
+  if (!trade) return 'Trade proposal is missing.';
+  const from = G.players[trade.fromId];
+  const to = G.players[trade.toId];
+  if (!from || !to || from.bankrupt || to.bankrupt) return 'One of the players is bankrupt.';
+  if (trade.fromMoney > from.money) return `${from.name} no longer has enough cash.`;
+  if (trade.toMoney > to.money) return `${to.name} no longer has enough cash.`;
+
+  for (const id of trade.fromProps || []) {
+    const sp = SPACES[id];
+    const prop = G.properties[id];
+    if (!sp || !prop || prop.owner !== from.id) return `${from.name} no longer owns ${sp?.name || 'a property'}.`;
+    if (propertyHasBuildings(id)) return `Sell buildings on ${sp.name} before trading it.`;
+  }
+
+  for (const id of trade.toProps || []) {
+    const sp = SPACES[id];
+    const prop = G.properties[id];
+    if (!sp || !prop || prop.owner !== to.id) return `${to.name} no longer owns ${sp?.name || 'a property'}.`;
+    if (propertyHasBuildings(id)) return `Sell buildings on ${sp.name} before trading it.`;
+  }
+
+  return '';
+}
+
+function applyAcceptedTrade(trade) {
+  const from = G.players[trade.fromId];
+  const to = G.players[trade.toId];
+
+  (trade.fromProps || []).forEach(id => {
+    const prop = G.properties[id];
+    if (!prop) return;
+    prop.owner = to.id;
+    clearOwnedAsset(from, id);
+    addOwnedAsset(to, id);
+  });
+
+  (trade.toProps || []).forEach(id => {
+    const prop = G.properties[id];
+    if (!prop) return;
+    prop.owner = from.id;
+    clearOwnedAsset(to, id);
+    addOwnedAsset(from, id);
+  });
+
+  from.money = from.money - (trade.fromMoney || 0) + (trade.toMoney || 0);
+  to.money = to.money - (trade.toMoney || 0) + (trade.fromMoney || 0);
+
+  addLog(`${from.name} and ${to.name} completed a trade.`, 'success');
+}
+
 function openTradeModal() {
+  if (G.pendingTrade) {
+    toast('Resolve the current trade proposal first.', 'danger');
+    maybeShowPendingTradeReview();
+    return;
+  }
+
   const p = curPlayer();
   const sel = document.getElementById('trade-partner');
   sel.innerHTML = '';
@@ -2982,13 +3439,17 @@ function openTradeModal() {
   tradeSelected = {mine: [], theirs: []};
   document.getElementById('trade-my-money').value = 0;
   document.getElementById('trade-their-money').value = 0;
+  if (!sel.options.length) {
+    toast('No valid trade partners available.', 'danger');
+    return;
+  }
   renderTradeProps();
   openOverlay('trade-overlay');
 }
 
 function renderTradeProps() {
   const p = curPlayer();
-  const partnerId = parseInt(document.getElementById('trade-partner').value);
+  const partnerId = parseInt(document.getElementById('trade-partner').value, 10);
   const partner = G.players[partnerId];
 
   const renderList = (el, props, isMyList) => {
@@ -3019,40 +3480,139 @@ function renderTradeProps() {
 
 function confirmTrade() {
   if (!requireTurnControl()) return;
+  if (G.pendingTrade) {
+    toast('A trade is already pending.', 'danger');
+    return;
+  }
+
   const p = curPlayer();
-  const partnerId = parseInt(document.getElementById('trade-partner').value);
+  const partnerId = parseInt(document.getElementById('trade-partner').value, 10);
   const partner = G.players[partnerId];
-  const myMoney = parseInt(document.getElementById('trade-my-money').value) || 0;
-  const theirMoney = parseInt(document.getElementById('trade-their-money').value) || 0;
+  if (!partner || partner.bankrupt || partner.id === p.id) {
+    toast('Select a valid trade partner.', 'danger');
+    return;
+  }
+
+  const myMoney = Math.max(0, parseInt(document.getElementById('trade-my-money').value, 10) || 0);
+  const theirMoney = Math.max(0, parseInt(document.getElementById('trade-their-money').value, 10) || 0);
+
+  const myBlocked = tradeSelected.mine.find(id => propertyHasBuildings(id));
+  if (myBlocked !== undefined) {
+    toast(`Sell buildings on ${SPACES[myBlocked].name} before trading it.`, 'danger');
+    return;
+  }
+  const theirBlocked = tradeSelected.theirs.find(id => propertyHasBuildings(id));
+  if (theirBlocked !== undefined) {
+    toast(`${partner.name} must sell buildings on ${SPACES[theirBlocked].name} first.`, 'danger');
+    return;
+  }
 
   if (myMoney > p.money) { toast('You don\'t have that much money!', 'danger'); return; }
   if (theirMoney > partner.money) { toast(`${partner.name} doesn\'t have that much!`, 'danger'); return; }
 
-  // Transfer properties
-  tradeSelected.mine.forEach(id => {
-    const sp = SPACES[id];
-    G.properties[id].owner = partner.id;
-    removeFrom(p.properties, id); removeFrom(p.railroads, id); removeFrom(p.utilities, id);
-    if (sp.type === 'property') partner.properties.push(id);
-    else if (sp.type === 'railroad') partner.railroads.push(id);
-    else partner.utilities.push(id);
-  });
-  tradeSelected.theirs.forEach(id => {
-    const sp = SPACES[id];
-    G.properties[id].owner = p.id;
-    removeFrom(partner.properties, id); removeFrom(partner.railroads, id); removeFrom(partner.utilities, id);
-    if (sp.type === 'property') p.properties.push(id);
-    else if (sp.type === 'railroad') p.railroads.push(id);
-    else p.utilities.push(id);
-  });
-  p.money = p.money - myMoney + theirMoney;
-  partner.money = partner.money - theirMoney + myMoney;
+  const myInvalidOwner = tradeSelected.mine.find(id => G.properties[id]?.owner !== p.id);
+  if (myInvalidOwner !== undefined) {
+    toast(`You no longer own ${SPACES[myInvalidOwner].name}.`, 'danger');
+    return;
+  }
+  const partnerInvalidOwner = tradeSelected.theirs.find(id => G.properties[id]?.owner !== partner.id);
+  if (partnerInvalidOwner !== undefined) {
+    toast(`${partner.name} no longer owns ${SPACES[partnerInvalidOwner].name}.`, 'danger');
+    return;
+  }
 
-  addLog(`${p.name} traded with ${partner.name}!`, 'success');
+  if (!tradeSelected.mine.length && !tradeSelected.theirs.length && myMoney === 0 && theirMoney === 0) {
+    toast('Add cash or properties to propose a trade.', 'danger');
+    return;
+  }
+
+  G.pendingTrade = {
+    id: `tr_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`,
+    fromId: p.id,
+    toId: partner.id,
+    fromProps: [...tradeSelected.mine],
+    toProps: [...tradeSelected.theirs],
+    fromMoney: myMoney,
+    toMoney: theirMoney,
+    createdAt: Date.now(),
+  };
+
+  tradeReviewShownKey = '';
+  addLog(`${p.name} proposed a trade to ${partner.name}.`, 'important');
   closeOverlay('trade-overlay');
   renderAll();
   updateActionButtons();
-  toast('Trade complete! 🤝', 'gold');
+  toast(`Trade proposal sent to ${partner.name}.`, 'gold');
+}
+
+function respondTrade(acceptTrade) {
+  const trade = G.pendingTrade;
+  if (!trade) return;
+
+  if (isOnlineGame()) {
+    const me = getLocalPlayerIndex();
+    if (me !== trade.toId) {
+      toast(`Only ${G.players[trade.toId]?.name || 'the recipient'} can respond.`, 'danger');
+      return;
+    }
+  }
+
+  const from = G.players[trade.fromId];
+  const to = G.players[trade.toId];
+
+  if (!acceptTrade) {
+    addLog(`${to?.name || 'Player'} declined ${from?.name || 'player'}'s trade proposal.`, 'danger');
+    G.pendingTrade = null;
+    tradeReviewShownKey = '';
+    closeOverlay('trade-review-overlay');
+    renderAll();
+    updateActionButtons();
+    return;
+  }
+
+  const invalidReason = validatePendingTrade(trade);
+  if (invalidReason) {
+    addLog(`Trade proposal canceled: ${invalidReason}`, 'danger');
+    toast(invalidReason, 'danger');
+    G.pendingTrade = null;
+    tradeReviewShownKey = '';
+    closeOverlay('trade-review-overlay');
+    renderAll();
+    updateActionButtons();
+    return;
+  }
+
+  applyAcceptedTrade(trade);
+  G.pendingTrade = null;
+  tradeReviewShownKey = '';
+  closeOverlay('trade-review-overlay');
+  renderAll();
+  updateActionButtons();
+  checkBankruptcy();
+  toast('Trade completed! 🤝', 'gold');
+}
+
+function cancelTradeProposal() {
+  const trade = G.pendingTrade;
+  if (!trade) return;
+
+  if (isOnlineGame()) {
+    const me = getLocalPlayerIndex();
+    if (me !== trade.fromId) {
+      toast(`Only ${G.players[trade.fromId]?.name || 'the proposer'} can cancel this trade.`, 'danger');
+      return;
+    }
+  }
+
+  const from = G.players[trade.fromId];
+  const to = G.players[trade.toId];
+  addLog(`${from?.name || 'Player'} canceled the trade proposal to ${to?.name || 'player'}.`, 'danger');
+  G.pendingTrade = null;
+  tradeReviewShownKey = '';
+  closeOverlay('trade-overlay');
+  closeOverlay('trade-review-overlay');
+  renderAll();
+  updateActionButtons();
 }
 
 // ═══════════════════════════════════════════════
@@ -3133,12 +3693,68 @@ function payBailout() {
 // ═══════════════════════════════════════════════
 //  MONEY & BANKRUPTCY
 // ═══════════════════════════════════════════════
+function sellBuildingsForEmergencyCash(player) {
+  if (!player || player.bankrupt) return 0;
+  let raised = 0;
+  player.properties.forEach(id => {
+    const sp = SPACES[id];
+    const prop = G.properties[id];
+    if (!sp || !prop) return;
+    if (prop.hotel) {
+      const refund = Math.floor((sp.house * 5) / 2);
+      prop.hotel = false;
+      prop.houses = 0;
+      player.money += refund;
+      raised += refund;
+      addLog(`${player.name} sold hotel on ${sp.name} for ৳${fmt(refund)}.`, 'danger');
+    }
+    if (prop.houses > 0) {
+      const count = prop.houses;
+      const refund = Math.floor((sp.house * count) / 2);
+      prop.houses = 0;
+      player.money += refund;
+      raised += refund;
+      addLog(`${player.name} sold ${count} house${count > 1 ? 's' : ''} on ${sp.name} for ৳${fmt(refund)}.`, 'danger');
+    }
+  });
+  return raised;
+}
+
+function addOwnedAsset(player, id) {
+  const sp = SPACES[id];
+  if (!sp || !player) return;
+  if (sp.type === 'property' && !player.properties.includes(id)) player.properties.push(id);
+  else if (sp.type === 'railroad' && !player.railroads.includes(id)) player.railroads.push(id);
+  else if (sp.type === 'utility' && !player.utilities.includes(id)) player.utilities.push(id);
+}
+
+function clearOwnedAsset(player, id) {
+  removeFrom(player.properties, id);
+  removeFrom(player.railroads, id);
+  removeFrom(player.utilities, id);
+}
+
 function chargeMoney(p, amount, recipient=null, toParking=false) {
-  if (amount <= 0) { if (recipient) recipient.money += Math.abs(amount); return; }
-  const actualPay = Math.min(p.money, amount);
-  p.money -= actualPay;
-  if (recipient) recipient.money += actualPay;
-  else if (toParking) G.parkingPot += actualPay;
+  if (amount <= 0) { if (recipient) recipient.money += Math.abs(amount); return true; }
+  if (!p || p.bankrupt) return false;
+
+  if (p.money < amount) {
+    const raised = sellBuildingsForEmergencyCash(p);
+    if (raised > 0) {
+      addLog(`${p.name} raised ৳${fmt(raised)} by liquidating buildings.`, 'important');
+    }
+  }
+
+  if (p.money >= amount) {
+    p.money -= amount;
+    if (recipient && !recipient.bankrupt) recipient.money += amount;
+    else if (toParking) G.parkingPot += amount;
+    return true;
+  }
+
+  // Cannot cover debt even after liquidation.
+  declareBankruptcy(p, recipient && !recipient.bankrupt ? recipient : null, amount, toParking);
+  return false;
 }
 
 function showRentModal(payer, owner, propName, rent) {
@@ -3150,14 +3766,7 @@ function showRentModal(payer, owner, propName, rent) {
 function checkBankruptcy() {
   G.players.forEach(p => {
     if (p.bankrupt || p.money >= 0) return;
-    // Check if can raise money by mortgaging everything
-    const totalMortgage = [...p.properties, ...p.railroads, ...p.utilities].reduce((s, id) => {
-      const pr = G.properties[id];
-      return s + (pr.mortgaged ? 0 : SPACES[id].mortgage);
-    }, 0);
-    if (p.money + totalMortgage < 0) {
-      declareBankruptcy(p);
-    }
+    declareBankruptcy(p, null, Math.abs(p.money), true);
   });
   const active = G.players.filter(p => !p.bankrupt);
   if (active.length === 1) {
@@ -3165,19 +3774,85 @@ function checkBankruptcy() {
   }
 }
 
-function declareBankruptcy(p) {
+function declareBankruptcy(p, creditor = null, debtAmount = 0, toBank = false) {
+  if (!p || p.bankrupt) return;
+
+  if (G.pendingTrade && (G.pendingTrade.fromId === p.id || G.pendingTrade.toId === p.id)) {
+    const from = G.players[G.pendingTrade.fromId];
+    const to = G.players[G.pendingTrade.toId];
+    addLog(`Trade proposal between ${from?.name || 'players'} and ${to?.name || 'players'} was canceled due to bankruptcy.`, 'danger');
+    G.pendingTrade = null;
+    tradeReviewShownKey = '';
+    closeOverlay('trade-review-overlay');
+  }
+
+  sellBuildingsForEmergencyCash(p);
   p.bankrupt = true;
-  addLog(`${p.name} is BANKRUPT! 💀`, 'danger');
-  // Return all properties to bank
-  [...p.properties, ...p.railroads, ...p.utilities].forEach(id => {
-    G.properties[id].owner = null;
-    G.properties[id].houses = 0;
-    G.properties[id].hotel = false;
-    G.properties[id].mortgaged = false;
-  });
-  p.properties = []; p.railroads = []; p.utilities = [];
-  document.getElementById('bankrupt-name').textContent = `${p.name} is Bankrupt!`;
-  document.getElementById('bankrupt-desc').textContent = `${p.name} has run out of money and is eliminated.`;
+  p.inJail = false;
+
+  const assets = [...p.properties, ...p.railroads, ...p.utilities];
+
+  if (creditor && !creditor.bankrupt && creditor.id !== p.id) {
+    addLog(`${p.name} is BANKRUPT to ${creditor.name}! Assets transferred.`, 'danger');
+    if (p.money > 0) creditor.money += p.money;
+    p.money = 0;
+
+    let interestDue = 0;
+    assets.forEach(id => {
+      const prop = G.properties[id];
+      const sp = SPACES[id];
+      if (!prop || !sp) return;
+      clearOwnedAsset(p, id);
+      prop.owner = creditor.id;
+      addOwnedAsset(creditor, id);
+      if (prop.mortgaged) {
+        const interest = Math.ceil(mortgageValueForSpace(sp) * 0.1);
+        interestDue += interest;
+      }
+    });
+
+    if (interestDue > 0) {
+      creditor.money -= interestDue;
+      addLog(`${creditor.name} paid ৳${fmt(interestDue)} mortgage interest to the bank.`, 'danger');
+      if (creditor.money < 0 && !creditor.bankrupt) {
+        addLog(`${creditor.name} cannot cover mortgage interest and goes bankrupt to the bank.`, 'danger');
+        declareBankruptcy(creditor, null, Math.abs(creditor.money), true);
+      }
+    }
+
+    document.getElementById('bankrupt-name').textContent = `${p.name} is Bankrupt!`;
+    document.getElementById('bankrupt-desc').textContent = `${p.name} could not pay ${creditor.name} and turned over all assets.`;
+  } else {
+    const debtTxt = debtAmount > 0 ? ` (৳${fmt(debtAmount)})` : '';
+    addLog(`${p.name} is BANKRUPT to the Bank${debtTxt}. Bank auctions all properties.`, 'danger');
+    if (toBank && p.money > 0) G.parkingPot += p.money;
+    p.money = 0;
+
+    const auctionIds = [];
+    assets.forEach(id => {
+      const prop = G.properties[id];
+      if (!prop) return;
+      clearOwnedAsset(p, id);
+      prop.owner = null;
+      prop.houses = 0;
+      prop.hotel = false;
+      prop.mortgaged = false;
+      auctionIds.push(id);
+    });
+
+    queueBankAuctions(auctionIds);
+    if (auctionIds.length) {
+      addLog(`Bank queued ${auctionIds.length} property auction${auctionIds.length > 1 ? 's' : ''}.`, 'important');
+    }
+
+    document.getElementById('bankrupt-name').textContent = `${p.name} is Bankrupt!`;
+    document.getElementById('bankrupt-desc').textContent = `${p.name} could not pay the Bank. Their properties are queued for auction.`;
+  }
+
+  p.properties = [];
+  p.railroads = [];
+  p.utilities = [];
+  p.bankrupt = true;
   openOverlay('bankrupt-overlay');
 }
 
@@ -3186,6 +3861,8 @@ function confirmBankruptcy() {
   G.phase = 'end';
   renderAll();
   updateActionButtons();
+  if (launchNextBankAuction()) return;
+  checkBankruptcy();
 }
 
 // ═══════════════════════════════════════════════
@@ -3238,7 +3915,7 @@ function showSpaceInfo(id) {
         <tr><td>Rent 4 Houses</td><td>${fmtCurrency(sp.rent[4])}</td></tr>
         <tr><td>Rent Hotel</td><td>${fmtCurrency(sp.rent[5])}</td></tr>
         <tr><td>House Cost</td><td>${fmtCurrency(sp.house)}</td></tr>
-        <tr><td>Mortgage Value</td><td>${fmtCurrency(sp.mortgage)}</td></tr>
+        <tr><td>Mortgage Value</td><td>${fmtCurrency(mortgageValueForSpace(sp))}</td></tr>
         ${prop ? `<tr><td>Buildings</td><td>${prop.hotel?'🏨 Hotel':prop.houses>0?'🏠×'+prop.houses:'None'}</td></tr>` : ''}
       </table>
       <button class="btn btn-full" style="background:rgba(255,255,255,.1);color:#fff;margin-top:1rem" onclick="closeOverlay('prop-overlay')">Close</button>
@@ -3254,7 +3931,7 @@ function showSpaceInfo(id) {
         <tr><td>Rent (2 RRs)</td><td>${fmtCurrency(sp.rent[1])}</td></tr>
         <tr><td>Rent (3 RRs)</td><td>${fmtCurrency(sp.rent[2])}</td></tr>
         <tr><td>Rent (4 RRs)</td><td>${fmtCurrency(sp.rent[3])}</td></tr>
-        <tr><td>Mortgage</td><td>${fmtCurrency(sp.mortgage)}</td></tr>
+        <tr><td>Mortgage</td><td>${fmtCurrency(mortgageValueForSpace(sp))}</td></tr>
       </table>
       <button class="btn btn-full" style="background:rgba(255,255,255,.1);color:#fff;margin-top:1rem" onclick="closeOverlay('prop-overlay')">Close</button>
     `;
@@ -3308,6 +3985,43 @@ function addLog(text, type='') {
   renderGameLog();
 }
 
+function getLastChatMessage() {
+  return Array.isArray(G.chat) && G.chat.length ? G.chat[G.chat.length - 1] : null;
+}
+
+function chatMessageKey(msg) {
+  if (!msg) return '';
+  const ts = Number(msg.time) || 0;
+  const who = String(msg.uid || msg.name || '');
+  const text = String(msg.text || '');
+  return `${ts}|${who}|${text}`;
+}
+
+function isChatPanelOpenOnMobile() {
+  const drawer = document.getElementById('mobile-drawer');
+  if (!drawer || !drawer.classList.contains('open')) return false;
+  return !!document.getElementById('drawer-chat');
+}
+
+function showChatPreview(msg) {
+  const key = chatMessageKey(msg);
+  if (!key || CHAT_PREVIEW.lastShownKey === key) return;
+  CHAT_PREVIEW.lastShownKey = key;
+
+  const isMobile = !!(window.matchMedia && window.matchMedia('(max-width: 899px)').matches);
+  if (!isMobile || isChatPanelOpenOnMobile()) return;
+
+  const activeId = document.activeElement?.id || '';
+  if (activeId === 'chat-input' || activeId === 'drawer-chat-input') return;
+
+  const token = String(msg.token || '💬');
+  const name = String(msg.name || 'Player').trim() || 'Player';
+  const cleanText = String(msg.text || '').replace(/\s+/g, ' ').trim();
+  if (!cleanText) return;
+  const preview = cleanText.length > 56 ? `${cleanText.slice(0, 56)}...` : cleanText;
+  toast(`${token} ${name}: ${preview}`, 'chat');
+}
+
 function sendChat() {
   const inp = document.getElementById('chat-input');
   const text = inp.value.trim();
@@ -3325,6 +4039,7 @@ function sendChat() {
     time: Date.now(),
   });
   if (G.chat.length > 120) G.chat = G.chat.slice(-120);
+  showChatPreview(getLastChatMessage());
   renderChatLog();
   const dc = document.getElementById('drawer-chat');
   if (dc) dc.innerHTML = document.getElementById('chat-log').innerHTML;
