@@ -32,6 +32,14 @@ body{font-family:var(--font-body);background:#0f2318;color:#1a1a1a;overscroll-be
 .screen{position:fixed;inset:0;display:flex;flex-direction:column;transition:opacity .35s,transform .35s;will-change:opacity}
 .screen.hidden{opacity:0;pointer-events:none;transform:scale(.97)}
 
+#home-screen,#online-screen,#credits-screen{background:linear-gradient(145deg,#0a1f10 0%,#1a3d25 50%,#0d2b1a 100%);overflow-y:auto}
+.page-top-actions{display:flex;justify-content:flex-start;padding:1rem 1rem 0;max-width:700px;margin:0 auto;width:100%}
+.page-back-btn{background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.2)}
+.home-actions{display:grid;grid-template-columns:1fr;gap:.75rem}
+.credits-body{max-width:700px;margin:0 auto;width:100%;padding:1rem 1rem 2rem}
+.credits-link{color:#93c5fd;text-decoration:none;font-weight:700}
+.credits-link:hover{text-decoration:underline}
+
 /* ── LOBBY ── */
 #lobby-screen{background:linear-gradient(145deg,#0a1f10 0%,#1a3d25 50%,#0d2b1a 100%);overflow-y:auto}
 .lobby-header{text-align:center;padding:2.5rem 1rem 1rem;position:relative}
@@ -75,6 +83,8 @@ body{font-family:var(--font-body);background:#0f2318;color:#1a1a1a;overscroll-be
 .player-slot .name-input{flex:1;background:transparent;border:none;border-bottom:1px solid rgba(255,255,255,.2);color:#fff;font-size:.95rem;padding:.2rem .4rem;outline:none;font-family:var(--font-body)}
 .player-slot .name-input::placeholder{color:rgba(255,255,255,.3)}
 .player-slot .name-input:focus{border-bottom-color:var(--green-light)}
+.player-slot .type-select{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:6px;padding:.28rem .45rem;font-size:.78rem;font-family:var(--font-body);min-width:88px}
+.player-slot .type-select option{background:#1a3d25;color:#fff}
 .player-slot .remove-btn{background:rgba(192,57,43,.3);border:none;color:#ff6b6b;width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center}
 
 .how-to{list-style:none;color:rgba(255,255,255,.65);font-size:.9rem;line-height:1.8}
@@ -426,21 +436,41 @@ body{font-family:var(--font-body);background:#0f2318;color:#1a1a1a;overscroll-be
 </head>
 <body>
 
-<!-- ═══════════════ LOBBY SCREEN ═══════════════ -->
-<div class="screen" id="lobby-screen">
+<!-- ═══════════════ HOME SCREEN ═══════════════ -->
+<div class="screen" id="home-screen">
   <div class="lobby-header">
     <div class="lobby-logo">🎲 <span>Bangladeshi</span> Monopoly</div>
     <div class="lobby-subtitle">Multiplayer Board Game • Pass & Play</div>
-    <div class="lobby-tagline">✦ Local Multiplayer ✦</div>
+    <div class="lobby-tagline">✦ Choose Your Mode ✦</div>
   </div>
   <div class="lobby-body">
     <div class="card">
-      <h2>Setup Players</h2>
-      <div id="player-slots"></div>
-      <button class="btn btn-secondary btn-sm" id="add-player-btn" onclick="addPlayerSlot()">+ Add Player</button>
+      <h2>Play</h2>
+      <div class="home-actions">
+        <button class="btn btn-primary btn-lg btn-full" onclick="openOfflineSetupPage()">🎮 Offline</button>
+        <button class="btn btn-secondary btn-lg btn-full" onclick="openOnlineSetupPage('host')">🌐 Online</button>
+      </div>
     </div>
     <div class="card">
-      <h2>🌐 Online Rooms (Firebase)</h2>
+      <h2>Credits</h2>
+      <button class="btn btn-gold btn-full" onclick="showScreen('credits-screen')">🏅 View Credits</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ ONLINE SETUP SCREEN ═══════════════ -->
+<div class="screen hidden" id="online-screen">
+  <div class="page-top-actions">
+    <button class="btn btn-sm page-back-btn" onclick="openHomePage()">← Back</button>
+  </div>
+  <div class="lobby-header" style="padding-top:1rem">
+    <div class="lobby-logo">🌐 <span>Online</span> Room Setup</div>
+    <div class="lobby-subtitle">Create or join a Firebase room</div>
+    <div class="lobby-tagline">✦ Room Entry Page ✦</div>
+  </div>
+  <div class="lobby-body">
+    <div class="card">
+      <h2>Online Rooms (Firebase)</h2>
       <div class="input-group">
         <label>Your Online Name</label>
         <input type="text" id="online-player-name" maxlength="24" placeholder="Enter your name">
@@ -482,19 +512,44 @@ body{font-family:var(--font-body);background:#0f2318;color:#1a1a1a;overscroll-be
           <label style="color:rgba(255,255,255,.7);font-size:.85rem">Open Rooms</label>
           <button class="btn btn-sm" style="padding:.3rem .55rem;background:rgba(255,255,255,.12);color:#fff" onclick="refreshOpenRoomsList(true)">Refresh</button>
         </div>
-        <div id="open-rooms-list" style="margin-top:.5rem;max-height:150px;overflow-y:auto"></div>
+        <div id="open-rooms-list" style="margin-top:.5rem;max-height:170px;overflow-y:auto"></div>
       </div>
+    </div>
+  </div>
+</div>
 
+<!-- ═══════════════ LOBBY SCREEN ═══════════════ -->
+<div class="screen hidden" id="lobby-screen">
+  <div class="page-top-actions">
+    <button class="btn btn-sm page-back-btn" onclick="handleLobbyBack()">← Back</button>
+  </div>
+  <div class="lobby-header" style="padding-top:1rem">
+    <div class="lobby-logo">🎲 <span>Bangladeshi</span> Monopoly</div>
+    <div class="lobby-subtitle">Multiplayer Board Game • Pass & Play</div>
+    <div class="lobby-tagline" id="lobby-context-tagline">✦ Local Multiplayer ✦</div>
+  </div>
+  <div class="lobby-body">
+    <div class="card">
+      <h2>Setup Players</h2>
+      <div id="player-slots"></div>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+        <button class="btn btn-secondary btn-sm" id="add-player-btn" onclick="addPlayerSlot('human')">+ Add Human</button>
+        <button class="btn btn-secondary btn-sm" id="add-ai-btn" onclick="addPlayerSlot('ai')">+ Add AI</button>
+      </div>
+    </div>
+
+    <div class="card" id="online-room-panel" style="display:none">
+      <h2>🌐 Online Room</h2>
       <div class="two-col" style="margin-top:.75rem">
         <button class="btn btn-gold btn-sm" id="ready-btn" onclick="toggleReadyState()" disabled>✅ Ready</button>
         <button class="btn btn-danger btn-sm" id="leave-room-btn" onclick="leaveOnlineRoom()" disabled>Leave Room</button>
       </div>
-
       <div id="online-room-players" style="margin-top:.75rem;max-height:150px;overflow-y:auto"></div>
       <div id="online-room-status" style="margin-top:.75rem;color:rgba(255,255,255,.65);font-size:.82rem;line-height:1.5">
         Offline mode. Choose Host or Join.
       </div>
     </div>
+
     <div class="card">
       <h2>🗺️ Choose Board Theme</h2>
       <div id="board-theme-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:.5rem"></div>
@@ -537,6 +592,28 @@ body{font-family:var(--font-body);background:#0f2318;color:#1a1a1a;overscroll-be
       </ul>
     </div>
     <button class="btn btn-primary btn-lg btn-full" onclick="startGame()" id="start-btn" style="margin-top:.5rem">🎮 Start Game</button>
+  </div>
+</div>
+
+<!-- ═══════════════ CREDITS SCREEN ═══════════════ -->
+<div class="screen hidden" id="credits-screen">
+  <div class="page-top-actions">
+    <button class="btn btn-sm page-back-btn" onclick="openHomePage()">← Back</button>
+  </div>
+  <div class="lobby-header" style="padding-top:1rem">
+    <div class="lobby-logo">🏅 <span>Credits</span></div>
+    <div class="lobby-subtitle"></div>
+  </div>
+  <div class="credits-body">
+    <div class="card">
+      <h2>Made By</h2>
+      <p style="color:rgba(255,255,255,.75);font-size:1rem;line-height:1.7">
+        Made by <strong style="color:#fff">wakifrajin</strong>.
+      </p>
+      <p style="margin-top:.4rem">
+        <a class="credits-link" href="https://github.com/WakifRajin" target="_blank" rel="noopener noreferrer">https://github.com/WakifRajin</a>
+      </p>
+    </div>
   </div>
 </div>
 
@@ -844,6 +921,7 @@ const PLAYING_ROOM_STALE_MS = 1000 * 60 * 60 * 24;
 const EMPTY_ROOM_STALE_MS = 1000 * 60 * 15;
 const ROOM_CLEANUP_INTERVAL_MS = 1000 * 60 * 2;
 const ROOM_CLEANUP_BATCH_LIMIT = 16;
+let LOBBY_CONTEXT = 'offline';
 
 function ensureLocalUid() {
   const key = 'monopoly_online_uid';
@@ -1596,6 +1674,10 @@ let tradeReviewShownKey = '';
 const CHAT_PREVIEW = {
   lastShownKey: '',
 };
+const AI_CTRL = {
+  timerId: null,
+  lastKey: '',
+};
 
 function initGameState(players, startMoney) {
   const shuffledChance = shuffle([...CHANCE_CARDS]);
@@ -1608,6 +1690,7 @@ function initGameState(players, startMoney) {
       id: i,
       uid: p.uid || null,
       name: p.name,
+      kind: p.kind === 'ai' ? 'ai' : 'human',
       token: p.token,
       color: TOKEN_COLORS[i % TOKEN_COLORS.length],
       money: startMoney, pos: 0, properties: [], railroads: [], utilities: [],
@@ -1640,9 +1723,17 @@ function initGameState(players, startMoney) {
 //  LOBBY SETUP
 // ═══════════════════════════════════════════════
 let lobbyPlayers = [
-  {uid: ONLINE.localUid, name:'Player 1', token:TOKENS[0]},
-  {uid: null, name:'Player 2', token:TOKENS[1]}
+  {uid: ONLINE.localUid, name:'Player 1', token:TOKENS[0], kind:'human'},
+  {uid: null, name:'Player 2', token:TOKENS[1], kind:'human'}
 ];
+
+function normalizePlayerKind(kind) {
+  return kind === 'ai' ? 'ai' : 'human';
+}
+
+function defaultLobbyPlayerName(index, kind = 'human') {
+  return normalizePlayerKind(kind) === 'ai' ? `AI ${index + 1}` : `Player ${index + 1}`;
+}
 
 function getRoomRef() {
   return FIREBASE.api.ref(FIREBASE.db, `rooms/${ONLINE.roomId}`);
@@ -1689,6 +1780,7 @@ function hydrateRemoteGameState(raw) {
     ...p,
     id: i,
     name: sanitizeName(p.name, `Player ${i + 1}`),
+    kind: normalizePlayerKind(p.kind),
     token: sanitizeToken(p.token, TOKENS[i % TOKENS.length]),
     color: sanitizeColor(p.color, TOKEN_COLORS[i % TOKEN_COLORS.length]),
     money: Number.isFinite(Number(p.money)) ? Number(p.money) : 0,
@@ -1921,7 +2013,7 @@ async function applyRoomSnapshot(data) {
       ONLINE.isApplyingRemote = false;
     }
   } else if (ONLINE.status === 'lobby') {
-    renderLobby();
+    openOnlineRoomPage();
     if (departureMessage) {
       toast(departureMessage, 'danger');
     }
@@ -2029,7 +2121,7 @@ async function createOnlineRoom() {
     }
 
     const candidateRef = FIREBASE.api.ref(FIREBASE.db, `rooms/${candidateRoomId}`);
-    const candidateMe = { uid: ONLINE.localUid, name: myName, token: TOKENS[0], ready: false };
+    const candidateMe = { uid: ONLINE.localUid, name: myName, token: TOKENS[0], kind: 'human', ready: false };
 
     try {
       const result = await FIREBASE.api.runTransaction(candidateRef, current => {
@@ -2072,7 +2164,7 @@ async function createOnlineRoom() {
   if (codeEl) codeEl.value = createdRoomId;
   const hostPassEl = document.getElementById('host-room-password');
   if (hostPassEl) hostPassEl.value = '';
-  renderLobby();
+  openOnlineRoomPage();
   toast(`Room created: ${createdRoomId}`, 'gold');
 }
 
@@ -2152,7 +2244,7 @@ async function joinOnlineRoom() {
           return;
         }
         const token = tokenForPlayer(players, ONLINE.localUid);
-        players = [...players, { uid: ONLINE.localUid, name: myName, token, ready: false }];
+        players = [...players, { uid: ONLINE.localUid, name: myName, token, kind: 'human', ready: false }];
       } else {
         const currentToken = sanitizeToken(players[existingIdx].token, TOKENS[existingIdx % TOKENS.length]);
         const otherTokens = new Set(
@@ -2167,6 +2259,7 @@ async function joinOnlineRoom() {
           uid: ONLINE.localUid,
           name: myName,
           token,
+          kind: 'human',
           ready: false,
         };
       }
@@ -2186,7 +2279,7 @@ async function joinOnlineRoom() {
 
   attachRoomListener(roomId);
   if (passEl) passEl.value = '';
-  renderLobby();
+  openOnlineRoomPage();
   toast(`Joined room ${roomId}`, 'gold');
 }
 
@@ -2403,6 +2496,7 @@ function applyOnlineDepartureRuleToRoomData(roomData, leavingUid) {
 
 async function leaveOnlineRoom(showToast = true, mutateRoom = true) {
   if (!ONLINE.connected || !FIREBASE.api) {
+    LOBBY_CONTEXT = 'online';
     ONLINE.connected = false;
     ONLINE.roomId = null;
     ONLINE.isHost = false;
@@ -2411,6 +2505,7 @@ async function leaveOnlineRoom(showToast = true, mutateRoom = true) {
     ONLINE.status = 'offline';
     ONLINE.lastDepartureNoticeId = '';
     updateOnlineLobbyUI();
+    showScreen('online-screen');
     return;
   }
 
@@ -2436,9 +2531,10 @@ async function leaveOnlineRoom(showToast = true, mutateRoom = true) {
   ONLINE.status = 'offline';
   ONLINE.revision = 0;
   ONLINE.lastDepartureNoticeId = '';
+  LOBBY_CONTEXT = 'online';
   updateOnlineLobbyUI();
   renderLobby();
-  showScreen('lobby-screen');
+  showScreen('online-screen');
   if (showToast) toast(wasPlaying ? 'You left the match.' : 'Left online room.', 'gold');
 }
 
@@ -2446,7 +2542,15 @@ function renderLobby() {
   const el = document.getElementById('player-slots');
   el.innerHTML = '';
   const online = isOnlineGame();
+  const showOnlinePanel = online || LOBBY_CONTEXT === 'online';
+  const onlinePanel = document.getElementById('online-room-panel');
+  if (onlinePanel) onlinePanel.style.display = showOnlinePanel ? '' : 'none';
+  const taglineEl = document.getElementById('lobby-context-tagline');
+  if (taglineEl) taglineEl.textContent = showOnlinePanel ? '✦ Online Room Lobby ✦' : '✦ Local Multiplayer ✦';
+
   lobbyPlayers.forEach((p, i) => {
+    const kind = normalizePlayerKind(p.kind);
+    p.kind = kind;
     const div = document.createElement('div');
     div.className = 'player-slot active';
     const isMe = p.uid && p.uid === ONLINE.localUid;
@@ -2456,13 +2560,20 @@ function renderLobby() {
     const pColor = TOKEN_COLORS[i % TOKEN_COLORS.length];
     const safeName = escAttr(p.name);
     const readyBadge = online && p.uid ? `<span style="margin-left:.3rem;font-size:.72rem;padding:.1rem .35rem;border-radius:10px;background:${p.ready?'rgba(45,160,90,.3)':'rgba(127,29,29,.3)'};color:${p.ready?'#86efac':'#fca5a5'}">${p.ready?'READY':'NOT READY'}</span>` : '';
+    const typeSelect = !online
+      ? `<select class="type-select" title="Player type" onchange="onLobbyTypeChange(${i}, this.value)">
+           <option value="human" ${kind === 'human' ? 'selected' : ''}>🙂 Human</option>
+           <option value="ai" ${kind === 'ai' ? 'selected' : ''}>🤖 AI</option>
+         </select>`
+      : '';
     const tokenControls = (online && isMe)
       ? `<div style="display:flex;gap:.25rem"><button class="btn btn-sm" style="padding:.2rem .35rem;background:rgba(255,255,255,.12);color:#fff" onclick="cycleMyToken(-1)">◀</button><button class="btn btn-sm" style="padding:.2rem .35rem;background:rgba(255,255,255,.12);color:#fff" onclick="cycleMyToken(1)">▶</button></div>`
       : '';
     div.innerHTML = `
       <div class="token-preview" style="color:${pColor}">${p.token}</div>
-      <input class="name-input" value="${safeName}" placeholder="Player ${i+1}" onchange="onLobbyNameChange(${i}, this.value)" ${readOnlyAttr} style="color:${pColor};${editable?'':'opacity:.8;cursor:not-allowed'}">
+      <input class="name-input" value="${safeName}" placeholder="${escAttr(defaultLobbyPlayerName(i, kind))}" onchange="onLobbyNameChange(${i}, this.value)" ${readOnlyAttr} style="color:${pColor};${editable?'':'opacity:.8;cursor:not-allowed'}">
       ${readyBadge}
+      ${typeSelect}
       ${tokenControls}
       ${removeBtn}
     `;
@@ -2470,7 +2581,10 @@ function renderLobby() {
   });
 
   const addBtn = document.getElementById('add-player-btn');
-  if (addBtn) addBtn.style.display = (online || lobbyPlayers.length >= 8) ? 'none' : '';
+  const addAiBtn = document.getElementById('add-ai-btn');
+  const hideAddButtons = online || lobbyPlayers.length >= 8;
+  if (addBtn) addBtn.style.display = hideAddButtons ? 'none' : '';
+  if (addAiBtn) addAiBtn.style.display = hideAddButtons ? 'none' : '';
 
   const onlineNameInput = document.getElementById('online-player-name');
   if (onlineNameInput && !onlineNameInput.value) {
@@ -2517,7 +2631,8 @@ function renderLobby() {
 }
 
 function onLobbyNameChange(i, value) {
-  const clean = sanitizeName(value, `Player ${i + 1}`);
+  const fallback = defaultLobbyPlayerName(i, normalizePlayerKind(lobbyPlayers[i]?.kind));
+  const clean = sanitizeName(value, fallback);
   lobbyPlayers[i].name = clean;
   if (isOnlineGame() && lobbyPlayers[i].uid === ONLINE.localUid) {
     updateLocalPlayerProfile({ name: clean, ready: false }).catch(err => {
@@ -2527,14 +2642,34 @@ function onLobbyNameChange(i, value) {
   }
 }
 
-function addPlayerSlot() {
+function onLobbyTypeChange(i, kind) {
+  if (isOnlineGame()) return;
+  const player = lobbyPlayers[i];
+  if (!player) return;
+
+  const prevKind = normalizePlayerKind(player.kind);
+  const nextKind = normalizePlayerKind(kind);
+  player.kind = nextKind;
+
+  const prevDefault = defaultLobbyPlayerName(i, prevKind);
+  const nextDefault = defaultLobbyPlayerName(i, nextKind);
+  const currentName = sanitizeName(player.name, prevDefault);
+  if (!currentName || currentName === prevDefault || currentName === defaultLobbyPlayerName(i, 'human') || currentName === defaultLobbyPlayerName(i, 'ai')) {
+    player.name = nextDefault;
+  }
+
+  renderLobby();
+}
+
+function addPlayerSlot(kind = 'human') {
   if (isOnlineGame()) {
     toast('In online mode, players join with room code.', 'danger');
     return;
   }
   if (lobbyPlayers.length >= 8) return;
   const i = lobbyPlayers.length;
-  lobbyPlayers.push({uid: null, name:`Player ${i+1}`, token:TOKENS[i]});
+  const nextKind = normalizePlayerKind(kind);
+  lobbyPlayers.push({uid: null, name: defaultLobbyPlayerName(i, nextKind), token:TOKENS[i], kind: nextKind});
   renderLobby();
 }
 
@@ -2545,9 +2680,11 @@ function removePlayer(i) {
 }
 
 async function startGame() {
+  clearOfflineAiTimer(true);
   const names = lobbyPlayers.map((p, i) => ({
     uid: p.uid || null,
-    name: sanitizeName(document.querySelectorAll('.name-input')[i]?.value || p.name, `Player ${i + 1}`),
+    name: sanitizeName(document.querySelectorAll('.name-input')[i]?.value || p.name, defaultLobbyPlayerName(i, normalizePlayerKind(p.kind))),
+    kind: isOnlineGame() ? 'human' : normalizePlayerKind(p.kind),
     token: sanitizeToken(p.token, TOKENS[i % TOKENS.length]),
     ready: !!p.ready,
   }));
@@ -2582,6 +2719,7 @@ async function startGame() {
       names.push({
         uid: p.uid || null,
         name: sanitizeName(p.name, `Player ${i + 1}`),
+        kind: 'human',
         token: sanitizeToken(p.token, TOKENS[i % TOKENS.length]),
         ready: !!p.ready,
       });
@@ -2681,6 +2819,7 @@ function renderAll() {
   syncAuctionOverlay();
   updateTopBar();
   updateActionButtons();
+  maybeScheduleOfflineAiTurn();
 }
 
 function syncAuctionOverlay() {
@@ -2689,7 +2828,8 @@ function syncAuctionOverlay() {
 
   if (G.auctionState) {
     renderAuction();
-    openOverlay('auction-overlay');
+    if (isOfflineAiAuctionTurn()) closeOverlay('auction-overlay');
+    else openOverlay('auction-overlay');
   } else {
     closeOverlay('auction-overlay');
   }
@@ -2742,7 +2882,7 @@ function renderPlayerCards() {
       div.innerHTML = `
         <div class="prow1">
           <div class="ptoken" style="color:${p.color}">${p.token}</div>
-          <div class="pname">${p.name}${p.bankrupt ? ' 💀' : ''}</div>
+          <div class="pname">${p.name}${isAiPlayer(p) ? ' 🤖' : ''}${p.bankrupt ? ' 💀' : ''}</div>
           <div class="pmoney">${fmtCurrency(p.money)}</div>
         </div>
         <div class="ppos">${p.inJail ? '⛓️ In Jail' : `📍 ${SPACES[p.pos].name}`}</div>
@@ -2759,7 +2899,7 @@ function renderPlayerCards() {
       chip.innerHTML = `
         <div class="mobile-player-main">
           <span class="mobile-player-token" style="color:${p.color}">${p.token}</span>
-          <span class="mobile-player-name">${escHtml(p.name)}${p.bankrupt ? ' 💀' : ''}</span>
+          <span class="mobile-player-name">${escHtml(p.name)}${isAiPlayer(p) ? ' 🤖' : ''}${p.bankrupt ? ' 💀' : ''}</span>
         </div>
         <div class="mobile-player-meta">${fmtCurrency(p.money)} • ${escHtml(location)}</div>
       `;
@@ -2827,10 +2967,172 @@ function renderBoardOwnership() {
 function updateTopBar() {
   const p = curPlayer();
   document.getElementById('tb-token').textContent = p.token;
-  document.getElementById('tb-name').textContent = p.name;
+  document.getElementById('tb-name').textContent = `${p.name}${isAiPlayer(p) ? ' 🤖' : ''}`;
   document.getElementById('tb-money').textContent = fmtCurrency(p.money);
   const jailTag = document.getElementById('tb-jail-tag');
   jailTag.style.display = p.inJail ? '' : 'none';
+}
+
+function isAiPlayer(player) {
+  return !!player && normalizePlayerKind(player.kind) === 'ai';
+}
+
+function isOfflineAiAuctionTurn() {
+  if (isOnlineGame() || !G || !G.auctionState || !Array.isArray(G.players)) return false;
+  const bidderId = currentAuctionBidderId();
+  if (!Number.isInteger(bidderId)) return false;
+  const bidder = G.players[bidderId];
+  return isAiPlayer(bidder) && !bidder.bankrupt;
+}
+
+function clearOfflineAiTimer(resetKey = false) {
+  if (AI_CTRL.timerId) {
+    clearTimeout(AI_CTRL.timerId);
+    AI_CTRL.timerId = null;
+  }
+  if (resetKey) AI_CTRL.lastKey = '';
+}
+
+function offlineAiStateKey() {
+  if (!G || !Array.isArray(G.players) || !G.players.length) return '';
+  const current = curPlayer();
+  const bidderId = currentAuctionBidderId();
+  const auctionPart = G.auctionState
+    ? `${G.auctionState.propId}:${bidderId}:${Number(G.auctionState.currentBid) || 0}`
+    : 'no-auction';
+  const tradePart = G.pendingTrade
+    ? `${G.pendingTrade.id || 'trade'}:${G.pendingTrade.fromId}:${G.pendingTrade.toId}`
+    : 'no-trade';
+  return [
+    G.currentPlayerIdx,
+    current?.kind || 'human',
+    G.phase,
+    G.pendingBuy === null ? 'no-buy' : G.pendingBuy,
+    auctionPart,
+    tradePart,
+    current?.inJail ? 1 : 0,
+    current?.bankrupt ? 1 : 0,
+  ].join('|');
+}
+
+function estimateAssetValue(spaceId) {
+  const sp = SPACES[spaceId];
+  if (!sp) return 0;
+  const price = Number(sp.price) || 0;
+  if (price > 0) return price;
+  return Math.max(0, Math.floor(mortgageValueForSpace(sp) * 2));
+}
+
+function maybeScheduleOfflineAiTurn() {
+  if (isOnlineGame() || !G || G.gameOver || !Array.isArray(G.players) || !G.players.length) {
+    clearOfflineAiTimer(true);
+    return;
+  }
+
+  const gameScreen = document.getElementById('game-screen');
+  if (!gameScreen || gameScreen.classList.contains('hidden')) {
+    clearOfflineAiTimer(true);
+    return;
+  }
+
+  const current = curPlayer();
+  const bidderId = currentAuctionBidderId();
+  const bidder = Number.isInteger(bidderId) ? G.players[bidderId] : null;
+  const tradeRecipient = G.pendingTrade ? G.players[Number(G.pendingTrade.toId)] : null;
+  const aiNeedsAction = (isAiPlayer(current) && !current.bankrupt)
+    || (!!G.auctionState && isAiPlayer(bidder) && !bidder.bankrupt)
+    || (!!G.pendingTrade && isAiPlayer(tradeRecipient) && !tradeRecipient.bankrupt);
+
+  if (!aiNeedsAction) {
+    clearOfflineAiTimer(true);
+    return;
+  }
+
+  const stateKey = offlineAiStateKey();
+  if (AI_CTRL.timerId && AI_CTRL.lastKey === stateKey) return;
+
+  clearOfflineAiTimer(false);
+  AI_CTRL.lastKey = stateKey;
+  AI_CTRL.timerId = setTimeout(runOfflineAiStep, 500 + Math.floor(Math.random() * 500));
+}
+
+function runOfflineAiStep() {
+  AI_CTRL.timerId = null;
+
+  if (isOnlineGame() || !G || G.gameOver || !Array.isArray(G.players) || !G.players.length) {
+    AI_CTRL.lastKey = '';
+    return;
+  }
+
+  const gameScreen = document.getElementById('game-screen');
+  if (!gameScreen || gameScreen.classList.contains('hidden')) return;
+
+  if (G.pendingTrade) {
+    const trade = G.pendingTrade;
+    const recipient = G.players[Number(trade.toId)];
+    if (isAiPlayer(recipient) && !recipient.bankrupt) {
+      const receiveValue = (trade.fromProps || []).reduce((sum, id) => sum + estimateAssetValue(id), 0) + Math.max(0, Number(trade.fromMoney) || 0);
+      const giveValue = (trade.toProps || []).reduce((sum, id) => sum + estimateAssetValue(id), 0) + Math.max(0, Number(trade.toMoney) || 0);
+      const accept = receiveValue >= (giveValue - Math.max(300, Math.floor(recipient.money * 0.05)));
+      respondTrade(accept);
+      return;
+    }
+  }
+
+  if (G.auctionState) {
+    const bidderId = currentAuctionBidderId();
+    const bidder = Number.isInteger(bidderId) ? G.players[bidderId] : null;
+    if (isAiPlayer(bidder) && !bidder.bankrupt) {
+      const a = G.auctionState;
+      const sp = SPACES[a.propId];
+      const basePrice = Number(sp?.price) || 1000;
+      const liquidityCap = Math.floor(bidder.money * 0.55);
+      const valuationCap = Math.floor(basePrice * (1.05 + Math.random() * 0.2));
+      const maxBid = Math.max(0, Math.min(liquidityCap, valuationCap));
+      const nextBid = (Number(a.currentBid) || 0) + 100;
+
+      if (nextBid > maxBid || bidder.money < nextBid) {
+        passAuction();
+        return;
+      }
+
+      const room = maxBid - (Number(a.currentBid) || 0);
+      let increment = 100;
+      if (room >= 1000) increment = 1000;
+      else if (room >= 500) increment = 500;
+      else if (room >= 200) increment = 200;
+      placeBid(increment);
+      return;
+    }
+  }
+
+  const p = curPlayer();
+  if (!isAiPlayer(p) || p.bankrupt) return;
+
+  if (G.pendingBuy !== null) {
+    const spaceId = G.pendingBuy;
+    const sp = SPACES[spaceId];
+    const price = Number(sp?.price) || 0;
+    const reserve = Math.max(1200, Math.floor(price * 0.3));
+    const shouldBuy = p.money >= price && (p.money - price >= reserve || Math.random() < 0.45);
+    closeOverlay('buy-overlay');
+    if (shouldBuy) actionBuy();
+    else startAuction();
+    return;
+  }
+
+  if (G.phase === 'roll') {
+    if (p.inJail && (p.jailTurns >= 2 || (p.money >= 3000 && Math.random() < 0.55))) {
+      payBailout();
+      return;
+    }
+    rollDice();
+    return;
+  }
+
+  if (G.phase === 'action' || G.phase === 'end') {
+    endTurn();
+  }
 }
 
 function updateActionButtons() {
@@ -2838,6 +3140,8 @@ function updateActionButtons() {
   const onProp = G.properties[p.pos];
   const sp = SPACES[p.pos];
   const turnOwnedByMe = canLocalControlTurn();
+  const aiTurnOffline = !isOnlineGame() && isAiPlayer(p);
+  const canHumanAct = turnOwnedByMe && !aiTurnOffline;
   const postRollPhase = G.phase === 'action' || G.phase === 'end';
   const actionLocked = !!G.pendingBuy || !!G.auctionState;
   const tradePending = !!G.pendingTrade;
@@ -2848,28 +3152,31 @@ function updateActionButtons() {
   const canEnd = G.phase === 'action' || G.phase === 'end';
   const inJail = p.inJail;
 
-  ['btn-buy','mb-buy'].forEach(id => { const el = document.getElementById(id); if(el) el.disabled = !turnOwnedByMe || !canBuyAny; });
-  ['btn-build','mb-build'].forEach(id => { const el = document.getElementById(id); if(el) el.disabled = !turnOwnedByMe || !canBuild; });
-  ['btn-mortgage','mb-mortgage'].forEach(id => { const el = document.getElementById(id); if(el) el.disabled = !turnOwnedByMe || !canMortgage; });
-  ['btn-trade','mb-trade'].forEach(id => { const el = document.getElementById(id); if(el) el.disabled = !turnOwnedByMe || !canTrade; });
-  ['btn-end','mb-end'].forEach(id => { const el = document.getElementById(id); if(el) el.disabled = !turnOwnedByMe || !canEnd; });
+  ['btn-buy','mb-buy'].forEach(id => { const el = document.getElementById(id); if(el) el.disabled = !canHumanAct || !canBuyAny; });
+  ['btn-build','mb-build'].forEach(id => { const el = document.getElementById(id); if(el) el.disabled = !canHumanAct || !canBuild; });
+  ['btn-mortgage','mb-mortgage'].forEach(id => { const el = document.getElementById(id); if(el) el.disabled = !canHumanAct || !canMortgage; });
+  ['btn-trade','mb-trade'].forEach(id => { const el = document.getElementById(id); if(el) el.disabled = !canHumanAct || !canTrade; });
+  ['btn-end','mb-end'].forEach(id => { const el = document.getElementById(id); if(el) el.disabled = !canHumanAct || !canEnd; });
   
   const rollBtn = document.getElementById('roll-btn');
   if (rollBtn) {
-    rollBtn.disabled = G.phase !== 'roll' || !turnOwnedByMe;
-    rollBtn.textContent = !turnOwnedByMe
+    rollBtn.disabled = G.phase !== 'roll' || !canHumanAct;
+    rollBtn.textContent = aiTurnOffline
+      ? `🤖 ${p.name} is thinking...`
+      : !turnOwnedByMe
       ? `⏳ ${p.name} is playing`
       : (inJail && G.phase === 'roll' ? '🎲 Roll for Doubles' : '🎲 Roll Dice');
   }
 
   // Jail bail button
-  const bailVis = turnOwnedByMe && inJail && G.phase === 'roll' && p.money >= 500;
+  const bailVis = canHumanAct && inJail && G.phase === 'roll' && p.money >= 500;
   ['btn-pay-jail','mb-pay-jail'].forEach(id => { const el = document.getElementById(id); if(el) el.style.display = bailVis ? '' : 'none'; });
 
   // Center message
   const cm = document.getElementById('center-msg');
   if (cm) {
-    if (!turnOwnedByMe) cm.textContent = `Watching ${p.name}'s turn`;
+    if (aiTurnOffline) cm.textContent = `🤖 ${p.name} is making a move`;
+    else if (!turnOwnedByMe) cm.textContent = `Watching ${p.name}'s turn`;
     else if (inJail && G.phase === 'roll') cm.textContent = `Roll doubles or pay ৳500 bail`;
     else if (G.phase === 'roll') cm.textContent = `${p.name}'s turn to roll`;
     else if (G.phase === 'action') cm.textContent = `Landed on ${sp.name}`;
@@ -2878,7 +3185,8 @@ function updateActionButtons() {
 
   const mobileTurnLine = document.getElementById('mobile-turnline');
   if (mobileTurnLine) {
-    if (!turnOwnedByMe) mobileTurnLine.textContent = `⏳ Watching ${p.name}'s turn`;
+    if (aiTurnOffline) mobileTurnLine.textContent = `🤖 ${p.name} is thinking`;
+    else if (!turnOwnedByMe) mobileTurnLine.textContent = `⏳ Watching ${p.name}'s turn`;
     else if (inJail && G.phase === 'roll') mobileTurnLine.textContent = '⛓️ Roll doubles or pay bail';
     else if (G.phase === 'roll') mobileTurnLine.textContent = '🎲 Roll dice to move';
     else if (G.phase === 'action') mobileTurnLine.textContent = `📍 ${sp.name} • choose an action`;
@@ -2886,7 +3194,7 @@ function updateActionButtons() {
   }
 
   // Prompt jailed player with clear choices at the start of their roll phase.
-  if (turnOwnedByMe && inJail && G.phase === 'roll') {
+  if (canHumanAct && inJail && G.phase === 'roll') {
     const promptKey = `${G.currentPlayerIdx}:${p.jailTurns}:${G.phase}`;
     if (jailPromptShownKey !== promptKey && !document.querySelector('.overlay.show')) {
       jailPromptShownKey = promptKey;
@@ -2897,7 +3205,7 @@ function updateActionButtons() {
   maybeShowPendingTradeReview();
 
   // Start auto-advance timer when player enters the 'end' phase (move done, can end turn)
-  if (G.phase === 'end' && !G.gameOver && turnOwnedByMe) {
+  if (G.phase === 'end' && !G.gameOver && canHumanAct) {
     startTimer();
   } else {
     stopTimer();
@@ -3168,6 +3476,12 @@ function drawCard(type, p) {
     checkBankruptcy();
   };
 
+  if (!isOnlineGame() && isAiPlayer(p)) {
+    closeOverlay('card-overlay');
+    apply();
+    return;
+  }
+
   closeOverlay('card-overlay');
   openOverlay('card-overlay');
   document.querySelector('#card-overlay .btn').onclick = () => { closeOverlay('card-overlay'); apply(); };
@@ -3187,6 +3501,11 @@ function nearestRailroad(pos) {
 //  BUY / AUCTION
 // ═══════════════════════════════════════════════
 function promptBuy(p, sp) {
+  if (!isOnlineGame() && isAiPlayer(p)) {
+    closeOverlay('buy-overlay');
+    return;
+  }
+
   if (p.money < sp.price) {
     // Can't afford — auto auction
     document.getElementById('buy-title').textContent = `Can't Afford — Auction!`;
@@ -3260,7 +3579,9 @@ function beginAuction(propId, { source = 'market', bidderStartIdx = 0 } = {}) {
     source,
   };
   renderAuction();
-  openOverlay('auction-overlay');
+  if (isOfflineAiAuctionTurn()) closeOverlay('auction-overlay');
+  else openOverlay('auction-overlay');
+  maybeScheduleOfflineAiTurn();
   return true;
 }
 
@@ -3650,6 +3971,12 @@ function maybeShowPendingTradeReview() {
     return;
   }
 
+  const recipient = G.players[Number(G.pendingTrade.toId)];
+  if (!isOnlineGame() && isAiPlayer(recipient)) {
+    closeOverlay('trade-review-overlay');
+    return;
+  }
+
   const role = getPendingTradeRole();
   if (role === 'spectator') {
     closeOverlay('trade-review-overlay');
@@ -3925,6 +4252,11 @@ function showJailPrompt(p, mode = 'turn') {
   const actionsEl = document.getElementById('jail-actions');
   if (!iconEl || !titleEl || !descEl || !actionsEl || !p) return;
 
+  if (!isOnlineGame() && isAiPlayer(p)) {
+    closeOverlay('jail-overlay');
+    return;
+  }
+
   if (mode === 'sent') {
     iconEl.textContent = '🚔';
     titleEl.textContent = 'Go to Jail!';
@@ -4058,6 +4390,10 @@ function chargeMoney(p, amount, recipient=null, toParking=false) {
 }
 
 function showRentModal(payer, owner, propName, rent) {
+  if (!isOnlineGame() && isAiPlayer(payer)) {
+    closeOverlay('rent-overlay');
+    return;
+  }
   document.getElementById('rent-title').textContent = `Rent for ${propName}`;
   document.getElementById('rent-desc').textContent = `${payer.name} pays ৳${fmt(rent)} to ${owner.name}.`;
   openOverlay('rent-overlay');
@@ -4153,6 +4489,17 @@ function declareBankruptcy(p, creditor = null, debtAmount = 0, toBank = false) {
   p.railroads = [];
   p.utilities = [];
   p.bankrupt = true;
+
+  if (!isOnlineGame() && isAiPlayer(p)) {
+    closeOverlay('bankrupt-overlay');
+    G.phase = 'end';
+    renderAll();
+    updateActionButtons();
+    if (launchNextBankAuction()) return;
+    checkBankruptcy();
+    return;
+  }
+
   openOverlay('bankrupt-overlay');
 }
 
@@ -4272,6 +4619,7 @@ function showWinner(p) {
 
 function restartGame() {
   stopTimer();
+  clearOfflineAiTimer(true);
   showScreen('lobby-screen');
 }
 
@@ -4513,6 +4861,46 @@ function showPlayerPortfolio(playerIdx) {
   openOverlay('portfolio-overlay');
 }
 
+function openHomePage() {
+  showScreen('home-screen');
+}
+
+function openOfflineSetupPage() {
+  LOBBY_CONTEXT = 'offline';
+  renderLobby();
+  updateOnlineLobbyUI();
+  showScreen('lobby-screen');
+}
+
+function openOnlineSetupPage(mode = 'host') {
+  LOBBY_CONTEXT = 'online';
+  setOnlineMode(mode);
+  updateOnlineLobbyUI();
+  showScreen('online-screen');
+}
+
+function openOnlineRoomPage() {
+  LOBBY_CONTEXT = 'online';
+  renderLobby();
+  updateOnlineLobbyUI();
+  showScreen('lobby-screen');
+}
+
+function handleLobbyBack() {
+  if (isOnlineGame()) {
+    leaveOnlineRoom(true, true).catch(err => {
+      console.error(err);
+      toast('Could not leave room cleanly.', 'danger');
+    });
+    return;
+  }
+  if (LOBBY_CONTEXT === 'online') {
+    openOnlineSetupPage(ONLINE.mode);
+    return;
+  }
+  openHomePage();
+}
+
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
   document.getElementById(id).classList.remove('hidden');
@@ -4696,6 +5084,7 @@ installOnlineMutationHooks();
 installLobbyEvents();
 renderLobby();
 updateOnlineLobbyUI();
+showScreen('home-screen');
 </script>
 </body>
 </html>
