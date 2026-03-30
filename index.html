@@ -7,6 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root {
+  --vh: 1vh;
   --green: #1a7a3c;
   --green-light: #2da05a;
   --green-pale: #e8f5ed;
@@ -80,13 +81,15 @@ body{font-family:var(--font-body);background:#0f2318;color:#1a1a1a;overscroll-be
 .how-to li::before{content:'🎯 ';margin-right:.3rem}
 
 /* ── GAME SCREEN ── */
-#game-screen{background:#0f2318;display:grid;grid-template-rows:auto 1fr auto}
+#game-screen{background:#0f2318;display:grid;grid-template-rows:auto 1fr auto;height:calc(var(--vh, 1vh) * 100)}
 
 /* Top bar */
 .game-topbar{background:rgba(0,0,0,.4);border-bottom:1px solid rgba(255,255,255,.08);padding:.5rem 1rem;display:flex;align-items:center;justify-content:space-between;gap:.5rem;flex-shrink:0;min-height:52px}
 .game-topbar .turn-badge{font-weight:700;color:#fff;font-size:.9rem;display:flex;align-items:center;gap:.5rem}
 .game-topbar .turn-badge .token{font-size:1.2rem}
 .topbar-actions{display:flex;gap:.5rem}
+.topbar-tools{display:flex;align-items:center;gap:.45rem;flex-shrink:0}
+.topbar-tool-btn{background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2);padding:.3rem .55rem;font-size:.76rem;min-width:2rem}
 
 /* Main game area */
 .game-main{display:grid;overflow:hidden}
@@ -244,6 +247,21 @@ body{font-family:var(--font-body);background:#0f2318;color:#1a1a1a;overscroll-be
 .act-end{background:linear-gradient(135deg,#7f1d1d,#dc2626);color:#fff;grid-column:span 2}
 .act-jail{background:linear-gradient(135deg,#0f4c75,#1a7a9a);color:#fff;grid-column:span 2}
 
+/* Mobile HUD */
+.mobile-turnline{font-size:.74rem;color:rgba(255,255,255,.72);font-weight:600;letter-spacing:.01em;padding:0 .2rem}
+.mobile-player-strip{display:flex;gap:.42rem;overflow-x:auto;padding-bottom:.1rem}
+.mobile-player-strip::-webkit-scrollbar{height:4px}
+.mobile-player-strip::-webkit-scrollbar-thumb{background:rgba(255,255,255,.18);border-radius:2px}
+.mobile-player-chip{min-width:132px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.16);border-radius:8px;padding:.34rem .44rem;cursor:pointer;transition:all .18s}
+.mobile-player-chip.active-turn{border-color:var(--gold-light);background:rgba(201,151,28,.18);box-shadow:0 0 10px rgba(201,151,28,.22)}
+.mobile-player-chip.bankrupt{opacity:.42;filter:grayscale(1)}
+.mobile-player-main{display:flex;align-items:center;gap:.35rem}
+.mobile-player-token{font-size:1.06rem;line-height:1}
+.mobile-player-name{font-size:.76rem;color:#fff;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mobile-player-meta{margin-top:.12rem;font-size:.68rem;color:rgba(255,255,255,.62);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mobile-actions-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.35rem}
+.mobile-actions-grid .act-btn{padding:.47rem .3rem;font-size:.73rem;min-height:34px}
+
 /* Log */
 .log-entry{font-size:.78rem;color:rgba(255,255,255,.7);padding:.25rem 0;border-bottom:1px solid rgba(255,255,255,.05)}
 .log-entry .log-time{color:rgba(255,255,255,.3);font-size:.7rem;margin-right:.3rem}
@@ -308,9 +326,9 @@ body{font-family:var(--font-body);background:#0f2318;color:#1a1a1a;overscroll-be
 /* ── RESPONSIVE LAYOUT ── */
 /* Desktop: 3-column layout */
 @media(min-width:900px){
-  .game-main{grid-template-columns:220px 1fr 260px;height:calc(100vh - 52px)}
+  .game-main{grid-template-columns:220px 1fr 260px;height:calc((var(--vh, 1vh) * 100) - 52px)}
   .board-wrapper{height:100%}
-  .board{width:min(calc(100vh - 80px),calc(100vw - 520px));height:min(calc(100vh - 80px),calc(100vw - 520px))}
+  .board{width:min(calc((var(--vh, 1vh) * 100) - 80px),calc(100vw - 520px));height:min(calc((var(--vh, 1vh) * 100) - 80px),calc(100vw - 520px))}
   .left-panel{display:flex;flex-direction:column;gap:.5rem;padding:.5rem;overflow:hidden}
   .right-panel{display:flex;flex-direction:column;gap:.5rem;padding:.5rem;overflow:hidden}
   .left-panel .panel{flex:0 0 auto}
@@ -320,15 +338,30 @@ body{font-family:var(--font-body);background:#0f2318;color:#1a1a1a;overscroll-be
 }
 /* Mobile: board + bottom panels */
 @media(max-width:899px){
-  #game-screen{grid-template-rows:auto 1fr auto;height:100vh}
-  .game-main{grid-template-rows:1fr;grid-template-columns:1fr;height:100%}
-  .board-wrapper{height:100%;max-height:calc(100vw)}
-  .board{width:min(98vw,calc(100vh - 130px));height:min(98vw,calc(100vh - 130px))}
+  #game-screen{grid-template-rows:auto 1fr auto;height:calc(var(--vh, 1vh) * 100)}
+  .game-main{grid-template-rows:1fr;grid-template-columns:1fr;height:100%;min-height:0}
+  .board-wrapper{height:100%;min-height:0;padding:.4rem .45rem .2rem}
+  .board{width:min(95vw,max(170px,calc((var(--vh, 1vh) * 100) - 260px)));height:min(95vw,max(170px,calc((var(--vh, 1vh) * 100) - 260px)))}
   .left-panel,.right-panel{display:none}
   .mobile-action-bar{display:flex}
-  .game-topbar{flex-wrap:wrap;min-height:auto}
-  .game-bottombar{background:rgba(0,0,0,.7);border-top:1px solid rgba(255,255,255,.1);padding:.5rem .75rem;display:flex;gap:.5rem;align-items:center;overflow-x:auto;flex-shrink:0}
+  .game-topbar{flex-wrap:nowrap;min-height:auto;padding:.4rem .6rem}
+  .game-topbar .turn-badge{font-size:.82rem;min-width:0;flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+  .game-topbar .turn-badge .token{font-size:1.05rem}
+  .topbar-tools{gap:.3rem}
+  .topbar-tool-btn{padding:.24rem .45rem;font-size:.72rem;min-width:1.9rem}
+  .game-bottombar{
+    background:linear-gradient(180deg,rgba(9,25,16,.94),rgba(5,16,10,.98));
+    border-top:1px solid rgba(255,255,255,.14);
+    padding:.45rem .55rem calc(.55rem + env(safe-area-inset-bottom));
+    display:flex;
+    flex-direction:column;
+    gap:.45rem;
+    overflow:hidden;
+    flex-shrink:0
+  }
+  .mobile-actions-grid .act-end,.mobile-actions-grid .act-jail{grid-column:auto}
 }
+@media(max-width:420px){#tb-money{display:none}}
 @media(min-width:900px){.game-bottombar{display:none}}
 
 /* Drawer for mobile */
@@ -382,7 +415,7 @@ body{font-family:var(--font-body);background:#0f2318;color:#1a1a1a;overscroll-be
       <button class="btn btn-secondary btn-sm" id="add-player-btn" onclick="addPlayerSlot()">+ Add Player</button>
     </div>
     <div class="card">
-      <h2>🌐 Online Rooms</h2>
+      <h2>🌐 Online Rooms (Firebase)</h2>
       <div class="input-group">
         <label>Your Online Name</label>
         <input type="text" id="online-player-name" maxlength="24" placeholder="Enter your name">
@@ -491,7 +524,7 @@ body{font-family:var(--font-body);background:#0f2318;color:#1a1a1a;overscroll-be
       <span id="tb-name">Player 1</span>'s Turn
       <span id="tb-jail-tag" style="display:none;background:#c0392b;color:#fff;font-size:.7rem;padding:.1rem .4rem;border-radius:4px;margin-left:.3rem">JAIL</span>
     </div>
-    <div style="display:flex;align-items:center;gap:.5rem">
+    <div class="topbar-tools">
       <!-- Auto-advance timer ring -->
       <div class="timer-wrap hidden" id="timer-wrap" title="Auto-advance timer">
         <svg class="timer-svg" viewBox="0 0 36 36">
@@ -501,9 +534,10 @@ body{font-family:var(--font-body);background:#0f2318;color:#1a1a1a;overscroll-be
         <div class="timer-num" id="timer-num">30</div>
       </div>
       <span id="tb-money" style="color:var(--gold-light);font-weight:700">৳15,000</span>
-      <button class="btn btn-sm" style="background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2);padding:.3rem .6rem;font-size:.75rem" onclick="openDrawer('log')">📋 Log</button>
-      <button class="btn btn-sm" style="background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2);padding:.3rem .6rem;font-size:.75rem" onclick="openDrawer('chat')">💬</button>
-      <button class="btn btn-sm" style="background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2);padding:.3rem .6rem;font-size:.75rem" onclick="openDrawer('settings')" title="Timer settings">⚙️</button>
+      <button class="btn btn-sm topbar-tool-btn" onclick="openDrawer('players')" title="Players">👥</button>
+      <button class="btn btn-sm topbar-tool-btn" onclick="openDrawer('log')" title="Game log">📋</button>
+      <button class="btn btn-sm topbar-tool-btn" onclick="openDrawer('chat')" title="Chat">💬</button>
+      <button class="btn btn-sm topbar-tool-btn" onclick="openDrawer('settings')" title="Timer settings">⚙️</button>
     </div>
   </div>
 
@@ -552,12 +586,16 @@ body{font-family:var(--font-body);background:#0f2318;color:#1a1a1a;overscroll-be
 
   <!-- Bottom bar mobile -->
   <div class="game-bottombar">
-    <button class="act-btn act-buy" id="mb-buy" onclick="actionBuy()" disabled style="flex-shrink:0;padding:.45rem .7rem;font-size:.78rem">🏠 Buy</button>
-    <button class="act-btn act-build" id="mb-build" onclick="openBuildModal()" disabled style="flex-shrink:0;padding:.45rem .7rem;font-size:.78rem">🏗 Build</button>
-    <button class="act-btn act-mortgage" id="mb-mortgage" onclick="openMortgageModal()" disabled style="flex-shrink:0;padding:.45rem .7rem;font-size:.78rem">💰 Mortg</button>
-    <button class="act-btn act-trade" id="mb-trade" onclick="openTradeModal()" disabled style="flex-shrink:0;padding:.45rem .7rem;font-size:.78rem">🤝 Trade</button>
-    <button class="act-btn act-jail" id="mb-pay-jail" onclick="payBailout()" style="display:none;flex-shrink:0;padding:.45rem .7rem;font-size:.78rem">💳 Bail</button>
-    <button class="act-btn act-end" id="mb-end" onclick="endTurn()" disabled style="flex-shrink:0;padding:.45rem .7rem;font-size:.78rem">⏩ End</button>
+    <div class="mobile-turnline" id="mobile-turnline">🎲 Roll dice to begin</div>
+    <div class="mobile-player-strip" id="mobile-player-strip"></div>
+    <div class="mobile-actions-grid">
+      <button class="act-btn act-buy" id="mb-buy" onclick="actionBuy()" disabled>🏠 Buy</button>
+      <button class="act-btn act-build" id="mb-build" onclick="openBuildModal()" disabled>🏗 Build</button>
+      <button class="act-btn act-mortgage" id="mb-mortgage" onclick="openMortgageModal()" disabled>💰 Mortgage</button>
+      <button class="act-btn act-trade" id="mb-trade" onclick="openTradeModal()" disabled>🤝 Trade</button>
+      <button class="act-btn act-jail" id="mb-pay-jail" onclick="payBailout()" style="display:none">💳 Pay Bail</button>
+      <button class="act-btn act-end" id="mb-end" onclick="endTurn()" disabled>⏩ End Turn</button>
+    </div>
   </div>
 </div>
 
@@ -696,12 +734,14 @@ body{font-family:var(--font-body);background:#0f2318;color:#1a1a1a;overscroll-be
 </div>
 
 <!-- Jail modal -->
-<div class="overlay" id="jail-overlay">
+<div class="overlay" id="jail-overlay" onclick="if(event.target===this)closeOverlay('jail-overlay')">
   <div class="modal" style="text-align:center">
-    <div style="font-size:3rem;margin-bottom:.5rem">🚔</div>
-    <h2>Go to Jail!</h2>
+    <div id="jail-icon" style="font-size:3rem;margin-bottom:.5rem">🚔</div>
+    <h2 id="jail-title">Go to Jail!</h2>
     <p id="jail-desc">You've been sent to jail. You can pay ৳500 bail, use a Get Out of Jail Free card, or roll doubles.</p>
-    <button class="btn btn-primary btn-full" onclick="closeOverlay('jail-overlay')">OK</button>
+    <div class="modal-actions" id="jail-actions" style="justify-content:center">
+      <button class="btn btn-primary btn-full" onclick="closeOverlay('jail-overlay')">OK</button>
+    </div>
   </div>
 </div>
 
@@ -1388,10 +1428,12 @@ const TOKEN_COLORS = ['#e74c3c','#3498db','#2ecc71','#f39c12','#9b59b6','#1abc9c
 //  GAME STATE
 // ═══════════════════════════════════════════════
 let G = {};  // global game state
+let jailPromptShownKey = '';
 
 function initGameState(players, startMoney) {
   const shuffledChance = shuffle([...CHANCE_CARDS]);
   const shuffledComm = shuffle([...COMMUNITY_CARDS]);
+  jailPromptShownKey = '';
   G = {
     players: players.map((p, i) => ({
       id: i,
@@ -2212,27 +2254,50 @@ function renderChatLog() {
 
 function renderPlayerCards() {
   const el = document.getElementById('player-cards');
-  el.innerHTML = '';
+  const mobileEl = document.getElementById('mobile-player-strip');
+  if (el) el.innerHTML = '';
+  if (mobileEl) mobileEl.innerHTML = '';
+
   G.players.forEach((p, i) => {
     const active = i === G.currentPlayerIdx;
-    const div = document.createElement('div');
-    div.className = 'pcard' + (active ? ' active-turn' : '') + (p.bankrupt ? ' bankrupt' : '');
+    const bankruptCls = p.bankrupt ? ' bankrupt' : '';
     const propDots = p.properties.map(pid => {
       const sp = SPACES[pid];
       return `<div class="pprop-dot" style="background:${COLOR[sp.color]}" title="${sp.name}"></div>`;
     }).join('') + p.railroads.map(() => `<div class="pprop-dot" style="background:#333" title="Railroad"></div>`).join('');
-    div.innerHTML = `
-      <div class="prow1">
-        <div class="ptoken" style="color:${p.color}">${p.token}</div>
-        <div class="pname">${p.name}${p.bankrupt ? ' 💀' : ''}</div>
-        <div class="pmoney">${fmtCurrency(p.money)}</div>
-      </div>
-      <div class="ppos">${p.inJail ? '⛓️ In Jail' : `📍 ${SPACES[p.pos].name}`}</div>
-      ${propDots ? `<div class="pprops">${propDots}</div>` : ''}
-    `;
-    div.title = `Tap to view ${p.name}'s properties`;
-    div.onclick = () => showPlayerPortfolio(i);
-    el.appendChild(div);
+    const location = p.inJail ? 'In Jail' : (SPACES[p.pos]?.name || 'On board');
+
+    if (el) {
+      const div = document.createElement('div');
+      div.className = 'pcard' + (active ? ' active-turn' : '') + bankruptCls;
+      div.innerHTML = `
+        <div class="prow1">
+          <div class="ptoken" style="color:${p.color}">${p.token}</div>
+          <div class="pname">${p.name}${p.bankrupt ? ' 💀' : ''}</div>
+          <div class="pmoney">${fmtCurrency(p.money)}</div>
+        </div>
+        <div class="ppos">${p.inJail ? '⛓️ In Jail' : `📍 ${SPACES[p.pos].name}`}</div>
+        ${propDots ? `<div class="pprops">${propDots}</div>` : ''}
+      `;
+      div.title = `Tap to view ${p.name}'s properties`;
+      div.onclick = () => showPlayerPortfolio(i);
+      el.appendChild(div);
+    }
+
+    if (mobileEl) {
+      const chip = document.createElement('div');
+      chip.className = 'mobile-player-chip' + (active ? ' active-turn' : '') + bankruptCls;
+      chip.innerHTML = `
+        <div class="mobile-player-main">
+          <span class="mobile-player-token" style="color:${p.color}">${p.token}</span>
+          <span class="mobile-player-name">${escHtml(p.name)}${p.bankrupt ? ' 💀' : ''}</span>
+        </div>
+        <div class="mobile-player-meta">${fmtCurrency(p.money)} • ${escHtml(location)}</div>
+      `;
+      chip.title = `Tap to view ${p.name}'s properties`;
+      chip.onclick = () => showPlayerPortfolio(i);
+      mobileEl.appendChild(chip);
+    }
   });
 }
 
@@ -2337,6 +2402,24 @@ function updateActionButtons() {
     else if (G.phase === 'roll') cm.textContent = `${p.name}'s turn to roll`;
     else if (G.phase === 'action') cm.textContent = `Landed on ${sp.name}`;
     else cm.textContent = TIMER.duration > 0 ? `Auto-advancing in ${TIMER.duration}s…` : `End turn when ready`;
+  }
+
+  const mobileTurnLine = document.getElementById('mobile-turnline');
+  if (mobileTurnLine) {
+    if (!turnOwnedByMe) mobileTurnLine.textContent = `⏳ Watching ${p.name}'s turn`;
+    else if (inJail && G.phase === 'roll') mobileTurnLine.textContent = '⛓️ Roll doubles or pay bail';
+    else if (G.phase === 'roll') mobileTurnLine.textContent = '🎲 Roll dice to move';
+    else if (G.phase === 'action') mobileTurnLine.textContent = `📍 ${sp.name} • choose an action`;
+    else mobileTurnLine.textContent = TIMER.duration > 0 ? `⏱ Auto-end: ${TIMER.duration}s after move` : '✅ End your turn when ready';
+  }
+
+  // Prompt jailed player with clear choices at the start of their roll phase.
+  if (turnOwnedByMe && inJail && G.phase === 'roll') {
+    const promptKey = `${G.currentPlayerIdx}:${p.jailTurns}:${G.phase}`;
+    if (jailPromptShownKey !== promptKey && !document.querySelector('.overlay.show')) {
+      jailPromptShownKey = promptKey;
+      showJailPrompt(p, 'turn');
+    }
   }
 
   // Start auto-advance timer when player enters the 'end' phase (move done, can end turn)
@@ -2975,16 +3058,55 @@ function confirmTrade() {
 // ═══════════════════════════════════════════════
 //  JAIL
 // ═══════════════════════════════════════════════
+function showJailPrompt(p, mode = 'turn') {
+  const iconEl = document.getElementById('jail-icon');
+  const titleEl = document.getElementById('jail-title');
+  const descEl = document.getElementById('jail-desc');
+  const actionsEl = document.getElementById('jail-actions');
+  if (!iconEl || !titleEl || !descEl || !actionsEl || !p) return;
+
+  if (mode === 'sent') {
+    iconEl.textContent = '🚔';
+    titleEl.textContent = 'Go to Jail!';
+    descEl.textContent = p.jailFreeCards > 0
+      ? `You have ${p.jailFreeCards} Get Out of Jail Free card(s). On your turn, choose to roll dice or use a card to get out.`
+      : 'On your turn, choose to roll dice for doubles or pay ৳500 bail.';
+    actionsEl.innerHTML = '<button class="btn btn-primary btn-full" onclick="closeOverlay(\'jail-overlay\')">OK</button>';
+    openOverlay('jail-overlay');
+    return;
+  }
+
+  const myTurn = canLocalControlTurn();
+  const canPay = p.jailFreeCards > 0 || p.money >= 500;
+  const bailLabel = p.jailFreeCards > 0
+    ? `🎟 Use Card${p.jailFreeCards > 1 ? ` (${p.jailFreeCards})` : ''}`
+    : '💳 Pay ৳500 Bail';
+
+  iconEl.textContent = '⛓️';
+  titleEl.textContent = `${p.name} is in Jail`;
+
+  if (!myTurn) {
+    descEl.textContent = `Waiting for ${p.name} to choose: roll dice or pay bail.`;
+    actionsEl.innerHTML = '<button class="btn btn-full" style="background:rgba(255,255,255,.12);color:#fff" onclick="closeOverlay(\'jail-overlay\')">Close</button>';
+    openOverlay('jail-overlay');
+    return;
+  }
+
+  descEl.textContent = `Choose now: roll for doubles or ${p.jailFreeCards > 0 ? 'use a card to leave jail' : 'pay ৳500 bail'}.`;
+  actionsEl.innerHTML = `
+    <button class="btn btn-primary" onclick="closeOverlay('jail-overlay'); rollDice();">🎲 Roll Dice</button>
+    <button class="btn ${canPay ? 'btn-gold' : ''}" ${canPay ? '' : 'disabled'} style="${canPay ? '' : 'background:rgba(255,255,255,.12);color:rgba(255,255,255,.45)'}" onclick="closeOverlay('jail-overlay'); payBailout();">${bailLabel}</button>
+  `;
+  openOverlay('jail-overlay');
+}
+
 function sendToJail(p) {
   p.inJail = true;
   p.jailTurns = 0;
   p.pos = 10;
   p.doublesCount = 0;
   addLog(`${p.name} goes to jail! ⛓️`, 'danger');
-  openOverlay('jail-overlay');
-  document.getElementById('jail-desc').textContent = p.jailFreeCards > 0
-    ? `You have ${p.jailFreeCards} Get Out of Jail Free card(s)!`
-    : 'Pay ৳500 bail or roll doubles to escape.';
+  showJailPrompt(p, 'sent');
 }
 
 function payBailout() {
@@ -3213,7 +3335,27 @@ function sendChat() {
 // ═══════════════════════════════════════════════
 function openDrawer(type) {
   const content = document.getElementById('drawer-content');
-  if (type === 'log') {
+  if (type === 'players') {
+    content.innerHTML = `
+      <h3 style="color:#fff;margin-bottom:.75rem;font-family:var(--font-display)">👥 Players</h3>
+      ${(G.players || []).map((p, i) => {
+        const active = i === G.currentPlayerIdx;
+        const where = p.inJail ? 'In Jail' : (SPACES[p.pos]?.name || 'On board');
+        const border = active ? 'var(--gold-light)' : 'rgba(255,255,255,.14)';
+        const bg = active ? 'rgba(201,151,28,.12)' : 'rgba(255,255,255,.05)';
+        const color = sanitizeColor(p.color, '#ffffff');
+        return `<div onclick="showPlayerPortfolio(${i});closeDrawer()" style="display:flex;align-items:center;gap:.55rem;padding:.5rem .55rem;border:1px solid ${border};border-radius:8px;background:${bg};margin-bottom:.38rem;cursor:pointer">
+          <div style="font-size:1.15rem;color:${color}">${p.token}</div>
+          <div style="min-width:0;flex:1">
+            <div style="color:#fff;font-weight:700;font-size:.86rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(p.name)}${p.bankrupt ? ' 💀' : ''}</div>
+            <div style="color:rgba(255,255,255,.5);font-size:.74rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(where)}</div>
+          </div>
+          <div style="font-size:.82rem;color:var(--gold-light);font-weight:700">${fmtCurrency(p.money)}</div>
+        </div>`;
+      }).join('')}
+      <p style="color:rgba(255,255,255,.45);font-size:.74rem;margin-top:.35rem">Tap a player card to view full portfolio and assets.</p>
+    `;
+  } else if (type === 'log') {
     content.innerHTML = '<h3 style="color:#fff;margin-bottom:.75rem;font-family:var(--font-display)">📋 Game Log</h3>' +
       G.log.slice(-30).map(l => `<div class="log-entry${l.type?' log-'+l.type:''}">${escHtml(l.text || '')}</div>`).join('');
   } else if (type === 'chat') {
@@ -3420,6 +3562,12 @@ function updateTimerUI() {
   num.textContent = TIMER.remaining;
 }
 
+function updateViewportHeightVar() {
+  const viewportHeight = window.visualViewport?.height || window.innerHeight || document.documentElement.clientHeight;
+  if (!viewportHeight) return;
+  document.documentElement.style.setProperty('--vh', `${viewportHeight * 0.01}px`);
+}
+
 function installOnlineMutationHooks() {
   ONLINE_MUTATION_FUNCS.forEach(name => {
     const fn = window[name];
@@ -3501,6 +3649,13 @@ function installLobbyEvents() {
 // ═══════════════════════════════════════════════
 //  INIT
 // ═══════════════════════════════════════════════
+updateViewportHeightVar();
+window.addEventListener('resize', updateViewportHeightVar);
+window.addEventListener('orientationchange', updateViewportHeightVar);
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', updateViewportHeightVar);
+}
+
 installOnlineMutationHooks();
 installLobbyEvents();
 renderLobby();
