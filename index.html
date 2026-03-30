@@ -836,7 +836,10 @@ body{font-family:var(--font-body);background:#0f2318;color:#1a1a1a;overscroll-be
     <div style="font-size:3rem;margin-bottom:.5rem">💀</div>
     <h2 id="bankrupt-name">Player is Bankrupt!</h2>
     <p id="bankrupt-desc"></p>
-    <button class="btn btn-danger btn-full" onclick="confirmBankruptcy()">Continue</button>
+    <div class="modal-actions" style="justify-content:center">
+      <button class="btn btn-gold" id="bankrupt-mortgage-btn" style="display:none" onclick="openMortgageForDebt()">💰 Mortgage Properties</button>
+      <button class="btn btn-danger" id="bankrupt-continue-btn" onclick="confirmBankruptcy()">Continue</button>
+    </div>
   </div>
 </div>
 
@@ -1560,6 +1563,15 @@ function buildSpacesFromTheme(themeId) {
   return result;
 }
 
+function applyThemeById(themeId) {
+  const nextId = BOARD_THEMES[themeId] ? themeId : 'dhaka';
+  selectedThemeId = nextId;
+  window.ACTIVE_THEME = BOARD_THEMES[nextId];
+  const themedSpaces = buildSpacesFromTheme(nextId);
+  for (let i = 0; i < 40; i++) SPACES[i] = themedSpaces[i];
+  return nextId;
+}
+
 function renderBoardThemeSelector() {
   const el = document.getElementById('board-theme-grid');
   if (!el) return;
@@ -1574,7 +1586,7 @@ function renderBoardThemeSelector() {
       <div style="font-size:.75rem;color:rgba(255,255,255,.5);margin-top:.15rem">${t.desc}</div>`;
     btn.onclick = async () => {
       if (!hostCanEditTheme) return;
-      selectedThemeId = t.id;
+      applyThemeById(t.id);
       renderBoardThemeSelector();
       await syncLobbySettingsToRoom();
     };
@@ -1677,6 +1689,14 @@ const CHAT_PREVIEW = {
 const AI_CTRL = {
   timerId: null,
   lastKey: '',
+  lastTradeAttemptKey: '',
+};
+const DEBT_PROMPT = {
+  active: false,
+  payerId: null,
+  amount: 0,
+  recipientId: null,
+  toParking: false,
 };
 
 function initGameState(players, startMoney) {
@@ -1685,6 +1705,11 @@ function initGameState(players, startMoney) {
   jailPromptShownKey = '';
   tradeReviewShownKey = '';
   CHAT_PREVIEW.lastShownKey = '';
+  DEBT_PROMPT.active = false;
+  DEBT_PROMPT.payerId = null;
+  DEBT_PROMPT.amount = 0;
+  DEBT_PROMPT.recipientId = null;
+  DEBT_PROMPT.toParking = false;
   G = {
     players: players.map((p, i) => ({
       id: i,
@@ -1715,6 +1740,7 @@ function initGameState(players, startMoney) {
     auctionState: null,
     bankAuctionQueue: [],
     pendingTrade: null,
+    boardThemeId: selectedThemeId,
     gameOver: false,
   };
 }
@@ -1760,16 +1786,20 @@ async function syncLobbySettingsToRoom() {
 }
 
 function safeGameStateForRoom() {
-  const raw = JSON.parse(JSON.stringify(G || {}));
-  if (raw.auctionState && raw.auctionState.passed && !Array.isArray(raw.auctionState.passed)) {
-    raw.auctionState.passed = Array.from(raw.auctionState.passed);
-  }
+  const raw = JSON.parse(JSON.stringify(G || {}, (_key, value) => {
+    if (value instanceof Set) return Array.from(value);
+    return value;
+  }));
   return raw;
 }
 
 function hydrateRemoteGameState(raw) {
   if (!raw) return;
   const next = JSON.parse(JSON.stringify(raw));
+
+  const remoteThemeId = BOARD_THEMES[next.boardThemeId] ? next.boardThemeId : selectedThemeId;
+  applyThemeById(remoteThemeId);
+  next.boardThemeId = selectedThemeId;
 
   const players = indexedObjectToArray(next.players).filter(p => p && typeof p === 'object');
   if (!players.length) {
@@ -1977,8 +2007,7 @@ async function applyRoomSnapshot(data) {
 
   const settings = data.settings || {};
   if (settings.themeId && BOARD_THEMES[settings.themeId]) {
-    selectedThemeId = settings.themeId;
-    window.ACTIVE_THEME = BOARD_THEMES[selectedThemeId];
+    applyThemeById(settings.themeId);
   }
   if (typeof settings.startMoney === 'number') {
     const sm = document.getElementById('starting-money');
@@ -2730,10 +2759,8 @@ async function startGame() {
   TIMER.duration = parseInt(document.getElementById('lobby-timer').value) || 0;
 
   // Apply selected theme
-  const themeSpaces = buildSpacesFromTheme(selectedThemeId);
-  for (let i=0;i<40;i++) SPACES[i] = themeSpaces[i];
+  applyThemeById(selectedThemeId);
   const t = BOARD_THEMES[selectedThemeId];
-  window.ACTIVE_THEME = t;
 
   initGameState(names, startMoney);
   buildBoard();
@@ -2828,8 +2855,7 @@ function syncAuctionOverlay() {
 
   if (G.auctionState) {
     renderAuction();
-    if (isOfflineAiAuctionTurn()) closeOverlay('auction-overlay');
-    else openOverlay('auction-overlay');
+    openOverlay('auction-overlay');
   } else {
     closeOverlay('auction-overlay');
   }
@@ -3023,6 +3049,197 @@ function estimateAssetValue(spaceId) {
   return Math.max(0, Math.floor(mortgageValueForSpace(sp) * 2));
 }
 
+function aiCashReserve(player) {
+  if (!player) return 1500;
+  const owned = (player.properties?.length || 0) + (player.railroads?.length || 0) + (player.utilities?.length || 0);
+  return Math.max(1500, 900 + owned * 180);
+}
+
+function aiPropertyPriority(player, spaceId) {
+  const sp = SPACES[spaceId];
+  if (!sp) return 0;
+  const price = Number(sp.price) || estimateAssetValue(spaceId);
+  let score = price;
+
+  if (sp.type === 'property') {
+    const groupIds = SPACES.filter(s => s.type === 'property' && s.group === sp.group).map(s => s.id);
+    const ownedCount = groupIds.filter(id => G.properties[id]?.owner === player.id).length;
+    if (ownedCount >= groupIds.length - 1) score += Math.floor(price * 0.85);
+    else if (ownedCount > 0) score += Math.floor(price * 0.22 * ownedCount);
+  } else if (sp.type === 'railroad') {
+    score += (player.railroads?.length || 0) * 700;
+  } else if (sp.type === 'utility') {
+    score += (player.utilities?.length || 0) * 450;
+  }
+
+  return score;
+}
+
+function aiTryMortgageToTarget(player, targetCash) {
+  if (!player || player.bankrupt || player.money >= targetCash) return false;
+
+  const assets = [...player.properties, ...player.railroads, ...player.utilities]
+    .filter(id => canMortgageAsset(player, id))
+    .sort((a, b) => mortgageValueForSpace(SPACES[a]) - mortgageValueForSpace(SPACES[b]));
+
+  if (!assets.length) return false;
+  const id = assets[0];
+  const sp = SPACES[id];
+  const prop = G.properties[id];
+  if (!sp || !prop || prop.owner !== player.id || prop.mortgaged) return false;
+  const mortgageValue = mortgageValueForSpace(sp);
+  prop.mortgaged = true;
+  player.money += mortgageValue;
+  addLog(`${player.name} mortgaged ${sp.name} for ৳${fmt(mortgageValue)}.`, 'important');
+  renderAll();
+  updateTopBar();
+  return true;
+}
+
+function aiTryBuildOne(player) {
+  if (!player || player.bankrupt || G.pendingBuy !== null || G.auctionState || G.pendingTrade) return false;
+
+  const groups = buildableGroups(player);
+  if (!groups.length) return false;
+  const reserve = aiCashReserve(player);
+
+  let best = null;
+  groups.forEach(ids => {
+    if (ids.some(id => G.properties[id]?.mortgaged)) return;
+    ids.forEach(id => {
+      const sp = SPACES[id];
+      const prop = G.properties[id];
+      if (!sp || !prop || prop.owner !== player.id || prop.hotel) return;
+      const cost = Number(sp.house) || 0;
+      if (cost <= 0) return;
+      if (player.money - cost < reserve) return;
+
+      const currentRent = prop.houses > 0 ? (sp.rent[prop.houses] || 0) : (sp.rent[0] || 0);
+      const nextRent = prop.houses >= 4 ? (sp.rent[5] || currentRent) : (sp.rent[prop.houses + 1] || currentRent);
+      const score = (nextRent - currentRent) + (4 - prop.houses) * 25;
+      if (!best || score > best.score) {
+        best = { id, score };
+      }
+    });
+  });
+
+  if (!best) return false;
+  buildHouse(best.id);
+  return true;
+}
+
+function aiTryProposeTrade(player) {
+  if (!player || player.bankrupt || isOnlineGame() || G.pendingTrade || G.auctionState || G.pendingBuy !== null) return false;
+
+  const turnKey = `${player.id}|${player.pos}|${G.phase}|${G.dice?.join('-') || '0-0'}`;
+  if (AI_CTRL.lastTradeAttemptKey === turnKey) return false;
+  AI_CTRL.lastTradeAttemptKey = turnKey;
+
+  const reserve = aiCashReserve(player);
+  let bestOffer = null;
+
+  for (let id = 0; id < SPACES.length; id++) {
+    const sp = SPACES[id];
+    const prop = G.properties[id];
+    if (!sp || !prop || prop.owner === null || prop.owner === player.id) continue;
+    if (prop.mortgaged || propertyHasBuildings(id)) continue;
+    const owner = G.players[prop.owner];
+    if (!owner || owner.bankrupt) continue;
+
+    let ask = 0;
+    let score = 0;
+
+    if (sp.type === 'property') {
+      const groupIds = SPACES.filter(s => s.type === 'property' && s.group === sp.group).map(s => s.id);
+      if (groupIds.some(gid => propertyHasBuildings(gid))) continue;
+      const ownedByMe = groupIds.filter(gid => G.properties[gid]?.owner === player.id).length;
+      if (ownedByMe === 0) continue;
+      const missingAfterTrade = groupIds.filter(gid => gid !== id && G.properties[gid]?.owner !== player.id).length;
+      if (missingAfterTrade > 0) continue;
+
+      ask = Math.max(600, Math.floor((Number(sp.price) || 1200) * 1.06));
+      score = 1600 + (Number(sp.price) || 0) - ask;
+    } else if (sp.type === 'railroad') {
+      if ((player.railroads?.length || 0) === 0) continue;
+      ask = Math.max(700, Math.floor((Number(sp.price) || 2000) * 0.95));
+      score = 1100 + (player.railroads?.length || 0) * 240 - ask;
+    } else if (sp.type === 'utility') {
+      if ((player.utilities?.length || 0) === 0) continue;
+      ask = Math.max(550, Math.floor((Number(sp.price) || 1500) * 0.9));
+      score = 900 + (player.utilities?.length || 0) * 180 - ask;
+    } else {
+      continue;
+    }
+
+    const budget = Math.max(0, player.money - Math.floor(reserve * 0.55));
+    ask = Math.min(ask, owner.money, budget);
+    if (ask <= 0) continue;
+
+    const finalScore = score + Math.max(0, (Number(sp.price) || 0) - ask);
+    if (!bestOffer || finalScore > bestOffer.score) {
+      bestOffer = { ownerId: owner.id, propId: id, ask, score: finalScore };
+    }
+  }
+
+  if (bestOffer) {
+    const target = G.players[bestOffer.ownerId];
+    G.pendingTrade = {
+      id: `tr_ai_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
+      fromId: player.id,
+      toId: target.id,
+      fromProps: [],
+      toProps: [bestOffer.propId],
+      fromMoney: bestOffer.ask,
+      toMoney: 0,
+      createdAt: Date.now(),
+    };
+    tradeReviewShownKey = '';
+    addLog(`${player.name} proposed a trade to ${target.name}.`, 'important');
+    renderAll();
+    updateActionButtons();
+    return true;
+  }
+
+  // If low on cash, try selling a low-impact asset for quick liquidity.
+  if (player.money < Math.floor(reserve * 0.6)) {
+    const myAssets = [...player.properties, ...player.railroads, ...player.utilities]
+      .filter(id => {
+        const prop = G.properties[id];
+        return prop && prop.owner === player.id && !prop.mortgaged && !propertyHasBuildings(id);
+      })
+      .sort((a, b) => estimateAssetValue(a) - estimateAssetValue(b));
+
+    const buyers = G.players
+      .filter(op => op.id !== player.id && !op.bankrupt)
+      .sort((a, b) => b.money - a.money);
+
+    if (myAssets.length && buyers.length) {
+      const propId = myAssets[0];
+      const buyer = buyers[0];
+      const ask = Math.min(buyer.money, Math.max(350, Math.floor(estimateAssetValue(propId) * 0.78)));
+      if (ask > 0) {
+        G.pendingTrade = {
+          id: `tr_ai_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
+          fromId: player.id,
+          toId: buyer.id,
+          fromProps: [propId],
+          toProps: [],
+          fromMoney: 0,
+          toMoney: ask,
+          createdAt: Date.now(),
+        };
+        tradeReviewShownKey = '';
+        addLog(`${player.name} offered ${SPACES[propId]?.name || 'a property'} to ${buyer.name} for ৳${fmt(ask)}.`, 'important');
+        renderAll();
+        updateActionButtons();
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 function maybeScheduleOfflineAiTurn() {
   if (isOnlineGame() || !G || G.gameOver || !Array.isArray(G.players) || !G.players.length) {
     clearOfflineAiTimer(true);
@@ -3040,6 +3257,7 @@ function maybeScheduleOfflineAiTurn() {
   const bidder = Number.isInteger(bidderId) ? G.players[bidderId] : null;
   const tradeRecipient = G.pendingTrade ? G.players[Number(G.pendingTrade.toId)] : null;
   const aiNeedsAction = (isAiPlayer(current) && !current.bankrupt)
+    || (isAiPlayer(current) && current.bankrupt)
     || (!!G.auctionState && isAiPlayer(bidder) && !bidder.bankrupt)
     || (!!G.pendingTrade && isAiPlayer(tradeRecipient) && !tradeRecipient.bankrupt);
 
@@ -3084,12 +3302,15 @@ function runOfflineAiStep() {
     const bidder = Number.isInteger(bidderId) ? G.players[bidderId] : null;
     if (isAiPlayer(bidder) && !bidder.bankrupt) {
       const a = G.auctionState;
-      const sp = SPACES[a.propId];
-      const basePrice = Number(sp?.price) || 1000;
-      const liquidityCap = Math.floor(bidder.money * 0.55);
-      const valuationCap = Math.floor(basePrice * (1.05 + Math.random() * 0.2));
-      const maxBid = Math.max(0, Math.min(liquidityCap, valuationCap));
+      const reserve = aiCashReserve(bidder);
       const nextBid = (Number(a.currentBid) || 0) + 100;
+      if (bidder.money < nextBid && aiTryMortgageToTarget(bidder, nextBid + Math.floor(reserve * 0.4))) {
+        return;
+      }
+
+      const valueCap = Math.floor(aiPropertyPriority(bidder, a.propId) * (0.95 + Math.random() * 0.15));
+      const cashCap = Math.max(0, bidder.money - Math.floor(reserve * 0.45));
+      const maxBid = Math.max(0, Math.min(valueCap, cashCap));
 
       if (nextBid > maxBid || bidder.money < nextBid) {
         passAuction();
@@ -3107,14 +3328,28 @@ function runOfflineAiStep() {
   }
 
   const p = curPlayer();
-  if (!isAiPlayer(p) || p.bankrupt) return;
+  if (!isAiPlayer(p)) return;
+
+  if (p.bankrupt) {
+    if (G.phase === 'roll') G.phase = 'end';
+    endTurn();
+    return;
+  }
 
   if (G.pendingBuy !== null) {
     const spaceId = G.pendingBuy;
     const sp = SPACES[spaceId];
     const price = Number(sp?.price) || 0;
-    const reserve = Math.max(1200, Math.floor(price * 0.3));
-    const shouldBuy = p.money >= price && (p.money - price >= reserve || Math.random() < 0.45);
+    const reserve = aiCashReserve(p);
+    if (p.money < price && aiTryMortgageToTarget(p, price + Math.floor(reserve * 0.35))) {
+      return;
+    }
+    const score = aiPropertyPriority(p, spaceId);
+    const shouldBuy = p.money >= price && (
+      score >= Math.floor(price * 1.2)
+      || p.money - price >= reserve
+      || Math.random() < 0.3
+    );
     closeOverlay('buy-overlay');
     if (shouldBuy) actionBuy();
     else startAuction();
@@ -3131,6 +3366,20 @@ function runOfflineAiStep() {
   }
 
   if (G.phase === 'action' || G.phase === 'end') {
+    const reserve = aiCashReserve(p);
+    if (p.money < Math.floor(reserve * 0.7) && aiTryMortgageToTarget(p, reserve)) {
+      return;
+    }
+    if ((G.phase === 'action' || G.phase === 'end') && aiTryBuildOne(p)) {
+      return;
+    }
+    if (aiTryProposeTrade(p)) {
+      const tradeRecipient = G.pendingTrade ? G.players[Number(G.pendingTrade.toId)] : null;
+      if (G.pendingTrade && tradeRecipient && !isAiPlayer(tradeRecipient) && G.currentPlayerIdx === p.id) {
+        endTurn();
+      }
+      return;
+    }
     endTurn();
   }
 }
@@ -3140,16 +3389,17 @@ function updateActionButtons() {
   const onProp = G.properties[p.pos];
   const sp = SPACES[p.pos];
   const turnOwnedByMe = canLocalControlTurn();
-  const aiTurnOffline = !isOnlineGame() && isAiPlayer(p);
+  const aiTurnOffline = !isOnlineGame() && isAiPlayer(p) && !p.bankrupt;
   const canHumanAct = turnOwnedByMe && !aiTurnOffline;
+  const debtPending = hasPendingDebtPromptForCurrentPlayer();
   const postRollPhase = G.phase === 'action' || G.phase === 'end';
   const actionLocked = !!G.pendingBuy || !!G.auctionState;
   const tradePending = !!G.pendingTrade;
-  const canBuyAny = G.phase === 'action' && onProp && onProp.owner === null;
-  const canBuild = postRollPhase && !actionLocked && buildableGroups(p).length > 0;
+  const canBuyAny = !debtPending && G.phase === 'action' && onProp && onProp.owner === null;
+  const canBuild = !debtPending && postRollPhase && !actionLocked && buildableGroups(p).length > 0;
   const canMortgage = postRollPhase && !actionLocked && (p.properties.length > 0 || p.railroads.length > 0 || p.utilities.length > 0);
-  const canTrade = postRollPhase && !actionLocked && !tradePending && G.players.filter(x => !x.bankrupt).length > 1;
-  const canEnd = G.phase === 'action' || G.phase === 'end';
+  const canTrade = !debtPending && postRollPhase && !actionLocked && !tradePending && G.players.filter(x => !x.bankrupt).length > 1;
+  const canEnd = !debtPending && (G.phase === 'action' || G.phase === 'end');
   const inJail = p.inJail;
 
   ['btn-buy','mb-buy'].forEach(id => { const el = document.getElementById(id); if(el) el.disabled = !canHumanAct || !canBuyAny; });
@@ -3176,6 +3426,10 @@ function updateActionButtons() {
   const cm = document.getElementById('center-msg');
   if (cm) {
     if (aiTurnOffline) cm.textContent = `🤖 ${p.name} is making a move`;
+    else if (debtPending) {
+      const shortBy = Math.max(0, Number(DEBT_PROMPT.amount || 0) - Number(p.money || 0));
+      cm.textContent = `💰 Short ৳${fmt(shortBy)}. Mortgage assets or declare bankruptcy`;
+    }
     else if (!turnOwnedByMe) cm.textContent = `Watching ${p.name}'s turn`;
     else if (inJail && G.phase === 'roll') cm.textContent = `Roll doubles or pay ৳500 bail`;
     else if (G.phase === 'roll') cm.textContent = `${p.name}'s turn to roll`;
@@ -3186,6 +3440,10 @@ function updateActionButtons() {
   const mobileTurnLine = document.getElementById('mobile-turnline');
   if (mobileTurnLine) {
     if (aiTurnOffline) mobileTurnLine.textContent = `🤖 ${p.name} is thinking`;
+    else if (debtPending) {
+      const shortBy = Math.max(0, Number(DEBT_PROMPT.amount || 0) - Number(p.money || 0));
+      mobileTurnLine.textContent = `💰 Short ৳${fmt(shortBy)} • mortgage or bankruptcy`;
+    }
     else if (!turnOwnedByMe) mobileTurnLine.textContent = `⏳ Watching ${p.name}'s turn`;
     else if (inJail && G.phase === 'roll') mobileTurnLine.textContent = '⛓️ Roll doubles or pay bail';
     else if (G.phase === 'roll') mobileTurnLine.textContent = '🎲 Roll dice to move';
@@ -3271,7 +3529,13 @@ function handleJailRoll(p, d1, d2, doubles) {
     if (p.jailTurns >= 3) {
       // Force pay
       addLog(`${p.name} must pay ৳500 to leave jail after 3 turns.`, 'danger');
-      chargeMoney(p, 500);
+      const paid = chargeMoney(p, 500);
+      if (!paid) {
+        G.phase = 'end';
+        renderAll();
+        updateActionButtons();
+        return;
+      }
       if (p.bankrupt) {
         G.phase = 'end';
         renderAll();
@@ -3579,8 +3843,7 @@ function beginAuction(propId, { source = 'market', bidderStartIdx = 0 } = {}) {
     source,
   };
   renderAuction();
-  if (isOfflineAiAuctionTurn()) closeOverlay('auction-overlay');
-  else openOverlay('auction-overlay');
+  openOverlay('auction-overlay');
   maybeScheduleOfflineAiTurn();
   return true;
 }
@@ -3613,25 +3876,90 @@ function launchNextBankAuction() {
 function renderAuction() {
   const a = G.auctionState;
   if (!a) return;
+  const aiBidderTurn = isOfflineAiAuctionTurn();
   const bidderId = currentAuctionBidderId();
   const bidder = Number.isInteger(bidderId) ? G.players[bidderId] : null;
   const leader = Number.isInteger(a.highBidder) ? G.players[a.highBidder] : null;
   document.getElementById('auc-prop-name').textContent = a.propName;
   document.getElementById('auc-bid').textContent = fmt(a.currentBid);
   document.getElementById('auc-leader').textContent = leader?.name || 'None';
-  document.getElementById('auc-bidder').textContent = bidder?.name || 'Waiting for bidder sync...';
+  document.getElementById('auc-bidder').textContent = bidder
+    ? `${bidder.name}${aiBidderTurn ? ' (AI thinking...)' : ''}`
+    : 'Waiting for bidder sync...';
   document.getElementById('auc-bidder-money').textContent = fmt(bidder?.money || 0);
 
-  const canAct = canLocalControlAuctionAction();
+  openOverlay('auction-overlay');
+
+  const canAct = !aiBidderTurn && canLocalControlAuctionAction();
   document.querySelectorAll('#bid-btns button').forEach(btn => {
     btn.disabled = !canAct;
   });
+}
+
+function nextAuctionBidderIndex(a, startIdx) {
+  if (!a || !Array.isArray(a.activePlayers) || !a.activePlayers.length) return -1;
+  if (!(a.passed instanceof Set)) {
+    a.passed = new Set(indexedObjectToArray(a.passed).map(Number).filter(Number.isInteger));
+  }
+
+  const len = a.activePlayers.length;
+  let cursor = Number.isFinite(Number(startIdx)) ? Math.trunc(Number(startIdx)) : 0;
+  for (let i = 0; i < len; i++) {
+    const idx = ((cursor % len) + len) % len;
+    const playerId = Number(a.activePlayers[idx]);
+    if (!a.passed.has(playerId)) return idx;
+    cursor++;
+  }
+  return -1;
+}
+
+function finalizeAuction(a) {
+  if (!a) return;
+  const source = a.source || 'market';
+  closeOverlay('auction-overlay');
+
+  if (a.highBidder !== null && a.currentBid > 0) {
+    const winner = G.players[a.highBidder];
+    const sp = SPACES[a.propId];
+    const prop = G.properties[a.propId];
+    if (winner && sp && prop && prop.owner === null) {
+      winner.money -= a.currentBid;
+      prop.owner = winner.id;
+      prop.houses = 0;
+      prop.hotel = false;
+      addOwnedAsset(winner, a.propId);
+      addLog(`${winner.name} wins auction for ${sp.name} at ৳${fmt(a.currentBid)}!`, 'success');
+    } else {
+      addLog(`Auction for ${a.propName} ended with invalid winner state; property remains unsold.`, 'danger');
+    }
+  } else {
+    addLog(`Auction cancelled — all players passed. ${a.propName} remains unsold.`);
+  }
+
+  G.auctionState = null;
+
+  if (source === 'bank') {
+    if (launchNextBankAuction()) {
+      renderAll();
+      updateActionButtons();
+      return;
+    }
+    addLog('Bank auction series completed.', 'important');
+    checkBankruptcy();
+  }
+
+  G.phase = 'end';
+  renderAll();
+  updateActionButtons();
 }
 
 function placeBid(amount) {
   if (!requireAuctionControl()) return;
   const a = G.auctionState;
   if (!a) return;
+  if (!(a.passed instanceof Set)) {
+    a.passed = new Set(indexedObjectToArray(a.passed).map(Number).filter(Number.isInteger));
+  }
   const bidderId = currentAuctionBidderId();
   if (!Number.isInteger(bidderId)) return;
   const bidder = G.players[bidderId];
@@ -3641,16 +3969,31 @@ function placeBid(amount) {
   a.currentBid = newBid;
   a.highBidder = bidder.id;
   addLog(`${bidder.name} bids ৳${fmt(newBid)} for ${a.propName}`);
-  a.bidderIdx++;
-  // Skip passed players
-  while (a.passed.has(a.activePlayers[a.bidderIdx % a.activePlayers.length])) a.bidderIdx++;
+
+  const remaining = a.activePlayers.filter(id => !a.passed.has(id));
+  if (remaining.length <= 1 && a.highBidder !== null) {
+    finalizeAuction(a);
+    return;
+  }
+
+  const nextIdx = nextAuctionBidderIndex(a, Number(a.bidderIdx) + 1);
+  if (nextIdx < 0) {
+    addLog('Auction state had no eligible next bidder; finalizing current auction.', 'danger');
+    finalizeAuction(a);
+    return;
+  }
+  a.bidderIdx = nextIdx;
   renderAuction();
+  maybeScheduleOfflineAiTurn();
 }
 
 function passAuction() {
   if (!requireAuctionControl()) return;
   const a = G.auctionState;
   if (!a) return;
+  if (!(a.passed instanceof Set)) {
+    a.passed = new Set(indexedObjectToArray(a.passed).map(Number).filter(Number.isInteger));
+  }
   const bidderId = currentAuctionBidderId();
   if (!Number.isInteger(bidderId)) return;
   const bidder = G.players[bidderId];
@@ -3660,41 +4003,19 @@ function passAuction() {
   // Check if only one active bidder remains
   const remaining = a.activePlayers.filter(id => !a.passed.has(id));
   if (remaining.length === 0 || (remaining.length === 1 && a.highBidder !== null)) {
-    const source = a.source || 'market';
-    closeOverlay('auction-overlay');
-    // Award property
-    if (a.highBidder !== null && a.currentBid > 0) {
-      const winner = G.players[a.highBidder];
-      winner.money -= a.currentBid;
-      const sp = SPACES[a.propId];
-      G.properties[a.propId].owner = winner.id;
-      G.properties[a.propId].houses = 0;
-      G.properties[a.propId].hotel = false;
-      addOwnedAsset(winner, a.propId);
-      addLog(`${winner.name} wins auction for ${sp.name} at ৳${fmt(a.currentBid)}!`, 'success');
-    } else {
-      addLog(`No bids — ${a.propName} remains unsold.`);
-    }
-    G.auctionState = null;
-
-    if (source === 'bank') {
-      if (launchNextBankAuction()) {
-        renderAll();
-        updateActionButtons();
-        return;
-      }
-      addLog('Bank auction series completed.', 'important');
-      checkBankruptcy();
-    }
-
-    G.phase = 'end';
-    renderAll();
-    updateActionButtons();
+    finalizeAuction(a);
     return;
   }
-  a.bidderIdx++;
-  while (a.passed.has(a.activePlayers[a.bidderIdx % a.activePlayers.length])) a.bidderIdx++;
+
+  const nextIdx = nextAuctionBidderIndex(a, Number(a.bidderIdx) + 1);
+  if (nextIdx < 0) {
+    addLog('Auction pass advanced to no eligible bidder; finalizing current auction.', 'danger');
+    finalizeAuction(a);
+    return;
+  }
+  a.bidderIdx = nextIdx;
   renderAuction();
+  maybeScheduleOfflineAiTurn();
 }
 
 // ═══════════════════════════════════════════════
@@ -3749,6 +4070,7 @@ function openBuildModal() {
 function buildHouse(propId) {
   if (!requireTurnControl()) return;
   const p = curPlayer();
+  const actorIsAi = !isOnlineGame() && isAiPlayer(p);
   const sp = SPACES[propId];
   const prop = G.properties[propId];
   const cost = sp.house;
@@ -3757,13 +4079,15 @@ function buildHouse(propId) {
   if (prop.houses === 4) { prop.hotel = true; prop.houses = 0; addLog(`${p.name} built a hotel on ${sp.name}!`, 'success'); }
   else { prop.houses++; addLog(`${p.name} built house #${prop.houses} on ${sp.name}.`, 'success'); }
   renderAll();
-  openBuildModal(); // refresh
+  if (actorIsAi) closeOverlay('build-overlay');
+  else openBuildModal(); // refresh
   updateTopBar();
 }
 
 function sellHouse(propId) {
   if (!requireTurnControl()) return;
   const p = curPlayer();
+  const actorIsAi = !isOnlineGame() && isAiPlayer(p);
   const sp = SPACES[propId];
   const prop = G.properties[propId];
   const refund = Math.floor(sp.house / 2);
@@ -3771,7 +4095,8 @@ function sellHouse(propId) {
   if (prop.hotel) { prop.hotel = false; prop.houses = 4; addLog(`${p.name} sold hotel on ${sp.name} for ৳${fmt(refund)}.`); }
   else { prop.houses--; addLog(`${p.name} sold house on ${sp.name} for ৳${fmt(refund)}.`); }
   renderAll();
-  openBuildModal();
+  if (actorIsAi) closeOverlay('build-overlay');
+  else openBuildModal();
   updateTopBar();
 }
 
@@ -3836,6 +4161,7 @@ function openMortgageModal() {
 function mortgageProp(id) {
   if (!requireTurnControl()) return;
   const p = curPlayer();
+  const actorIsAi = !isOnlineGame() && isAiPlayer(p);
   const sp = SPACES[id];
   const prop = G.properties[id];
   if (!canMortgageAsset(p, id)) {
@@ -3847,13 +4173,18 @@ function mortgageProp(id) {
   p.money += mortgageValue;
   addLog(`${p.name} mortgaged ${sp.name} for ৳${fmt(mortgageValue)}.`);
   renderAll();
-  openMortgageModal();
+  if (actorIsAi) closeOverlay('mortgage-overlay');
+  else openMortgageModal();
+  if (!actorIsAi) {
+    if (tryResolveDebtPrompt()) return;
+  }
   updateTopBar();
 }
 
 function unmortgageProp(id) {
   if (!requireTurnControl()) return;
   const p = curPlayer();
+  const actorIsAi = !isOnlineGame() && isAiPlayer(p);
   const sp = SPACES[id];
   const prop = G.properties[id];
   const cost = Math.floor(mortgageValueForSpace(sp) * 1.1);
@@ -3862,7 +4193,11 @@ function unmortgageProp(id) {
   p.money -= cost;
   addLog(`${p.name} unmortgaged ${sp.name} for ৳${fmt(cost)}.`);
   renderAll();
-  openMortgageModal();
+  if (actorIsAi) closeOverlay('mortgage-overlay');
+  else openMortgageModal();
+  if (!actorIsAi) {
+    if (tryResolveDebtPrompt()) return;
+  }
   updateTopBar();
 }
 
@@ -3878,7 +4213,10 @@ function getLocalPlayerIndex() {
 
 function getPendingTradeRole() {
   if (!G.pendingTrade) return 'none';
-  if (!isOnlineGame()) return 'offline';
+  if (!isOnlineGame()) {
+    const recipient = G.players[Number(G.pendingTrade.toId)];
+    return isAiPlayer(recipient) ? 'ai-recipient' : 'offline';
+  }
   const me = getLocalPlayerIndex();
   if (me === G.pendingTrade.toId) return 'recipient';
   if (me === G.pendingTrade.fromId) return 'proposer';
@@ -3920,6 +4258,8 @@ function renderTradeReviewModal() {
     ? '📨 Your response is needed'
     : role === 'proposer'
       ? `⏳ Waiting for ${to.name}`
+      : role === 'ai-recipient'
+        ? `🤖 ${to.name} is reviewing this trade`
       : role === 'offline'
         ? '🧪 Local trade review mode'
         : 'ℹ️ Trade in progress';
@@ -3927,6 +4267,8 @@ function renderTradeReviewModal() {
     ? 'background:rgba(22,163,74,.2);border:1px solid rgba(74,222,128,.45);color:#b7f7cb;'
     : role === 'proposer'
       ? 'background:rgba(37,99,235,.25);border:1px solid rgba(125,211,252,.45);color:#d8ecff;'
+      : role === 'ai-recipient'
+        ? 'background:rgba(59,130,246,.2);border:1px solid rgba(147,197,253,.5);color:#dbeafe;'
       : role === 'offline'
         ? 'background:rgba(217,119,6,.2);border:1px solid rgba(252,211,77,.45);color:#ffe9b8;'
         : 'background:rgba(148,163,184,.2);border:1px solid rgba(203,213,225,.45);color:#e2e8f0;';
@@ -3934,6 +4276,8 @@ function renderTradeReviewModal() {
     ? 'You received this trade offer.'
     : role === 'proposer'
       ? `Waiting for ${to.name} to respond.`
+      : role === 'ai-recipient'
+        ? `${to.name} is deciding automatically.`
       : role === 'offline'
         ? `${from.name} offered this trade to ${to.name}.`
         : 'Trade in progress.';
@@ -3967,12 +4311,6 @@ function maybeShowPendingTradeReview() {
   if (!overlay) return;
   if (!G.pendingTrade) {
     tradeReviewShownKey = '';
-    closeOverlay('trade-review-overlay');
-    return;
-  }
-
-  const recipient = G.players[Number(G.pendingTrade.toId)];
-  if (!isOnlineGame() && isAiPlayer(recipient)) {
     closeOverlay('trade-review-overlay');
     return;
   }
@@ -4366,6 +4704,77 @@ function clearOwnedAsset(player, id) {
   removeFrom(player.utilities, id);
 }
 
+function hasPendingDebtPromptForCurrentPlayer() {
+  return !!(DEBT_PROMPT.active && Number(DEBT_PROMPT.payerId) === Number(G.currentPlayerIdx));
+}
+
+function resetDebtPrompt() {
+  DEBT_PROMPT.active = false;
+  DEBT_PROMPT.payerId = null;
+  DEBT_PROMPT.amount = 0;
+  DEBT_PROMPT.recipientId = null;
+  DEBT_PROMPT.toParking = false;
+}
+
+function showDebtPrompt(p, amount, recipient = null, toParking = false) {
+  if (!p) return;
+  DEBT_PROMPT.active = true;
+  DEBT_PROMPT.payerId = p.id;
+  DEBT_PROMPT.amount = Math.max(0, Number(amount) || 0);
+  DEBT_PROMPT.recipientId = recipient && !recipient.bankrupt ? recipient.id : null;
+  DEBT_PROMPT.toParking = !!toParking;
+
+  const shortBy = Math.max(0, DEBT_PROMPT.amount - (Number(p.money) || 0));
+  const creditorName = DEBT_PROMPT.recipientId !== null ? (G.players[DEBT_PROMPT.recipientId]?.name || 'another player') : 'the bank';
+  const titleEl = document.getElementById('bankrupt-name');
+  const descEl = document.getElementById('bankrupt-desc');
+  const continueBtn = document.getElementById('bankrupt-continue-btn');
+  const mortgageBtn = document.getElementById('bankrupt-mortgage-btn');
+  if (titleEl) titleEl.textContent = `${p.name} must pay ৳${fmt(DEBT_PROMPT.amount)}`;
+  if (descEl) {
+    descEl.textContent = `${p.name} owes ${creditorName} and is short by ৳${fmt(shortBy)}. Mortgage properties to raise funds, or declare bankruptcy.`;
+  }
+  if (continueBtn) continueBtn.textContent = 'Declare Bankruptcy';
+  if (mortgageBtn) mortgageBtn.style.display = '';
+  openOverlay('bankrupt-overlay');
+}
+
+function openMortgageForDebt() {
+  if (!hasPendingDebtPromptForCurrentPlayer()) {
+    closeOverlay('bankrupt-overlay');
+    return;
+  }
+  closeOverlay('bankrupt-overlay');
+  openMortgageModal();
+}
+
+function tryResolveDebtPrompt() {
+  if (!DEBT_PROMPT.active) return false;
+  const payer = G.players[DEBT_PROMPT.payerId];
+  if (!payer || payer.bankrupt) {
+    resetDebtPrompt();
+    closeOverlay('bankrupt-overlay');
+    return false;
+  }
+
+  const due = Math.max(0, Number(DEBT_PROMPT.amount) || 0);
+  if (payer.money < due) return false;
+
+  payer.money -= due;
+  const recipient = DEBT_PROMPT.recipientId !== null ? G.players[DEBT_PROMPT.recipientId] : null;
+  if (recipient && !recipient.bankrupt) recipient.money += due;
+  else if (DEBT_PROMPT.toParking) G.parkingPot += due;
+
+  const creditorName = recipient && !recipient.bankrupt ? recipient.name : 'the bank';
+  addLog(`${payer.name} settled debt of ৳${fmt(due)} to ${creditorName}.`, 'success');
+  resetDebtPrompt();
+  closeOverlay('bankrupt-overlay');
+  closeOverlay('mortgage-overlay');
+  renderAll();
+  updateActionButtons();
+  return true;
+}
+
 function chargeMoney(p, amount, recipient=null, toParking=false) {
   if (amount <= 0) { if (recipient) recipient.money += Math.abs(amount); return true; }
   if (!p || p.bankrupt) return false;
@@ -4377,11 +4786,33 @@ function chargeMoney(p, amount, recipient=null, toParking=false) {
     }
   }
 
+  if (!isOnlineGame() && isAiPlayer(p) && p.money < amount) {
+    let usedMortgages = 0;
+    while (p.money < amount && usedMortgages < 32) {
+      const target = amount + Math.floor(aiCashReserve(p) * 0.25);
+      const mortgaged = aiTryMortgageToTarget(p, target);
+      if (!mortgaged) break;
+      usedMortgages++;
+    }
+    if (usedMortgages > 0) {
+      addLog(`${p.name} used ${usedMortgages} emergency mortgage${usedMortgages > 1 ? 's' : ''} to avoid bankruptcy.`, 'important');
+    }
+  }
+
   if (p.money >= amount) {
     p.money -= amount;
     if (recipient && !recipient.bankrupt) recipient.money += amount;
     else if (toParking) G.parkingPot += amount;
+    if (DEBT_PROMPT.active && DEBT_PROMPT.payerId === p.id) {
+      resetDebtPrompt();
+      closeOverlay('bankrupt-overlay');
+    }
     return true;
+  }
+
+  if (!isAiPlayer(p)) {
+    showDebtPrompt(p, amount, recipient && !recipient.bankrupt ? recipient : null, toParking);
+    return false;
   }
 
   // Cannot cover debt even after liquidation.
@@ -4412,6 +4843,9 @@ function checkBankruptcy() {
 
 function declareBankruptcy(p, creditor = null, debtAmount = 0, toBank = false) {
   if (!p || p.bankrupt) return;
+  if (DEBT_PROMPT.active && DEBT_PROMPT.payerId === p.id) {
+    resetDebtPrompt();
+  }
 
   if (G.pendingTrade && (G.pendingTrade.fromId === p.id || G.pendingTrade.toId === p.id)) {
     const from = G.players[G.pendingTrade.fromId];
@@ -4485,6 +4919,11 @@ function declareBankruptcy(p, creditor = null, debtAmount = 0, toBank = false) {
     document.getElementById('bankrupt-desc').textContent = `${p.name} could not pay the Bank. Their properties are queued for auction.`;
   }
 
+  const continueBtn = document.getElementById('bankrupt-continue-btn');
+  const mortgageBtn = document.getElementById('bankrupt-mortgage-btn');
+  if (continueBtn) continueBtn.textContent = 'Continue';
+  if (mortgageBtn) mortgageBtn.style.display = 'none';
+
   p.properties = [];
   p.railroads = [];
   p.utilities = [];
@@ -4504,6 +4943,18 @@ function declareBankruptcy(p, creditor = null, debtAmount = 0, toBank = false) {
 }
 
 function confirmBankruptcy() {
+  if (hasPendingDebtPromptForCurrentPlayer()) {
+    const payer = G.players[DEBT_PROMPT.payerId];
+    const recipient = DEBT_PROMPT.recipientId !== null ? G.players[DEBT_PROMPT.recipientId] : null;
+    const debt = Math.max(0, Number(DEBT_PROMPT.amount) || 0);
+    const toParking = !!DEBT_PROMPT.toParking;
+    resetDebtPrompt();
+    if (payer && !payer.bankrupt) {
+      declareBankruptcy(payer, recipient && !recipient.bankrupt ? recipient : null, debt, toParking);
+    }
+    return;
+  }
+
   closeOverlay('bankrupt-overlay');
   G.phase = 'end';
   renderAll();
@@ -4517,6 +4968,11 @@ function confirmBankruptcy() {
 // ═══════════════════════════════════════════════
 function endTurn() {
   if (!requireTurnControl()) return;
+  if (hasPendingDebtPromptForCurrentPlayer()) {
+    showDebtPrompt(curPlayer(), DEBT_PROMPT.amount, DEBT_PROMPT.recipientId !== null ? G.players[DEBT_PROMPT.recipientId] : null, DEBT_PROMPT.toParking);
+    toast('Settle debt by mortgaging or declare bankruptcy.', 'danger');
+    return;
+  }
   if (G.phase === 'roll') { toast('You must roll dice first!', 'danger'); return; }
   stopTimer();
   G.pendingBuy = null;
@@ -4529,6 +4985,7 @@ function endTurn() {
     count++;
   }
   G.currentPlayerIdx = next;
+  AI_CTRL.lastTradeAttemptKey = '';
   G.phase = 'roll';
   G.lastDoubles = false;
 
