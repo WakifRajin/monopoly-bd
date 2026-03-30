@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>🎲 Bangladeshi Monopoly</title>
+<title>Bangladeshi Monopoly</title>
+<link rel="icon" type="image/svg+xml" href="logo.svg">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -43,6 +44,8 @@ body{font-family:var(--font-body);background:#0f2318;color:#1a1a1a;overscroll-be
 /* ── LOBBY ── */
 #lobby-screen{background:linear-gradient(145deg,#0a1f10 0%,#1a3d25 50%,#0d2b1a 100%);overflow-y:auto}
 .lobby-header{text-align:center;padding:2.5rem 1rem 1rem;position:relative}
+.lobby-logo-wrap{display:flex;align-items:center;justify-content:center;gap:.65rem;margin-bottom:.25rem}
+.lobby-logo-mark{width:clamp(2.1rem,7.8vw,3.1rem);height:clamp(2.1rem,7.8vw,3.1rem);display:block;filter:drop-shadow(0 5px 12px rgba(0,0,0,.45))}
 .lobby-logo{font-family:var(--font-display);font-size:clamp(2rem,6vw,3.2rem);font-weight:900;color:#fff;line-height:1;text-shadow:0 4px 20px rgba(0,0,0,.5)}
 .lobby-logo span{color:var(--gold-light)}
 .lobby-subtitle{color:rgba(255,255,255,.6);font-size:.95rem;margin-top:.4rem;letter-spacing:.05em}
@@ -539,7 +542,10 @@ body{font-family:var(--font-body);background:#0f2318;color:#1a1a1a;overscroll-be
 <!-- ═══════════════ HOME SCREEN ═══════════════ -->
 <div class="screen" id="home-screen">
   <div class="lobby-header">
-    <div class="lobby-logo">🎲 <span>Bangladeshi</span> Monopoly</div>
+    <div class="lobby-logo-wrap">
+      <img src="logo.svg" alt="Monopoly logo" class="lobby-logo-mark">
+      <div class="lobby-logo"><span>Bangladeshi</span> Monopoly</div>
+    </div>
     <div class="lobby-subtitle">Multiplayer Board Game • Pass & Play</div>
     <div class="lobby-tagline">✦ Choose Your Mode ✦</div>
   </div>
@@ -564,7 +570,10 @@ body{font-family:var(--font-body);background:#0f2318;color:#1a1a1a;overscroll-be
     <button class="btn btn-sm page-back-btn" onclick="openHomePage()">← Back</button>
   </div>
   <div class="lobby-header" style="padding-top:1rem">
-    <div class="lobby-logo">🌐 <span>Online</span> Room Setup</div>
+    <div class="lobby-logo-wrap">
+      <img src="logo.svg" alt="Monopoly logo" class="lobby-logo-mark">
+      <div class="lobby-logo"><span>Online</span> Room Setup</div>
+    </div>
     <div class="lobby-subtitle">Create or join a Firebase room</div>
     <div class="lobby-tagline">✦ Room Entry Page ✦</div>
   </div>
@@ -624,7 +633,10 @@ body{font-family:var(--font-body);background:#0f2318;color:#1a1a1a;overscroll-be
     <button class="btn btn-sm page-back-btn" onclick="handleLobbyBack()">← Back</button>
   </div>
   <div class="lobby-header" style="padding-top:1rem">
-    <div class="lobby-logo">🎲 <span>Bangladeshi</span> Monopoly</div>
+    <div class="lobby-logo-wrap">
+      <img src="logo.svg" alt="Monopoly logo" class="lobby-logo-mark">
+      <div class="lobby-logo"><span>Bangladeshi</span> Monopoly</div>
+    </div>
     <div class="lobby-subtitle">Multiplayer Board Game • Pass & Play</div>
     <div class="lobby-tagline" id="lobby-context-tagline">✦ Local Multiplayer ✦</div>
   </div>
@@ -701,7 +713,10 @@ body{font-family:var(--font-body);background:#0f2318;color:#1a1a1a;overscroll-be
     <button class="btn btn-sm page-back-btn" onclick="openHomePage()">← Back</button>
   </div>
   <div class="lobby-header" style="padding-top:1rem">
-    <div class="lobby-logo">🏅 <span>Credits</span></div>
+    <div class="lobby-logo-wrap">
+      <img src="logo.svg" alt="Monopoly logo" class="lobby-logo-mark">
+      <div class="lobby-logo"><span>Credits</span></div>
+    </div>
     <div class="lobby-subtitle"></div>
   </div>
   <div class="credits-body">
