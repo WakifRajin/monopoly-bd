@@ -827,6 +827,9 @@ const ONLINE = {
   isApplyingRemote: false,
   status: 'offline',
   revision: 0,
+  lastDepartureNoticeId: '',
+  roomCleanupRunning: false,
+  lastRoomCleanupAt: 0,
 };
 
 const ONLINE_MUTATION_FUNCS = [
@@ -837,6 +840,10 @@ const ONLINE_MUTATION_FUNCS = [
 
 const ROOM_SCHEMA_VERSION = 2;
 const OPEN_ROOM_STALE_MS = 1000 * 60 * 60 * 6;
+const PLAYING_ROOM_STALE_MS = 1000 * 60 * 60 * 24;
+const EMPTY_ROOM_STALE_MS = 1000 * 60 * 15;
+const ROOM_CLEANUP_INTERVAL_MS = 1000 * 60 * 2;
+const ROOM_CLEANUP_BATCH_LIMIT = 16;
 
 function ensureLocalUid() {
   const key = 'monopoly_online_uid';
@@ -949,6 +956,67 @@ function cycleMyToken(step = 1) {
   });
 }
 
+function roomLastActivityAt(roomData) {
+  const stamp = Number(roomData?.updatedAt || roomData?.createdAt || 0);
+  return Number.isFinite(stamp) ? stamp : 0;
+}
+
+function isRoomAbandoned(roomData, now = Date.now()) {
+  if (!roomData || typeof roomData !== 'object') return false;
+  const lastSeen = roomLastActivityAt(roomData);
+  const age = lastSeen > 0 ? Math.max(0, now - lastSeen) : Number.POSITIVE_INFINITY;
+  const status = String(roomData.status || 'lobby');
+  const players = indexedObjectToArray(roomData.players).filter(p => p && p.uid);
+
+  if (players.length === 0) return age > EMPTY_ROOM_STALE_MS;
+  if (status === 'playing') return age > PLAYING_ROOM_STALE_MS;
+  return age > OPEN_ROOM_STALE_MS;
+}
+
+async function cleanupAbandonedRooms(candidateRoomIds = null, force = false) {
+  if (!FIREBASE.api || ONLINE.roomCleanupRunning) return 0;
+  const now = Date.now();
+  if (!force && now - ONLINE.lastRoomCleanupAt < ROOM_CLEANUP_INTERVAL_MS) return 0;
+
+  ONLINE.roomCleanupRunning = true;
+  ONLINE.lastRoomCleanupAt = now;
+
+  try {
+    let candidates = Array.isArray(candidateRoomIds) ? candidateRoomIds.slice() : null;
+    if (!candidates) {
+      const snap = await FIREBASE.api.get(FIREBASE.api.ref(FIREBASE.db, 'rooms'));
+      const rawRooms = snap.exists() ? (snap.val() || {}) : {};
+      const scanNow = Date.now();
+      candidates = Object.entries(rawRooms)
+        .filter(([roomId, data]) => roomId !== ONLINE.roomId && isValidRoomId(roomId) && isRoomAbandoned(data, scanNow))
+        .map(([roomId]) => roomId);
+    }
+
+    const uniqueIds = Array.from(new Set(candidates
+      .filter(roomId => roomId !== ONLINE.roomId && isValidRoomId(roomId))
+    )).slice(0, ROOM_CLEANUP_BATCH_LIMIT);
+
+    let removed = 0;
+    for (const roomId of uniqueIds) {
+      const roomRef = FIREBASE.api.ref(FIREBASE.db, `rooms/${roomId}`);
+      const tx = await FIREBASE.api.runTransaction(roomRef, current => {
+        if (!current) return;
+        if (!isRoomAbandoned(current, Date.now())) return current;
+        return null;
+      });
+      if (tx?.committed && tx?.snapshot && !tx.snapshot.exists()) {
+        removed += 1;
+      }
+    }
+    return removed;
+  } catch (err) {
+    console.error('Abandoned room cleanup failed.', err);
+    return 0;
+  } finally {
+    ONLINE.roomCleanupRunning = false;
+  }
+}
+
 async function refreshOpenRoomsList(force = false) {
   if (!FIREBASE.api || isOnlineGame() || ONLINE.mode !== 'join') return;
   if (ONLINE.roomsListLoading) return;
@@ -964,18 +1032,29 @@ async function refreshOpenRoomsList(force = false) {
     const rawRooms = snap.exists() ? (snap.val() || {}) : {};
     const now = Date.now();
     const rooms = [];
+    const staleCandidates = [];
     Object.entries(rawRooms).forEach(([roomId, d]) => {
       if (!d || typeof d !== 'object') return;
+      if (isRoomAbandoned(d, now) && roomId !== ONLINE.roomId && isValidRoomId(roomId)) {
+        staleCandidates.push(roomId);
+      }
+
       if (Number(d.schemaVersion || 0) !== ROOM_SCHEMA_VERSION) return;
-      const updatedAt = Number(d.updatedAt || 0);
-      if (!Number.isFinite(updatedAt) || now - updatedAt > OPEN_ROOM_STALE_MS) return;
+      const updatedAt = roomLastActivityAt(d);
+      if (isRoomAbandoned(d, now)) return;
       const players = indexedObjectToArray(d.players).filter(p => p && typeof p === 'object');
       if ((d.status || 'lobby') !== 'lobby') return;
       if ((d.visibility || 'open') !== 'open') return;
       if (players.length < 8 && isValidRoomId(roomId)) {
-        rooms.push({ id: roomId, players, hostUid: d.hostUid, updatedAt: d.updatedAt || 0 });
+        rooms.push({ id: roomId, players, hostUid: d.hostUid, updatedAt });
       }
     });
+
+    if (staleCandidates.length) {
+      cleanupAbandonedRooms(staleCandidates, force).catch(err => {
+        console.error('Failed to clean stale rooms from listing scan.', err);
+      });
+    }
 
     rooms.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
     const visibleRooms = rooms.slice(0, 25);
@@ -1578,7 +1657,7 @@ function defaultLobbySettings() {
 }
 
 async function syncLobbySettingsToRoom() {
-  if (!isOnlineGame() || !ONLINE.isHost || ONLINE.status !== 'lobby' || !FIREBASE.api) return;
+  if (!isOnlineGame() || !ONLINE.isHost || !FIREBASE.api) return;
   try {
     await FIREBASE.api.update(getRoomRef(), {
       settings: defaultLobbySettings(),
@@ -1762,6 +1841,19 @@ async function syncRoomState(reason = '') {
 async function applyRoomSnapshot(data) {
   if (!data) return;
   const prevLastChatKey = chatMessageKey(getLastChatMessage());
+  const departureNotice = data.lastDepartureNotice && typeof data.lastDepartureNotice === 'object' ? data.lastDepartureNotice : null;
+  let departureMessage = '';
+  let departureEndsMatch = false;
+  if (departureNotice?.id && departureNotice.id !== ONLINE.lastDepartureNoticeId) {
+    ONLINE.lastDepartureNoticeId = String(departureNotice.id);
+    const noticeTime = Number(departureNotice.time) || 0;
+    const isRecent = !noticeTime || (Date.now() - noticeTime) < 15000;
+    if (isRecent) {
+      const who = sanitizeName(departureNotice.name, 'A player');
+      departureMessage = String(departureNotice.message || `${who} left the room.`);
+      departureEndsMatch = departureNotice.type === 'leave-end';
+    }
+  }
   const roomVersion = Number(data.schemaVersion || 0);
   if (roomVersion !== ROOM_SCHEMA_VERSION) {
     throw new Error('Room is using an older game schema. Recreate the room from this version.');
@@ -1782,7 +1874,7 @@ async function applyRoomSnapshot(data) {
   const localPresent = roomPlayers.some(p => p.uid === ONLINE.localUid);
   if (isOnlineGame() && !localPresent) {
     updateOnlineStatus('You are no longer in this room.', true);
-    leaveOnlineRoom(false);
+    leaveOnlineRoom(false, false);
     toast('You were removed from the room.', 'danger');
     return;
   }
@@ -1814,6 +1906,13 @@ async function applyRoomSnapshot(data) {
       renderAll();
       showScreen('game-screen');
       updateActionButtons();
+      if (departureMessage) {
+        toast(departureMessage, departureEndsMatch ? 'danger' : 'gold');
+        if (departureEndsMatch) {
+          const winner = (G.players || []).find(p => !p.bankrupt);
+          if (winner) showWinner(winner);
+        }
+      }
       const nextLast = getLastChatMessage();
       if (prevLastChatKey && chatMessageKey(nextLast) !== prevLastChatKey) {
         showChatPreview(nextLast);
@@ -1823,6 +1922,9 @@ async function applyRoomSnapshot(data) {
     }
   } else if (ONLINE.status === 'lobby') {
     renderLobby();
+    if (departureMessage) {
+      toast(departureMessage, 'danger');
+    }
   }
 
   updateOnlineLobbyUI();
@@ -1832,11 +1934,12 @@ function attachRoomListener(roomId) {
   if (ONLINE.unsubRoom) ONLINE.unsubRoom();
   ONLINE.roomId = roomId;
   ONLINE.connected = true;
+  ONLINE.lastDepartureNoticeId = '';
   const ref = FIREBASE.api.ref(FIREBASE.db, `rooms/${roomId}`);
   ONLINE.unsubRoom = FIREBASE.api.onValue(ref, snap => {
     if (!snap.exists()) {
       updateOnlineStatus('Room closed. You are now offline.', true);
-      leaveOnlineRoom(false);
+      leaveOnlineRoom(false, false);
       return;
     }
     applyRoomSnapshot(snap.val()).catch(err => {
@@ -2087,7 +2190,218 @@ async function joinOnlineRoom() {
   toast(`Joined room ${roomId}`, 'gold');
 }
 
-async function leaveOnlineRoom(showToast = true) {
+function applyOnlineDepartureRuleToRoomData(roomData, leavingUid) {
+  if (!roomData || typeof roomData !== 'object') return roomData;
+
+  const now = Date.now();
+  const allRoomPlayers = indexedObjectToArray(roomData.players).filter(p => p && typeof p === 'object');
+  const leavingRoomPlayer = allRoomPlayers.find(p => p.uid === leavingUid) || null;
+  const remainingRoomPlayers = allRoomPlayers.filter(p => p.uid !== leavingUid);
+
+  if (!remainingRoomPlayers.length) return null;
+
+  const leavingName = sanitizeName(leavingRoomPlayer?.name, 'A player');
+  const out = {
+    ...roomData,
+    players: remainingRoomPlayers,
+    playerUids: remainingRoomPlayers.map(p => p.uid).filter(Boolean),
+    hostUid: remainingRoomPlayers[0]?.uid || null,
+    updatedAt: now,
+  };
+
+  if ((roomData.status || 'lobby') !== 'playing' || !roomData.gameState) {
+    out.lastDepartureNotice = {
+      id: `dep_${now}_${leavingUid}`,
+      type: 'leave-lobby',
+      name: leavingName,
+      message: `${leavingName} left the room.`,
+      time: now,
+    };
+    return out;
+  }
+
+  const gs = JSON.parse(JSON.stringify(roomData.gameState || {}));
+  const gamePlayers = indexedObjectToArray(gs.players).filter(p => p && typeof p === 'object');
+  if (!gamePlayers.length) {
+    out.gameState = gs;
+    out.lastDepartureNotice = {
+      id: `dep_${now}_${leavingUid}`,
+      type: 'leave-play',
+      name: leavingName,
+      message: `${leavingName} left the room.`,
+      time: now,
+    };
+    return out;
+  }
+
+  gs.players = gamePlayers.map((p, i) => ({ ...p, id: i }));
+
+  let quitterIdx = gs.players.findIndex(p => p.uid === leavingUid);
+  if (quitterIdx < 0 && leavingRoomPlayer?.token) {
+    quitterIdx = gs.players.findIndex(p => String(p.token || '') === String(leavingRoomPlayer.token || ''));
+  }
+  if (quitterIdx < 0 && leavingRoomPlayer?.name) {
+    const targetName = sanitizeName(leavingRoomPlayer.name, 'A player');
+    quitterIdx = gs.players.findIndex(p => sanitizeName(p.name, 'A player') === targetName);
+  }
+
+  if (quitterIdx < 0) {
+    out.gameState = gs;
+    out.lastDepartureNotice = {
+      id: `dep_${now}_${leavingUid}`,
+      type: 'leave-play',
+      name: leavingName,
+      message: `${leavingName} left the room.`,
+      time: now,
+    };
+    return out;
+  }
+
+  const quitter = gs.players[quitterIdx];
+  const quitterName = sanitizeName(quitter.name, leavingName);
+
+  const props = indexedObjectToArray(gs.properties);
+  if (props.length < SPACES.length) props.length = SPACES.length;
+  const queuedIds = [];
+  for (let i = 0; i < props.length; i++) {
+    const prop = props[i];
+    if (!prop || typeof prop !== 'object') continue;
+    const ownerN = Number(prop.owner);
+    if (!Number.isInteger(ownerN) || ownerN !== quitterIdx) continue;
+    prop.owner = null;
+    prop.houses = 0;
+    prop.hotel = false;
+    prop.mortgaged = false;
+    queuedIds.push(i);
+  }
+  gs.properties = props;
+
+  quitter.money = 0;
+  quitter.inJail = false;
+  quitter.jailTurns = 0;
+  quitter.doublesCount = 0;
+  quitter.bankrupt = true;
+  quitter.uid = null;
+  quitter.properties = [];
+  quitter.railroads = [];
+  quitter.utilities = [];
+  quitter.name = `${quitterName} (Left)`;
+
+  gs.players.forEach((pl, idx) => {
+    const ownedProps = [];
+    const ownedRail = [];
+    const ownedUtil = [];
+    for (let pid = 0; pid < props.length; pid++) {
+      const prop = props[pid];
+      if (!prop || Number(prop.owner) !== idx) continue;
+      const sp = SPACES[pid];
+      if (!sp) continue;
+      if (sp.type === 'property') ownedProps.push(pid);
+      else if (sp.type === 'railroad') ownedRail.push(pid);
+      else if (sp.type === 'utility') ownedUtil.push(pid);
+    }
+    pl.properties = ownedProps;
+    pl.railroads = ownedRail;
+    pl.utilities = ownedUtil;
+  });
+
+  if (gs.pendingTrade && (Number(gs.pendingTrade.fromId) === quitterIdx || Number(gs.pendingTrade.toId) === quitterIdx)) {
+    gs.pendingTrade = null;
+  }
+  gs.pendingBuy = null;
+
+  let queue = indexedObjectToArray(gs.bankAuctionQueue).map(Number).filter(Number.isInteger);
+  queuedIds.forEach(id => {
+    if (!queue.includes(id)) queue.push(id);
+  });
+  gs.bankAuctionQueue = queue;
+
+  if (gs.auctionState && typeof gs.auctionState === 'object') {
+    const auctionPropId = Number(gs.auctionState.propId);
+    if (Number.isInteger(auctionPropId) && props[auctionPropId] && props[auctionPropId].owner === null) {
+      if (!gs.bankAuctionQueue.includes(auctionPropId)) gs.bankAuctionQueue.unshift(auctionPropId);
+    }
+    gs.auctionState = null;
+  }
+
+  const activeIds = gs.players.filter(p => !p.bankrupt).map(p => p.id);
+  if (activeIds.length) {
+    const curN = Number(gs.currentPlayerIdx);
+    if (!Number.isInteger(curN) || !activeIds.includes(curN)) {
+      gs.currentPlayerIdx = activeIds[0];
+      gs.phase = 'roll';
+    }
+  }
+
+  if (activeIds.length <= 1) {
+    gs.gameOver = true;
+    gs.pendingBuy = null;
+    gs.pendingTrade = null;
+    gs.auctionState = null;
+    gs.bankAuctionQueue = [];
+
+    const winner = gs.players.find(p => !p.bankrupt);
+    const endMsg = winner
+      ? `${quitterName} left the match. ${winner.name} wins by default.`
+      : `${quitterName} left the match. Match ended.`;
+
+    out.lastDepartureNotice = {
+      id: `dep_${now}_${leavingUid}`,
+      type: 'leave-end',
+      name: quitterName,
+      winnerName: winner?.name || '',
+      message: endMsg,
+      time: now,
+    };
+  } else {
+    while (gs.bankAuctionQueue.length && !gs.auctionState) {
+      const nextId = Number(gs.bankAuctionQueue[0]);
+      if (!Number.isInteger(nextId) || !props[nextId] || props[nextId].owner !== null) {
+        gs.bankAuctionQueue.shift();
+        continue;
+      }
+      const bidderStartIdx = activeIds.includes(Number(gs.currentPlayerIdx))
+        ? activeIds.indexOf(Number(gs.currentPlayerIdx))
+        : 0;
+      gs.auctionState = {
+        propId: nextId,
+        propName: SPACES[nextId]?.name || 'Property',
+        currentBid: 0,
+        highBidder: null,
+        passed: [],
+        bidderIdx: bidderStartIdx,
+        activePlayers: activeIds,
+        source: 'bank',
+      };
+      gs.bankAuctionQueue.shift();
+    }
+
+    const liquidatedCount = queuedIds.length;
+    const liquidatedMsg = liquidatedCount > 0
+      ? `${quitterName} left the match. Bank liquidated assets and queued ${liquidatedCount} ${liquidatedCount === 1 ? 'property' : 'properties'} for auction.`
+      : `${quitterName} left the match. Bank liquidated assets.`;
+
+    out.lastDepartureNotice = {
+      id: `dep_${now}_${leavingUid}`,
+      type: 'leave-liquidation',
+      name: quitterName,
+      auctionsQueued: liquidatedCount,
+      message: liquidatedMsg,
+      time: now,
+    };
+
+    if (!Array.isArray(gs.log)) gs.log = [];
+    gs.log.push({ text: liquidatedMsg, type: 'important', time: now });
+    if (gs.log.length > 250) gs.log = gs.log.slice(-250);
+    gs.gameOver = false;
+  }
+
+  out.gameState = gs;
+  out.status = 'playing';
+  return out;
+}
+
+async function leaveOnlineRoom(showToast = true, mutateRoom = true) {
   if (!ONLINE.connected || !FIREBASE.api) {
     ONLINE.connected = false;
     ONLINE.roomId = null;
@@ -2095,36 +2409,21 @@ async function leaveOnlineRoom(showToast = true) {
     ONLINE.hostUid = null;
     ONLINE.visibility = 'open';
     ONLINE.status = 'offline';
+    ONLINE.lastDepartureNoticeId = '';
     updateOnlineLobbyUI();
     return;
   }
 
-  if (showToast && ONLINE.status === 'playing') {
-    toast('Cannot leave while a game is in progress.', 'danger');
-    return;
-  }
+  const wasPlaying = ONLINE.status === 'playing';
 
   const roomId = ONLINE.roomId;
   const roomRef = FIREBASE.api.ref(FIREBASE.db, `rooms/${roomId}`);
-  try {
-    await FIREBASE.api.runTransaction(roomRef, data => {
-      if (!data) return;
-      const players = indexedObjectToArray(data.players).filter(p => p && p.uid !== ONLINE.localUid);
-      if (!players.length) {
-        return null;
-      }
-      const nextHost = players[0].uid;
-      return {
-        ...data,
-        players,
-        playerUids: players.map(p => p.uid).filter(Boolean),
-        hostUid: nextHost,
-        status: data.status || 'lobby',
-        updatedAt: Date.now(),
-      };
-    });
-  } catch (err) {
-    console.error(err);
+  if (mutateRoom) {
+    try {
+      await FIREBASE.api.runTransaction(roomRef, data => applyOnlineDepartureRuleToRoomData(data, ONLINE.localUid));
+    } catch (err) {
+      console.error(err);
+    }
   }
 
   if (ONLINE.unsubRoom) ONLINE.unsubRoom();
@@ -2136,10 +2435,11 @@ async function leaveOnlineRoom(showToast = true) {
   ONLINE.visibility = 'open';
   ONLINE.status = 'offline';
   ONLINE.revision = 0;
+  ONLINE.lastDepartureNoticeId = '';
   updateOnlineLobbyUI();
   renderLobby();
   showScreen('lobby-screen');
-  if (showToast) toast('Left online room.', 'gold');
+  if (showToast) toast(wasPlaying ? 'You left the match.' : 'Left online room.', 'gold');
 }
 
 function renderLobby() {
@@ -4229,12 +4529,26 @@ const TIMER = {
 };
 
 function setTimerDuration(secs) {
-  TIMER.duration = secs;
+  if (isOnlineGame() && !ONLINE.isHost) {
+    toast('Only the host can change timer settings in online mode.', 'danger');
+    return;
+  }
+
+  const next = Math.max(0, Number(secs) || 0);
+  TIMER.duration = next;
+  const timerInput = document.getElementById('lobby-timer');
+  if (timerInput) timerInput.value = String(next);
   stopTimer();
+  if (G && Array.isArray(G.players) && G.phase === 'end' && canLocalControlTurn()) {
+    startTimer();
+  }
   // Re-open settings with updated state
   openDrawer('settings');
-  toast(secs === 0 ? '⏱ Timer disabled' : `⏱ Timer set to ${secs}s`, 'gold');
-  syncLobbySettingsToRoom();
+  toast(next === 0 ? '⏱ Timer disabled' : `⏱ Timer set to ${next}s`, 'gold');
+  syncLobbySettingsToRoom().catch(err => {
+    console.error(err);
+    toast('Failed to sync timer setting online.', 'danger');
+  });
 }
 
 function startTimer() {
@@ -4357,7 +4671,14 @@ function installLobbyEvents() {
   }
 
   setInterval(() => {
-    if (!isOnlineGame() && ONLINE.mode === 'join' && ONLINE.ready) refreshOpenRoomsList();
+    if (!ONLINE.ready || isOnlineGame()) return;
+    if (ONLINE.mode === 'join') {
+      refreshOpenRoomsList();
+      return;
+    }
+    cleanupAbandonedRooms(null, false).catch(err => {
+      console.error('Background room cleanup failed.', err);
+    });
   }, 8000);
 }
 
