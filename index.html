@@ -417,6 +417,10 @@ body{font-family:var(--font-body);background:#0f2318;color:#1a1a1a;overscroll-be
 .trade-prop-item.selected{border-color:var(--gold);background:rgba(201,151,28,.2);color:#fff}
 .trade-prop-item .tprop-dot{width:10px;height:10px;border-radius:2px;flex-shrink:0}
 
+#buy-overlay,#auction-overlay{
+  backdrop-filter:none !important;
+}
+
 #trade-overlay,#trade-review-overlay{
   background:transparent !important;
   backdrop-filter:none !important;
@@ -574,12 +578,12 @@ body{font-family:var(--font-body);background:#0f2318;color:#1a1a1a;overscroll-be
       <img src="logo.svg" alt="Monopoly logo" class="lobby-logo-mark">
       <div class="lobby-logo"><span>Online</span> Room Setup</div>
     </div>
-    <div class="lobby-subtitle">Create or join a Firebase room</div>
+    <div class="lobby-subtitle">Create or join an online room</div>
     <div class="lobby-tagline">✦ Room Entry Page ✦</div>
   </div>
   <div class="lobby-body">
     <div class="card">
-      <h2>Online Rooms (Firebase)</h2>
+      <h2>Online Rooms</h2>
       <div class="input-group">
         <label>Your Online Name</label>
         <input type="text" id="online-player-name" maxlength="24" placeholder="Enter your name">
@@ -755,6 +759,7 @@ body{font-family:var(--font-body);background:#0f2318;color:#1a1a1a;overscroll-be
       <button class="btn btn-sm topbar-tool-btn" onclick="openDrawer('log')" title="Game log">📋</button>
       <button class="btn btn-sm topbar-tool-btn" onclick="openDrawer('chat')" title="Chat">💬</button>
       <button class="btn btn-sm topbar-tool-btn" onclick="openDrawer('settings')" title="Timer settings">⚙️</button>
+      <button class="btn btn-sm topbar-tool-btn" id="leave-game-btn" onclick="openLeaveGameModal()" title="Leave game" style="display:none;background:rgba(192,57,43,.35)">🚪</button>
     </div>
   </div>
 
@@ -868,6 +873,19 @@ body{font-family:var(--font-body);background:#0f2318;color:#1a1a1a;overscroll-be
   </div>
 </div>
 
+<!-- Leave game modal (online only) -->
+<div class="overlay" id="leave-game-overlay" onclick="if(event.target===this)closeOverlay('leave-game-overlay')">
+  <div class="modal">
+    <h2>Leave Online Game?</h2>
+    <p>Choose how your seat is handled after you leave the match.</p>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="confirmLeaveOnlineGame('ai')">🤖 AI Takeover</button>
+      <button class="btn btn-gold" onclick="confirmLeaveOnlineGame('liquidation')">🏦 Liquidate & Auction</button>
+      <button class="btn" style="background:rgba(255,255,255,.1);color:#fff" onclick="closeOverlay('leave-game-overlay')">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <!-- Rent notification -->
 <div class="overlay" id="rent-overlay">
   <div class="modal" style="text-align:center">
@@ -952,6 +970,7 @@ body{font-family:var(--font-body);background:#0f2318;color:#1a1a1a;overscroll-be
     <h2 id="bankrupt-name">Player is Bankrupt!</h2>
     <p id="bankrupt-desc"></p>
     <div class="modal-actions" style="justify-content:center">
+      <button class="btn btn-secondary" id="bankrupt-sell-btn" style="display:none" onclick="openBuildForDebt()">🏠 Sell Buildings</button>
       <button class="btn btn-gold" id="bankrupt-mortgage-btn" style="display:none" onclick="openMortgageForDebt()">💰 Mortgage Properties</button>
       <button class="btn btn-danger" id="bankrupt-continue-btn" onclick="confirmBankruptcy()">Continue</button>
     </div>
@@ -1023,6 +1042,9 @@ const ONLINE = {
   status: 'offline',
   revision: 0,
   lastDepartureNoticeId: '',
+  lastSnapshotAt: 0,
+  aiRunner: null,
+  aiRunnerRequestAt: 0,
   roomCleanupRunning: false,
   lastRoomCleanupAt: 0,
 };
@@ -1360,10 +1382,10 @@ async function bootstrapFirebase() {
       serverTimestamp: dbMod.serverTimestamp,
     };
     ONLINE.ready = true;
-    updateOnlineStatus('Firebase RTDB ready. You can create or join a room.');
+    updateOnlineStatus('Online service ready. You can create or join a room.');
   } catch (err) {
     console.error(err);
-    const msg = firebaseErrorMessage(err, 'Firebase failed to initialize. Check RTDB URL and enable Anonymous Auth.');
+    const msg = firebaseErrorMessage(err, 'Online service failed to initialize. Check room service URL and enable anonymous sign-in.');
     updateOnlineStatus(msg, true);
   }
 }
@@ -1375,14 +1397,14 @@ function updateOnlineStatus(text, isError = false) {
   el.style.color = isError ? '#ff9ca1' : 'rgba(255,255,255,.65)';
 }
 
-function firebaseErrorMessage(err, fallback = 'Firebase request failed.') {
+function firebaseErrorMessage(err, fallback = 'Online request failed.') {
   const code = String(err?.code || '').toLowerCase();
   const message = String(err?.message || '');
   if (code.includes('permission-denied') || message.includes('Permission denied') || message.includes('PERMISSION_DENIED')) {
     return 'Permission denied by RTDB rules. Allow authenticated users to read/write rooms.';
   }
   if (code.includes('unauthenticated') || code.includes('auth') || message.toLowerCase().includes('anonymous')) {
-    return 'Authentication failed. Enable Anonymous Auth in Firebase Authentication.';
+    return 'Authentication failed. Enable anonymous sign-in in authentication settings.';
   }
   if (code.includes('network') || message.toLowerCase().includes('network')) {
     return 'Network error while contacting RTDB. Check your internet connection.';
@@ -1418,7 +1440,9 @@ function resolveLocalPlayerIndex() {
 function canLocalControlTurn() {
   if (!isOnlineGame() || !G.players || !G.players.length) return true;
   const myIdx = resolveLocalPlayerIndex();
-  return myIdx >= 0 && myIdx === G.currentPlayerIdx;
+  if (myIdx >= 0 && myIdx === G.currentPlayerIdx) return true;
+  const current = G.players[G.currentPlayerIdx];
+  return isAiPlayer(current) && canRunAiController();
 }
 
 function currentAuctionBidderId() {
@@ -1439,6 +1463,7 @@ function canLocalControlAuctionAction() {
   if (!Number.isInteger(bidderId)) return canLocalControlTurn();
   const bidder = G.players[bidderId];
   if (!bidder) return canLocalControlTurn();
+  if (isAiPlayer(bidder)) return canRunAiController();
   if (bidder.uid && bidder.uid === ONLINE.localUid) return true;
   const myIdx = resolveLocalPlayerIndex();
   return myIdx >= 0 ? myIdx === bidderId : canLocalControlTurn();
@@ -1678,7 +1703,7 @@ function buildSpacesFromTheme(themeId) {
     12: {id:12,name:t.utilities[0].name,type:'utility',icon:t.utilities[0].icon,price:1500,mortgage:750},
     15: {id:15,name:t.stations[1],type:'railroad',price:2000,rent:[250,500,1000,2000],mortgage:1000},
     17: {id:17,name:'Community Chest',type:'community',icon:'📦'},
-    20: {id:20,name:'Free Parking',type:'parking',icon:'🅿️',desc:'Free parking — take the pot!'},
+    20: {id:20,name:'Free Parking',type:'parking',icon:'🅿️',desc:'Free parking — just visiting.'},
     22: {id:22,name:'Chance',type:'chance',icon:'❓'},
     25: {id:25,name:t.stations[2],type:'railroad',price:2000,rent:[250,500,1000,2000],mortgage:1000},
     28: {id:28,name:t.utilities[1].name,type:'utility',icon:t.utilities[1].icon,price:1500,mortgage:750},
@@ -1769,7 +1794,7 @@ const SPACES = [
   {id:17, name:'Community Chest', type:'community',  icon:'📦'},
   {id:18, name:'Uttara Sector',   type:'property',   color:'ORANGE', price:1800, rent:[140,700,2000,5500,7500,9500],house:1000,mortgage:900,  group:3},
   {id:19, name:'Baridhara',       type:'property',   color:'ORANGE', price:2000, rent:[160,800,2200,6000,8000,10000],house:1000,mortgage:1000,group:3},
-  {id:20, name:'Free Parking',    type:'parking',    icon:'🅿️',  desc:'Free parking — take the pot!'},
+  {id:20, name:'Free Parking',    type:'parking',    icon:'🅿️',  desc:'Free parking — just visiting.'},
   {id:21, name:'Tejgaon I/A',     type:'property',   color:'RED', price:2200, rent:[180,900,2500,7000,8750,10500],house:1500,mortgage:1100,group:4},
   {id:22, name:'Chance',          type:'chance',     icon:'❓'},
   {id:23, name:'Tejgaon Rd',      type:'property',   color:'RED', price:2200, rent:[180,900,2500,7000,8750,10500],house:1500,mortgage:1100,group:4},
@@ -1838,6 +1863,8 @@ const AI_CTRL = {
   lastKey: '',
   lastTradeAttemptKey: '',
 };
+const AI_RUNNER_LEASE_MS = 3200;
+const AI_RUNNER_RENEW_MS = 1200;
 const DEBT_PROMPT = {
   active: false,
   payerId: null,
@@ -1913,8 +1940,43 @@ function normalizePlayerKind(kind) {
   return kind === 'ai' ? 'ai' : 'human';
 }
 
+const AI_PLACEHOLDER_NAMES = [
+  'Mirza Abbas',
+  'Dipjol',
+  'Hero Alom',
+  'Obaydul Kader',
+  'Shakib Khan',
+  'Sefuda',
+  'Shakib Al Hasan',
+  'Nasiruddin Patwary',
+  'Dr. Mahfuzur Rahman',
+  'Solaiman Shukhon',
+  'Salman Muqtadir',
+  'Ananta Jalil',
+];
+
+function isAiPlaceholderName(name) {
+  const clean = String(name || '').trim();
+  return AI_PLACEHOLDER_NAMES.includes(clean);
+}
+
+function pickRandomAiPlaceholderName(excludeIndex = -1) {
+  const used = new Set(
+    lobbyPlayers
+      .map((p, idx) => ({ p, idx }))
+      .filter(({ p, idx }) => idx !== excludeIndex && normalizePlayerKind(p?.kind) === 'ai' && isAiPlaceholderName(p?.name))
+      .map(({ p }) => String(p.name || '').trim())
+  );
+  const available = AI_PLACEHOLDER_NAMES.filter(name => !used.has(name));
+  const pool = available.length ? available : AI_PLACEHOLDER_NAMES;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
 function defaultLobbyPlayerName(index, kind = 'human') {
-  return normalizePlayerKind(kind) === 'ai' ? `AI ${index + 1}` : `Player ${index + 1}`;
+  if (normalizePlayerKind(kind) !== 'ai') return `Player ${index + 1}`;
+  const current = lobbyPlayers[index];
+  if (current && isAiPlaceholderName(current.name)) return String(current.name).trim();
+  return pickRandomAiPlaceholderName(index);
 }
 
 function getRoomRef() {
@@ -2114,24 +2176,34 @@ function hydrateRemoteGameState(raw) {
 async function syncRoomState(reason = '') {
   if (!isOnlineGame() || ONLINE.isApplyingRemote || !FIREBASE.api) return;
   try {
-    ONLINE.revision += 1;
-    const updatePayload = {
-      status: 'playing',
-      players: G.players.map((p, i) => ({
-        uid: p.uid || null,
-        name: sanitizeName(p.name, `Player ${i + 1}`),
-        token: sanitizeToken(p.token, TOKENS[i % TOKENS.length]),
-      })),
-      playerUids: G.players.map(p => p.uid).filter(Boolean),
-      gameState: safeGameStateForRoom(),
-      revision: ONLINE.revision,
-      updatedAt: Date.now(),
-      lastReason: reason || 'sync',
-    };
-    if (ONLINE.isHost) {
-      updatePayload.settings = defaultLobbySettings();
+    const baseRevision = Number(ONLINE.revision) || 0;
+    const nextRevision = baseRevision + 1;
+    const nextGameState = safeGameStateForRoom();
+    const nextSettings = ONLINE.isHost ? defaultLobbySettings() : null;
+
+    const txResult = await FIREBASE.api.runTransaction(getRoomRef(), current => {
+      if (!current || typeof current !== 'object') return current;
+
+      const serverRevision = Number(current.revision) || 0;
+      if (serverRevision !== baseRevision) {
+        return;
+      }
+
+      const out = {
+        ...current,
+        status: 'playing',
+        gameState: nextGameState,
+        revision: nextRevision,
+        updatedAt: Date.now(),
+        lastReason: reason || 'sync',
+      };
+      if (nextSettings) out.settings = nextSettings;
+      return out;
+    });
+
+    if (txResult?.committed) {
+      ONLINE.revision = nextRevision;
     }
-    await FIREBASE.api.update(getRoomRef(), updatePayload);
   } catch (err) {
     console.error(err);
     toast(firebaseErrorMessage(err, 'Failed to sync room state.'), 'danger');
@@ -2163,7 +2235,15 @@ async function applyRoomSnapshot(data) {
   ONLINE.revision = data.revision || 0;
   ONLINE.hostUid = data.hostUid || null;
   ONLINE.visibility = data.visibility || 'open';
-  ONLINE.isHost = ONLINE.hostUid === ONLINE.localUid;
+  ONLINE.lastSnapshotAt = Number(data.updatedAt) || Date.now();
+  const aiRunnerRaw = data.aiRunner && typeof data.aiRunner === 'object' ? data.aiRunner : null;
+  ONLINE.aiRunner = aiRunnerRaw
+    ? {
+        uid: String(aiRunnerRaw.uid || ''),
+        turnKey: String(aiRunnerRaw.turnKey || ''),
+        until: Number(aiRunnerRaw.until) || 0,
+      }
+    : null;
 
   const roomPlayers = indexedObjectToArray(data.players).map((p, i) => ({
     uid: p.uid || null,
@@ -2171,6 +2251,11 @@ async function applyRoomSnapshot(data) {
     token: sanitizeToken(p.token, TOKENS[i % TOKENS.length]),
     ready: !!p.ready,
   }));
+
+  if (!ONLINE.hostUid) {
+    ONLINE.hostUid = roomPlayers.find(p => p.uid)?.uid || null;
+  }
+  ONLINE.isHost = ONLINE.hostUid === ONLINE.localUid;
 
   const localPresent = roomPlayers.some(p => p.uid === ONLINE.localUid);
   if (isOnlineGame() && !localPresent) {
@@ -2220,6 +2305,7 @@ async function applyRoomSnapshot(data) {
       }
     } finally {
       ONLINE.isApplyingRemote = false;
+      maybeScheduleOfflineAiTurn();
     }
   } else if (ONLINE.status === 'lobby') {
     openOnlineRoomPage();
@@ -2236,6 +2322,9 @@ function attachRoomListener(roomId) {
   ONLINE.roomId = roomId;
   ONLINE.connected = true;
   ONLINE.lastDepartureNoticeId = '';
+  ONLINE.lastSnapshotAt = Date.now();
+  ONLINE.aiRunner = null;
+  ONLINE.aiRunnerRequestAt = 0;
   const ref = FIREBASE.api.ref(FIREBASE.db, `rooms/${roomId}`);
   ONLINE.unsubRoom = FIREBASE.api.onValue(ref, snap => {
     if (!snap.exists()) {
@@ -2298,7 +2387,7 @@ function updateOnlineLobbyUI() {
 
 async function createOnlineRoom() {
   if (!ONLINE.ready || !FIREBASE.api) {
-    toast('Firebase is not ready yet.', 'danger');
+    toast('Online service is not ready yet.', 'danger');
     return;
   }
   if (ONLINE.connected) return;
@@ -2379,7 +2468,7 @@ async function createOnlineRoom() {
 
 async function joinOnlineRoom() {
   if (!ONLINE.ready || !FIREBASE.api) {
-    toast('Firebase is not ready yet.', 'danger');
+    toast('Online service is not ready yet.', 'danger');
     return;
   }
   if (ONLINE.connected) return;
@@ -2492,24 +2581,35 @@ async function joinOnlineRoom() {
   toast(`Joined room ${roomId}`, 'gold');
 }
 
-function applyOnlineDepartureRuleToRoomData(roomData, leavingUid) {
+function applyOnlineDepartureRuleToRoomData(roomData, leavingUid, leaveMode = 'liquidation') {
   if (!roomData || typeof roomData !== 'object') return roomData;
 
   const now = Date.now();
-  const allRoomPlayers = indexedObjectToArray(roomData.players).filter(p => p && typeof p === 'object');
+  const departureMode = leaveMode === 'ai' ? 'ai' : 'liquidation';
+  const allRoomPlayers = indexedObjectToArray(roomData.players)
+    .filter(p => p && typeof p === 'object' && !!p.uid);
   const leavingRoomPlayer = allRoomPlayers.find(p => p.uid === leavingUid) || null;
   const remainingRoomPlayers = allRoomPlayers.filter(p => p.uid !== leavingUid);
 
   if (!remainingRoomPlayers.length) return null;
 
   const leavingName = sanitizeName(leavingRoomPlayer?.name, 'A player');
+  const previousHostUid = String(roomData.hostUid || '');
+  const keptHost = remainingRoomPlayers.find(p => String(p.uid || '') === previousHostUid)?.uid || null;
+  const nextRevision = (Number(roomData.revision) || 0) + 1;
   const out = {
     ...roomData,
     players: remainingRoomPlayers,
     playerUids: remainingRoomPlayers.map(p => p.uid).filter(Boolean),
-    hostUid: remainingRoomPlayers[0]?.uid || null,
+    hostUid: keptHost || remainingRoomPlayers[0]?.uid || null,
+    revision: nextRevision,
     updatedAt: now,
   };
+  if (out.aiRunner && typeof out.aiRunner === 'object') {
+    if (String(out.aiRunner.uid || '') === String(leavingUid || '')) {
+      out.aiRunner = null;
+    }
+  }
 
   if ((roomData.status || 'lobby') !== 'playing' || !roomData.gameState) {
     out.lastDepartureNotice = {
@@ -2561,6 +2661,32 @@ function applyOnlineDepartureRuleToRoomData(roomData, leavingUid) {
 
   const quitter = gs.players[quitterIdx];
   const quitterName = sanitizeName(quitter.name, leavingName);
+
+  if (departureMode === 'ai') {
+    quitter.uid = null;
+    quitter.kind = 'ai';
+    quitter.name = `${quitterName} (AI)`;
+
+    if (gs.pendingTrade && (Number(gs.pendingTrade.fromId) === quitterIdx || Number(gs.pendingTrade.toId) === quitterIdx)) {
+      gs.pendingTrade = null;
+    }
+
+    const aiMsg = `${quitterName} left the match. AI takeover is active.`;
+    if (!Array.isArray(gs.log)) gs.log = [];
+    gs.log.push({ text: aiMsg, type: 'important', time: now });
+    if (gs.log.length > 250) gs.log = gs.log.slice(-250);
+
+    out.lastDepartureNotice = {
+      id: `dep_${now}_${leavingUid}`,
+      type: 'leave-ai',
+      name: quitterName,
+      message: aiMsg,
+      time: now,
+    };
+    out.gameState = gs;
+    out.status = 'playing';
+    return out;
+  }
 
   const props = indexedObjectToArray(gs.properties);
   if (props.length < SPACES.length) props.length = SPACES.length;
@@ -2703,7 +2829,33 @@ function applyOnlineDepartureRuleToRoomData(roomData, leavingUid) {
   return out;
 }
 
-async function leaveOnlineRoom(showToast = true, mutateRoom = true) {
+function openLeaveGameModal() {
+  if (!isOnlineGame()) {
+    toast('Online game only.', 'danger');
+    return;
+  }
+  if (ONLINE.status !== 'playing') {
+    leaveOnlineRoom(true, true).catch(err => {
+      console.error(err);
+      toast('Could not leave room cleanly.', 'danger');
+    });
+    return;
+  }
+  openOverlay('leave-game-overlay');
+}
+
+async function confirmLeaveOnlineGame(mode) {
+  const leaveMode = mode === 'ai' ? 'ai' : 'liquidation';
+  closeOverlay('leave-game-overlay');
+  try {
+    await leaveOnlineRoom(true, true, leaveMode);
+  } catch (err) {
+    console.error(err);
+    toast('Could not leave the match.', 'danger');
+  }
+}
+
+async function leaveOnlineRoom(showToast = true, mutateRoom = true, leaveMode = 'liquidation') {
   if (!ONLINE.connected || !FIREBASE.api) {
     LOBBY_CONTEXT = 'online';
     ONLINE.connected = false;
@@ -2713,6 +2865,9 @@ async function leaveOnlineRoom(showToast = true, mutateRoom = true) {
     ONLINE.visibility = 'open';
     ONLINE.status = 'offline';
     ONLINE.lastDepartureNoticeId = '';
+    ONLINE.lastSnapshotAt = 0;
+    ONLINE.aiRunner = null;
+    ONLINE.aiRunnerRequestAt = 0;
     updateOnlineLobbyUI();
     showScreen('online-screen');
     return;
@@ -2724,7 +2879,7 @@ async function leaveOnlineRoom(showToast = true, mutateRoom = true) {
   const roomRef = FIREBASE.api.ref(FIREBASE.db, `rooms/${roomId}`);
   if (mutateRoom) {
     try {
-      await FIREBASE.api.runTransaction(roomRef, data => applyOnlineDepartureRuleToRoomData(data, ONLINE.localUid));
+      await FIREBASE.api.runTransaction(roomRef, data => applyOnlineDepartureRuleToRoomData(data, ONLINE.localUid, leaveMode));
     } catch (err) {
       console.error(err);
     }
@@ -2740,6 +2895,9 @@ async function leaveOnlineRoom(showToast = true, mutateRoom = true) {
   ONLINE.status = 'offline';
   ONLINE.revision = 0;
   ONLINE.lastDepartureNoticeId = '';
+  ONLINE.lastSnapshotAt = 0;
+  ONLINE.aiRunner = null;
+  ONLINE.aiRunnerRequestAt = 0;
   LOBBY_CONTEXT = 'online';
   updateOnlineLobbyUI();
   renderLobby();
@@ -2862,9 +3020,12 @@ function onLobbyTypeChange(i, kind) {
   player.kind = nextKind;
 
   const prevDefault = defaultLobbyPlayerName(i, prevKind);
-  const nextDefault = defaultLobbyPlayerName(i, nextKind);
+  const nextDefault = nextKind === 'ai'
+    ? pickRandomAiPlaceholderName(i)
+    : defaultLobbyPlayerName(i, nextKind);
+  const humanDefault = defaultLobbyPlayerName(i, 'human');
   const currentName = sanitizeName(player.name, prevDefault);
-  if (!currentName || currentName === prevDefault || currentName === defaultLobbyPlayerName(i, 'human') || currentName === defaultLobbyPlayerName(i, 'ai')) {
+  if (!currentName || currentName === prevDefault || currentName === humanDefault || isAiPlaceholderName(currentName)) {
     player.name = nextDefault;
   }
 
@@ -2879,7 +3040,10 @@ function addPlayerSlot(kind = 'human') {
   if (lobbyPlayers.length >= 8) return;
   const i = lobbyPlayers.length;
   const nextKind = normalizePlayerKind(kind);
-  lobbyPlayers.push({uid: null, name: defaultLobbyPlayerName(i, nextKind), token:TOKENS[i], kind: nextKind});
+  const defaultName = nextKind === 'ai'
+    ? pickRandomAiPlaceholderName(-1)
+    : defaultLobbyPlayerName(i, nextKind);
+  lobbyPlayers.push({uid: null, name: defaultName, token:TOKENS[i], kind: nextKind});
   renderLobby();
 }
 
@@ -3305,14 +3469,126 @@ function updateTopBar() {
   document.getElementById('tb-money').textContent = fmtCurrency(p.money);
   const jailTag = document.getElementById('tb-jail-tag');
   jailTag.style.display = p.inJail ? '' : 'none';
+  const leaveBtn = document.getElementById('leave-game-btn');
+  if (leaveBtn) leaveBtn.style.display = (isOnlineGame() && ONLINE.status === 'playing') ? '' : 'none';
 }
 
 function isAiPlayer(player) {
   return !!player && normalizePlayerKind(player.kind) === 'ai';
 }
 
+function getAiTurnKey() {
+  return offlineAiStateKey();
+}
+
+function uniqueConnectedRoomUids() {
+  const uids = indexedObjectToArray(lobbyPlayers)
+    .map(p => String(p?.uid || ''))
+    .filter(Boolean);
+  return [...new Set(uids)].sort();
+}
+
+function activeOnlineRunnerUid(now = Date.now()) {
+  if (!isOnlineGame()) return String(ONLINE.localUid || '');
+
+  const lease = ONLINE.aiRunner && typeof ONLINE.aiRunner === 'object' ? ONLINE.aiRunner : null;
+  const leaseUid = String(lease?.uid || '');
+  const leaseTurnKey = String(lease?.turnKey || '');
+  const leaseUntil = Number(lease?.until) || 0;
+  if (leaseUid && leaseTurnKey === getAiTurnKey() && leaseUntil > now) return leaseUid;
+
+  const host = String(ONLINE.hostUid || '');
+  if (host) return host;
+
+  const uids = uniqueConnectedRoomUids();
+  return uids[0] || String(ONLINE.localUid || '');
+}
+
+function hasValidAiRunnerLease(now = Date.now()) {
+  if (!isOnlineGame()) return true;
+  const lease = ONLINE.aiRunner && typeof ONLINE.aiRunner === 'object' ? ONLINE.aiRunner : null;
+  if (!lease) return false;
+  if (String(lease.turnKey || '') !== getAiTurnKey()) return false;
+  return (Number(lease.until) || 0) > now;
+}
+
+async function ensureAiRunnerLease(force = false) {
+  if (!isOnlineGame() || !FIREBASE.api || !ONLINE.connected || !ONLINE.localUid) return false;
+
+  const now = Date.now();
+  if (!force && ONLINE.aiRunnerRequestAt && (now - ONLINE.aiRunnerRequestAt) < 450) return false;
+  ONLINE.aiRunnerRequestAt = now;
+
+  const turnKey = getAiTurnKey();
+  let mine = false;
+
+  try {
+    const txResult = await FIREBASE.api.runTransaction(getRoomRef(), current => {
+      if (!current || typeof current !== 'object') return current;
+      if ((current.status || 'lobby') !== 'playing') return current;
+
+      const raw = current.aiRunner && typeof current.aiRunner === 'object' ? current.aiRunner : null;
+      const rawUid = String(raw?.uid || '');
+      const rawTurnKey = String(raw?.turnKey || '');
+      const rawUntil = Number(raw?.until) || 0;
+      const stale = rawUntil <= now;
+      const turnChanged = rawTurnKey !== turnKey;
+
+      if (!rawUid || stale || turnChanged || rawUid === ONLINE.localUid || force) {
+        current.aiRunner = {
+          uid: ONLINE.localUid,
+          turnKey,
+          until: now + AI_RUNNER_LEASE_MS,
+        };
+        mine = true;
+      } else {
+        mine = false;
+      }
+
+      return current;
+    });
+
+    const nextData = txResult?.snapshot?.val ? txResult.snapshot.val() : null;
+    const nextRaw = nextData?.aiRunner && typeof nextData.aiRunner === 'object' ? nextData.aiRunner : null;
+    ONLINE.aiRunner = nextRaw
+      ? {
+          uid: String(nextRaw.uid || ''),
+          turnKey: String(nextRaw.turnKey || ''),
+          until: Number(nextRaw.until) || 0,
+        }
+      : null;
+  } catch (err) {
+    console.error(err);
+  }
+
+  if (!ONLINE.aiRunner && mine) {
+    ONLINE.aiRunner = {
+      uid: ONLINE.localUid,
+      turnKey,
+      until: now + AI_RUNNER_LEASE_MS,
+    };
+  }
+
+  const lease = ONLINE.aiRunner;
+  return !!lease
+    && String(lease.uid || '') === String(ONLINE.localUid || '')
+    && String(lease.turnKey || '') === turnKey
+    && (Number(lease.until) || 0) > Date.now();
+}
+
+function canRunAiController(now = Date.now()) {
+  if (!isOnlineGame()) return true;
+  if (!ONLINE.localUid) return false;
+  if (!hasValidAiRunnerLease(now)) return false;
+  return String(ONLINE.aiRunner?.uid || '') === String(ONLINE.localUid || '');
+}
+
+function shouldAutoActForAi(player) {
+  return !!player && isAiPlayer(player) && canRunAiController();
+}
+
 function isOfflineAiAuctionTurn() {
-  if (isOnlineGame() || !G || !G.auctionState || !Array.isArray(G.players)) return false;
+  if (!G || !G.auctionState || !Array.isArray(G.players)) return false;
   const bidderId = currentAuctionBidderId();
   if (!Number.isInteger(bidderId)) return false;
   const bidder = G.players[bidderId];
@@ -3402,6 +3678,38 @@ function aiTryMortgageToTarget(player, targetCash) {
   renderAll();
   updateTopBar();
   return true;
+}
+
+function aiTryUnmortgage(player) {
+  if (!player || player.bankrupt) return false;
+
+  const reserve = aiCashReserve(player);
+  const mortgaged = [...player.properties, ...player.railroads, ...player.utilities]
+    .filter(id => {
+      const prop = G.properties[id];
+      return prop && prop.owner === player.id && prop.mortgaged;
+    })
+    .sort((a, b) => {
+      const aCost = Math.floor(mortgageValueForSpace(SPACES[a]) * 1.1);
+      const bCost = Math.floor(mortgageValueForSpace(SPACES[b]) * 1.1);
+      return aCost - bCost;
+    });
+
+  for (let i = 0; i < mortgaged.length; i++) {
+    const id = mortgaged[i];
+    const sp = SPACES[id];
+    const prop = G.properties[id];
+    const cost = Math.floor(mortgageValueForSpace(sp) * 1.1);
+    if (!prop || player.money - cost < reserve) continue;
+    prop.mortgaged = false;
+    player.money -= cost;
+    addLog(`${player.name} unmortgaged ${sp.name} for ৳${fmt(cost)}.`, 'important');
+    renderAll();
+    updateTopBar();
+    return true;
+  }
+
+  return false;
 }
 
 function aiTryBuildOne(player) {
@@ -3549,7 +3857,7 @@ function aiTryProposeTrade(player) {
 }
 
 function maybeScheduleOfflineAiTurn() {
-  if (isOnlineGame() || !G || G.gameOver || !Array.isArray(G.players) || !G.players.length) {
+  if (!G || G.gameOver || !Array.isArray(G.players) || !G.players.length) {
     clearOfflineAiTimer(true);
     return;
   }
@@ -3557,6 +3865,11 @@ function maybeScheduleOfflineAiTurn() {
   const gameScreen = document.getElementById('game-screen');
   if (!gameScreen || gameScreen.classList.contains('hidden')) {
     clearOfflineAiTimer(true);
+    return;
+  }
+
+  if (isOnlineGame() && ONLINE.isApplyingRemote) {
+    clearOfflineAiTimer(false);
     return;
   }
 
@@ -3575,23 +3888,108 @@ function maybeScheduleOfflineAiTurn() {
   }
 
   const stateKey = offlineAiStateKey();
+  const now = Date.now();
+  if (isOnlineGame()) {
+    if (!canRunAiController(now)) {
+      const runnerUid = activeOnlineRunnerUid(now) || 'none';
+      const waitKey = `${stateKey}:lease:${runnerUid}`;
+      if (AI_CTRL.timerId && AI_CTRL.lastKey === waitKey) return;
+      clearOfflineAiTimer(false);
+      AI_CTRL.lastKey = waitKey;
+      AI_CTRL.timerId = setTimeout(async () => {
+        AI_CTRL.timerId = null;
+        await ensureAiRunnerLease();
+        maybeScheduleOfflineAiTurn();
+      }, 520);
+      return;
+    }
+
+    const leaseRemaining = (Number(ONLINE.aiRunner?.until) || 0) - now;
+    if (leaseRemaining < AI_RUNNER_RENEW_MS) {
+      ensureAiRunnerLease(true);
+    }
+  } else if (!canRunAiController(now)) {
+    clearOfflineAiTimer(true);
+    return;
+  }
+
   if (AI_CTRL.timerId && AI_CTRL.lastKey === stateKey) return;
 
   clearOfflineAiTimer(false);
   AI_CTRL.lastKey = stateKey;
-  AI_CTRL.timerId = setTimeout(runOfflineAiStep, 500 + Math.floor(Math.random() * 500));
+  AI_CTRL.timerId = setTimeout(runOfflineAiStep, 380 + Math.floor(Math.random() * 280));
+}
+
+function tryAutoResolveAiDebtPrompt() {
+  if (!hasPendingDebtPromptForCurrentPlayer()) return false;
+
+  const payer = curPlayer();
+  if (!payer || !isAiPlayer(payer)) return false;
+  if (payer.bankrupt) {
+    resetDebtPrompt();
+    closeOverlay('bankrupt-overlay');
+    return true;
+  }
+
+  const due = Math.max(0, Number(DEBT_PROMPT.amount) || 0);
+  if (due <= 0) {
+    resetDebtPrompt();
+    closeOverlay('bankrupt-overlay');
+    return true;
+  }
+
+  if (tryResolveDebtPrompt()) return true;
+
+  const raised = sellBuildingsForEmergencyCash(payer);
+  if (raised > 0) {
+    addLog(`${payer.name} sold buildings to cover debt (raised ৳${fmt(raised)}).`, 'important');
+  }
+
+  let usedMortgages = 0;
+  while (payer.money < due && usedMortgages < 32) {
+    const target = due + Math.floor(aiCashReserve(payer) * 0.25);
+    const mortgaged = aiTryMortgageToTarget(payer, target);
+    if (!mortgaged) break;
+    usedMortgages++;
+  }
+  if (usedMortgages > 0) {
+    addLog(`${payer.name} used ${usedMortgages} emergency mortgage${usedMortgages > 1 ? 's' : ''} to settle debt.`, 'important');
+  }
+
+  if (tryResolveDebtPrompt()) return true;
+
+  const recipient = DEBT_PROMPT.recipientId !== null ? G.players[DEBT_PROMPT.recipientId] : null;
+  const toParking = !!DEBT_PROMPT.toParking;
+  resetDebtPrompt();
+  declareBankruptcy(payer, recipient && !recipient.bankrupt ? recipient : null, due, toParking);
+  return true;
 }
 
 function runOfflineAiStep() {
   AI_CTRL.timerId = null;
 
-  if (isOnlineGame() || !G || G.gameOver || !Array.isArray(G.players) || !G.players.length) {
+  if (!G || G.gameOver || !Array.isArray(G.players) || !G.players.length) {
     AI_CTRL.lastKey = '';
+    return;
+  }
+  if (!canRunAiController()) {
+    AI_CTRL.lastKey = '';
+    maybeScheduleOfflineAiTurn();
+    return;
+  }
+
+  if (isOnlineGame() && ONLINE.isApplyingRemote) {
+    AI_CTRL.lastKey = '';
+    maybeScheduleOfflineAiTurn();
     return;
   }
 
   const gameScreen = document.getElementById('game-screen');
   if (!gameScreen || gameScreen.classList.contains('hidden')) return;
+  if (MOVE_FX.active) {
+    maybeScheduleOfflineAiTurn();
+    return;
+  }
 
   if (G.pendingTrade) {
     const trade = G.pendingTrade;
@@ -3638,6 +4036,12 @@ function runOfflineAiStep() {
   const p = curPlayer();
   if (!isAiPlayer(p)) return;
 
+  if (tryAutoResolveAiDebtPrompt()) {
+    renderAll();
+    updateActionButtons();
+    return;
+  }
+
   if (p.bankrupt) {
     if (G.phase === 'roll') G.phase = 'end';
     endTurn();
@@ -3678,6 +4082,9 @@ function runOfflineAiStep() {
     if (p.money < Math.floor(reserve * 0.7) && aiTryMortgageToTarget(p, reserve)) {
       return;
     }
+    if (aiTryUnmortgage(p)) {
+      return;
+    }
     if ((G.phase === 'action' || G.phase === 'end') && aiTryBuildOne(p)) {
       return;
     }
@@ -3697,9 +4104,9 @@ function updateActionButtons() {
   const onProp = G.properties[p.pos];
   const sp = SPACES[p.pos];
   const turnOwnedByMe = canLocalControlTurn();
-  const aiTurnOffline = !isOnlineGame() && isAiPlayer(p) && !p.bankrupt;
+  const aiTurnActive = isAiPlayer(p) && !p.bankrupt;
   const movementLocked = MOVE_FX.active;
-  const canHumanAct = turnOwnedByMe && !aiTurnOffline && !movementLocked;
+  const canHumanAct = turnOwnedByMe && !aiTurnActive && !movementLocked;
   const debtPending = hasPendingDebtPromptForCurrentPlayer();
   const postRollPhase = G.phase === 'action' || G.phase === 'end';
   const actionLocked = !!G.pendingBuy || !!G.auctionState || movementLocked;
@@ -3710,6 +4117,11 @@ function updateActionButtons() {
   const canTrade = !debtPending && postRollPhase && !actionLocked && !tradePending && G.players.filter(x => !x.bankrupt).length > 1;
   const canEnd = !debtPending && (G.phase === 'action' || G.phase === 'end');
   const inJail = p.inJail;
+  const runnerUid = aiTurnActive && isOnlineGame() ? activeOnlineRunnerUid() : '';
+  const runnerName = runnerUid
+    ? (indexedObjectToArray(lobbyPlayers).find(lp => String(lp?.uid || '') === runnerUid)?.name || (runnerUid === ONLINE.hostUid ? 'Host' : 'another client'))
+    : 'another client';
+  const aiWaitingForRunner = aiTurnActive && isOnlineGame() && !canRunAiController();
 
   ['btn-buy','mb-buy'].forEach(id => { const el = document.getElementById(id); if(el) el.disabled = !canHumanAct || !canBuyAny; });
   ['btn-build','mb-build'].forEach(id => { const el = document.getElementById(id); if(el) el.disabled = !canHumanAct || !canBuild; });
@@ -3722,8 +4134,8 @@ function updateActionButtons() {
     rollBtn.disabled = G.phase !== 'roll' || !canHumanAct;
     rollBtn.textContent = movementLocked
       ? `🏃 ${p.name} is moving...`
-      : aiTurnOffline
-      ? `🤖 ${p.name} is thinking...`
+      : aiTurnActive
+      ? (aiWaitingForRunner ? `🤖 Waiting for ${runnerName}` : `🤖 ${p.name} is thinking...`)
       : !turnOwnedByMe
       ? `⏳ ${p.name} is playing`
       : (inJail && G.phase === 'roll' ? '🎲 Roll for Doubles' : '🎲 Roll Dice');
@@ -3737,10 +4149,10 @@ function updateActionButtons() {
   const cm = document.getElementById('center-msg');
   if (cm) {
     if (movementLocked) cm.textContent = `${p.name} is hopping across the board...`;
-    else if (aiTurnOffline) cm.textContent = `🤖 ${p.name} is making a move`;
+    else if (aiTurnActive) cm.textContent = aiWaitingForRunner ? `🤖 Waiting for ${runnerName} to run AI` : `🤖 ${p.name} is making a move`;
     else if (debtPending) {
       const shortBy = Math.max(0, Number(DEBT_PROMPT.amount || 0) - Number(p.money || 0));
-      cm.textContent = `💰 Short ৳${fmt(shortBy)}. Mortgage assets or declare bankruptcy`;
+      cm.textContent = `💰 Short ৳${fmt(shortBy)}. Sell buildings, mortgage assets, or declare bankruptcy`;
     }
     else if (!turnOwnedByMe) cm.textContent = `Watching ${p.name}'s turn`;
     else if (inJail && G.phase === 'roll') cm.textContent = `Roll doubles or pay ৳500 bail`;
@@ -3752,10 +4164,10 @@ function updateActionButtons() {
   const mobileTurnLine = document.getElementById('mobile-turnline');
   if (mobileTurnLine) {
     if (movementLocked) mobileTurnLine.textContent = `🏃 ${p.name} is moving...`;
-    else if (aiTurnOffline) mobileTurnLine.textContent = `🤖 ${p.name} is thinking`;
+    else if (aiTurnActive) mobileTurnLine.textContent = aiWaitingForRunner ? `🤖 Waiting for ${runnerName}` : `🤖 ${p.name} is thinking`;
     else if (debtPending) {
       const shortBy = Math.max(0, Number(DEBT_PROMPT.amount || 0) - Number(p.money || 0));
-      mobileTurnLine.textContent = `💰 Short ৳${fmt(shortBy)} • mortgage or bankruptcy`;
+      mobileTurnLine.textContent = `💰 Short ৳${fmt(shortBy)} • sell buildings or mortgage`;
     }
     else if (!turnOwnedByMe) mobileTurnLine.textContent = `⏳ Watching ${p.name}'s turn`;
     else if (inJail && G.phase === 'roll') mobileTurnLine.textContent = '⛓️ Roll doubles or pay bail';
@@ -3888,16 +4300,26 @@ async function movePlayer(p, steps, rolledDoubles) {
   landOn(p, rolledDoubles);
 }
 
-function movePlayerTo(p, target, collectGo=true) {
+async function movePlayerTo(p, target, collectGo=true) {
   const oldPos = p.pos;
   const goSalary = getThemeGoSalary();
-  if (collectGo && target < oldPos) {
+  const stepsForward = (target - oldPos + 40) % 40;
+  if (collectGo && stepsForward > 0 && target < oldPos) {
     p.money += goSalary;
     addLog(`${p.name} passed GO! Collected ${fmtCurrency(goSalary)}`, 'success');
   }
-  p.pos = target;
+
+  if (stepsForward > 0 && stepsForward <= 12) {
+    await animatePlayerStepMovement(p, stepsForward);
+  } else {
+    p.pos = target;
+    renderMarkers();
+    if (stepsForward > 0) pulseBoardSpace(target, 'step-arrive', 360);
+  }
+
   renderAll();
-  setTimeout(() => landOn(p, false), 300);
+  await waitMs(140);
+  landOn(p, false);
 }
 
 function landOn(p, rolledDoubles) {
@@ -3913,15 +4335,7 @@ function landOn(p, rolledDoubles) {
     addLog(`${p.name} is just visiting jail.`);
     G.phase = 'end';
   } else if (sp.type === 'parking') {
-    const pot = G.parkingPot;
-    if (pot > 0) {
-      p.money += pot;
-      G.parkingPot = 0;
-      addLog(`${p.name} collected Free Parking pot of ৳${fmt(pot)}! 🎉`, 'success');
-      toast(`🅿️ Jackpot! ৳${fmt(pot)}!`, 'gold');
-    } else {
-      addLog(`${p.name} enjoys free parking.`);
-    }
+    addLog(`${p.name} is just visiting free parking.`);
     G.phase = 'end';
   } else if (sp.type === 'gotojail') {
     sendToJail(p);
@@ -4017,7 +4431,7 @@ function drawCard(type, p) {
   document.getElementById('card-title').textContent = type === 'chance' ? 'Chance Card' : 'Community Chest';
   document.getElementById('card-desc').textContent = card.text;
 
-  const apply = () => {
+  const apply = async () => {
     if (card.action === 'money') {
       if (card.value > 0) {
         p.money += card.value;
@@ -4026,7 +4440,8 @@ function drawCard(type, p) {
         chargeMoney(p, -card.value, null, true);
       }
     } else if (card.action === 'goto') {
-      movePlayerTo(p, card.value, card.value < p.pos);
+      await movePlayerTo(p, card.value, card.value < p.pos);
+      return;
     } else if (card.action === 'jail') {
       sendToJail(p);
     } else if (card.action === 'jailcard') {
@@ -4034,7 +4449,7 @@ function drawCard(type, p) {
       addLog(`${p.name} got a Get Out of Jail Free card!`, 'success');
     } else if (card.action === 'nearest') {
       const nearest = nearestRailroad(p.pos);
-      movePlayerTo(p, nearest);
+      await movePlayerTo(p, nearest);
       return;
     } else if (card.action === 'repairs') {
       let cost = 0;
@@ -4059,15 +4474,18 @@ function drawCard(type, p) {
     checkBankruptcy();
   };
 
-  if (!isOnlineGame() && isAiPlayer(p)) {
+  if (shouldAutoActForAi(p)) {
     closeOverlay('card-overlay');
-    apply();
+    apply().catch(err => console.error(err));
     return;
   }
 
   closeOverlay('card-overlay');
   openOverlay('card-overlay');
-  document.querySelector('#card-overlay .btn').onclick = () => { closeOverlay('card-overlay'); apply(); };
+  document.querySelector('#card-overlay .btn').onclick = async () => {
+    closeOverlay('card-overlay');
+    await apply();
+  };
 }
 
 function nearestRailroad(pos) {
@@ -4084,7 +4502,7 @@ function nearestRailroad(pos) {
 //  BUY / AUCTION
 // ═══════════════════════════════════════════════
 function promptBuy(p, sp) {
-  if (!isOnlineGame() && isAiPlayer(p)) {
+  if (shouldAutoActForAi(p)) {
     closeOverlay('buy-overlay');
     return;
   }
@@ -4395,7 +4813,7 @@ function openBuildModal() {
 function buildHouse(propId) {
   if (!requireTurnControl()) return;
   const p = curPlayer();
-  const actorIsAi = !isOnlineGame() && isAiPlayer(p);
+  const actorIsAi = shouldAutoActForAi(p);
   const sp = SPACES[propId];
   const prop = G.properties[propId];
   const cost = sp.house;
@@ -4412,7 +4830,7 @@ function buildHouse(propId) {
 function sellHouse(propId) {
   if (!requireTurnControl()) return;
   const p = curPlayer();
-  const actorIsAi = !isOnlineGame() && isAiPlayer(p);
+  const actorIsAi = shouldAutoActForAi(p);
   const sp = SPACES[propId];
   const prop = G.properties[propId];
   const refund = Math.floor(sp.house / 2);
@@ -4420,8 +4838,17 @@ function sellHouse(propId) {
   if (prop.hotel) { prop.hotel = false; prop.houses = 4; addLog(`${p.name} sold hotel on ${sp.name} for ৳${fmt(refund)}.`); }
   else { prop.houses--; addLog(`${p.name} sold house on ${sp.name} for ৳${fmt(refund)}.`); }
   renderAll();
-  if (actorIsAi) closeOverlay('build-overlay');
-  else openBuildModal();
+  if (actorIsAi) {
+    closeOverlay('build-overlay');
+  } else {
+    const resolved = tryResolveDebtPrompt();
+    if (resolved) {
+      closeOverlay('build-overlay');
+      updateTopBar();
+      return;
+    }
+    openBuildModal();
+  }
   updateTopBar();
 }
 
@@ -4486,7 +4913,7 @@ function openMortgageModal() {
 function mortgageProp(id) {
   if (!requireTurnControl()) return;
   const p = curPlayer();
-  const actorIsAi = !isOnlineGame() && isAiPlayer(p);
+  const actorIsAi = shouldAutoActForAi(p);
   const sp = SPACES[id];
   const prop = G.properties[id];
   if (!canMortgageAsset(p, id)) {
@@ -4509,7 +4936,7 @@ function mortgageProp(id) {
 function unmortgageProp(id) {
   if (!requireTurnControl()) return;
   const p = curPlayer();
-  const actorIsAi = !isOnlineGame() && isAiPlayer(p);
+  const actorIsAi = shouldAutoActForAi(p);
   const sp = SPACES[id];
   const prop = G.properties[id];
   const cost = Math.floor(mortgageValueForSpace(sp) * 1.1);
@@ -4841,7 +5268,9 @@ function respondTrade(acceptTrade) {
 
   if (isOnlineGame()) {
     const me = getLocalPlayerIndex();
-    if (me !== trade.toId) {
+    const recipient = G.players[trade.toId];
+    const aiRecipient = recipient && isAiPlayer(recipient);
+    if (me !== trade.toId && !(aiRecipient && canRunAiController())) {
       toast(`Only ${G.players[trade.toId]?.name || 'the recipient'} can respond.`, 'danger');
       return;
     }
@@ -4915,7 +5344,7 @@ function showJailPrompt(p, mode = 'turn') {
   const actionsEl = document.getElementById('jail-actions');
   if (!iconEl || !titleEl || !descEl || !actionsEl || !p) return;
 
-  if (!isOnlineGame() && isAiPlayer(p)) {
+  if (shouldAutoActForAi(p)) {
     closeOverlay('jail-overlay');
     return;
   }
@@ -5055,12 +5484,17 @@ function showDebtPrompt(p, amount, recipient = null, toParking = false) {
   const descEl = document.getElementById('bankrupt-desc');
   const continueBtn = document.getElementById('bankrupt-continue-btn');
   const mortgageBtn = document.getElementById('bankrupt-mortgage-btn');
+  const sellBtn = document.getElementById('bankrupt-sell-btn');
   if (titleEl) titleEl.textContent = `${p.name} must pay ৳${fmt(DEBT_PROMPT.amount)}`;
   if (descEl) {
-    descEl.textContent = `${p.name} owes ${creditorName} and is short by ৳${fmt(shortBy)}. Mortgage properties to raise funds, or declare bankruptcy.`;
+    descEl.textContent = `${p.name} owes ${creditorName} and is short by ৳${fmt(shortBy)}. Sell buildings or mortgage properties to raise funds, or declare bankruptcy.`;
   }
   if (continueBtn) continueBtn.textContent = 'Declare Bankruptcy';
   if (mortgageBtn) mortgageBtn.style.display = '';
+  if (sellBtn) {
+    const hasBuildings = (p.properties || []).some(id => propertyHasBuildings(id));
+    sellBtn.style.display = hasBuildings ? '' : 'none';
+  }
   openOverlay('bankrupt-overlay');
 }
 
@@ -5071,6 +5505,15 @@ function openMortgageForDebt() {
   }
   closeOverlay('bankrupt-overlay');
   openMortgageModal();
+}
+
+function openBuildForDebt() {
+  if (!hasPendingDebtPromptForCurrentPlayer()) {
+    closeOverlay('bankrupt-overlay');
+    return;
+  }
+  closeOverlay('bankrupt-overlay');
+  openBuildModal();
 }
 
 function tryResolveDebtPrompt() {
@@ -5088,7 +5531,6 @@ function tryResolveDebtPrompt() {
   payer.money -= due;
   const recipient = DEBT_PROMPT.recipientId !== null ? G.players[DEBT_PROMPT.recipientId] : null;
   if (recipient && !recipient.bankrupt) recipient.money += due;
-  else if (DEBT_PROMPT.toParking) G.parkingPot += due;
 
   const creditorName = recipient && !recipient.bankrupt ? recipient.name : 'the bank';
   addLog(`${payer.name} settled debt of ৳${fmt(due)} to ${creditorName}.`, 'success');
@@ -5104,14 +5546,16 @@ function chargeMoney(p, amount, recipient=null, toParking=false) {
   if (amount <= 0) { if (recipient) recipient.money += Math.abs(amount); return true; }
   if (!p || p.bankrupt) return false;
 
-  if (p.money < amount) {
+  const actorIsAi = shouldAutoActForAi(p);
+
+  if (p.money < amount && actorIsAi) {
     const raised = sellBuildingsForEmergencyCash(p);
     if (raised > 0) {
       addLog(`${p.name} raised ৳${fmt(raised)} by liquidating buildings.`, 'important');
     }
   }
 
-  if (!isOnlineGame() && isAiPlayer(p) && p.money < amount) {
+  if (actorIsAi && p.money < amount) {
     let usedMortgages = 0;
     while (p.money < amount && usedMortgages < 32) {
       const target = amount + Math.floor(aiCashReserve(p) * 0.25);
@@ -5127,7 +5571,6 @@ function chargeMoney(p, amount, recipient=null, toParking=false) {
   if (p.money >= amount) {
     p.money -= amount;
     if (recipient && !recipient.bankrupt) recipient.money += amount;
-    else if (toParking) G.parkingPot += amount;
     if (DEBT_PROMPT.active && DEBT_PROMPT.payerId === p.id) {
       resetDebtPrompt();
       closeOverlay('bankrupt-overlay');
@@ -5135,7 +5578,7 @@ function chargeMoney(p, amount, recipient=null, toParking=false) {
     return true;
   }
 
-  if (!isAiPlayer(p)) {
+  if (!actorIsAi) {
     showDebtPrompt(p, amount, recipient && !recipient.bankrupt ? recipient : null, toParking);
     return false;
   }
@@ -5146,7 +5589,7 @@ function chargeMoney(p, amount, recipient=null, toParking=false) {
 }
 
 function showRentModal(payer, owner, propName, rent) {
-  if (!isOnlineGame() && isAiPlayer(payer)) {
+  if (shouldAutoActForAi(payer)) {
     closeOverlay('rent-overlay');
     return;
   }
@@ -5220,7 +5663,6 @@ function declareBankruptcy(p, creditor = null, debtAmount = 0, toBank = false) {
   } else {
     const debtTxt = debtAmount > 0 ? ` (৳${fmt(debtAmount)})` : '';
     addLog(`${p.name} is BANKRUPT to the Bank${debtTxt}. Bank auctions all properties.`, 'danger');
-    if (toBank && p.money > 0) G.parkingPot += p.money;
     p.money = 0;
 
     const auctionIds = [];
@@ -5246,15 +5688,17 @@ function declareBankruptcy(p, creditor = null, debtAmount = 0, toBank = false) {
 
   const continueBtn = document.getElementById('bankrupt-continue-btn');
   const mortgageBtn = document.getElementById('bankrupt-mortgage-btn');
+  const sellBtn = document.getElementById('bankrupt-sell-btn');
   if (continueBtn) continueBtn.textContent = 'Continue';
   if (mortgageBtn) mortgageBtn.style.display = 'none';
+  if (sellBtn) sellBtn.style.display = 'none';
 
   p.properties = [];
   p.railroads = [];
   p.utilities = [];
   p.bankrupt = true;
 
-  if (!isOnlineGame() && isAiPlayer(p)) {
+  if (shouldAutoActForAi(p)) {
     closeOverlay('bankrupt-overlay');
     G.phase = 'end';
     renderAll();
@@ -5517,6 +5961,12 @@ function openDrawer(type) {
     dc.innerHTML = document.getElementById('chat-log').innerHTML;
   } else if (type === 'settings') {
     const dur = TIMER.duration;
+    const canLeave = isOnlineGame() && ONLINE.status === 'playing';
+    const leaveBlock = canLeave
+      ? `<hr style="border:none;border-top:1px solid rgba(255,255,255,.12);margin:1rem 0">
+         <div style="color:rgba(255,255,255,.6);font-size:.85rem;margin-bottom:.6rem">Online match</div>
+         <button onclick="closeDrawer();openLeaveGameModal()" style="width:100%;padding:.6rem .9rem;border:none;border-radius:8px;background:linear-gradient(135deg,#7f1d1d,#c0392b);color:#fff;font-weight:700;cursor:pointer">🚪 Leave Game</button>`
+      : '';
     content.innerHTML = `
       <h3 style="color:#fff;margin-bottom:1rem;font-family:var(--font-display)">⚙️ Timer Settings</h3>
       <p style="color:rgba(255,255,255,.6);font-size:.85rem;margin-bottom:1rem">
@@ -5529,6 +5979,7 @@ function openDrawer(type) {
         </div>
       </div>
       <p style="color:rgba(255,255,255,.4);font-size:.78rem">Timer only runs during the "end turn" phase (after rolling & landing). It pauses while modals are open.</p>
+      ${leaveBlock}
     `;
   }
   document.getElementById('mobile-drawer').classList.add('open');
@@ -5850,6 +6301,13 @@ function installLobbyEvents() {
       console.error('Background room cleanup failed.', err);
     });
   }, 8000);
+
+  setInterval(() => {
+    const gameScreen = document.getElementById('game-screen');
+    if (!gameScreen || gameScreen.classList.contains('hidden')) return;
+    if (!G || G.gameOver) return;
+    maybeScheduleOfflineAiTurn();
+  }, 1400);
 }
 
 // ═══════════════════════════════════════════════
