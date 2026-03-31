@@ -6,6 +6,15 @@
 <title>Bangladeshi Monopoly</title>
 <link rel="icon" type="image/svg+xml" href="logo.svg">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-QPMD9QD5H7"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-QPMD9QD5H7');
+</script>
 <style>
 :root {
   --vh: 1vh;
@@ -33,7 +42,7 @@ body{font-family:var(--font-body);background:#0f2318;color:#1a1a1a;overscroll-be
 .screen{position:fixed;inset:0;display:flex;flex-direction:column;transition:opacity .35s,transform .35s;will-change:opacity}
 .screen.hidden{opacity:0;pointer-events:none;transform:scale(.97)}
 
-#home-screen,#online-screen,#credits-screen{background:linear-gradient(145deg,#0a1f10 0%,#1a3d25 50%,#0d2b1a 100%);overflow-y:auto}
+#home-screen,#online-screen,#credits-screen,#how-to-screen{background:linear-gradient(145deg,#0a1f10 0%,#1a3d25 50%,#0d2b1a 100%);overflow-y:auto}
 .page-top-actions{display:flex;justify-content:flex-start;padding:1rem 1rem 0;max-width:700px;margin:0 auto;width:100%}
 .page-back-btn{background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.2)}
 .home-actions{display:grid;grid-template-columns:1fr;gap:.75rem}
@@ -565,6 +574,10 @@ body{font-family:var(--font-body);background:#0f2318;color:#1a1a1a;overscroll-be
       <h2>Credits</h2>
       <button class="btn btn-gold btn-full" onclick="showScreen('credits-screen')">🏅 View Credits</button>
     </div>
+    <div class="card">
+      <h2>How to Play</h2>
+      <button class="btn btn-secondary btn-full" onclick="showScreen('how-to-screen')">📘 Open Guide</button>
+    </div>
   </div>
 </div>
 
@@ -732,6 +745,125 @@ body{font-family:var(--font-body);background:#0f2318;color:#1a1a1a;overscroll-be
       <p style="margin-top:.4rem">
         <a class="credits-link" href="https://github.com/WakifRajin" target="_blank" rel="noopener noreferrer">https://github.com/WakifRajin</a>
       </p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ HOW TO PLAY SCREEN ═══════════════ -->
+<div class="screen hidden" id="how-to-screen">
+  <div class="page-top-actions">
+    <button class="btn btn-sm page-back-btn" onclick="openHomePage()">← Back</button>
+  </div>
+  <div class="lobby-header" style="padding-top:1rem">
+    <div class="lobby-logo-wrap">
+      <img src="logo.svg" alt="Monopoly logo" class="lobby-logo-mark">
+      <div class="lobby-logo"><span>How</span> to Play</div>
+    </div>
+    <div class="lobby-subtitle">Full rulebook for this version of the game</div>
+  </div>
+  <div class="credits-body">
+    <div class="card">
+      <h2>1. Setup, Turn Order, and Win Condition</h2>
+      <ul class="how-to">
+        <li>Offline games support 2 to 8 players (any mix of human and AI). Online games require at least 2 ready human players, and only the host can launch.</li>
+        <li>Turn order follows lobby order and loops to the next non-bankrupt player each turn.</li>
+        <li>You start with the lobby starting-money value. If that value is invalid, the selected board theme default is used.</li>
+        <li>The selected board theme controls currency display, location names, GO salary amount, and default starting money.</li>
+        <li>Goal: make all other players bankrupt. The last non-bankrupt player wins.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h2>2. Turn Phases and Dice Rules</h2>
+      <ul class="how-to">
+        <li>Every turn runs in phases: Roll → Action/Land Result → End.</li>
+        <li>You must roll before you can end your turn.</li>
+        <li>If you roll doubles (and are not in jail), you get another roll after land effects resolve.</li>
+        <li>If you roll 3 doubles in one turn, you are sent directly to Jail immediately.</li>
+        <li>Movement wraps around 40 spaces. Passing GO pays the theme GO salary. Landing exactly on GO also pays salary.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h2>3. Space Rules</h2>
+      <ul class="how-to">
+        <li>GO: landing on GO pays salary.</li>
+        <li>Jail/Visit: safe when just visiting.</li>
+        <li>Free Parking: visiting only, no jackpot and no reward pool payout.</li>
+        <li>Go to Jail: sends you to Jail space (position 10), ends movement, and resets doubles streak.</li>
+        <li>Tax spaces: pay the printed amount to the bank.</li>
+        <li>Chance/Community Chest: draw top card from a shuffled deck and apply its action.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h2>4. Buying, Auction, and Rent</h2>
+      <ul class="how-to">
+        <li>Landing on an unowned property/railroad/utility lets you buy it at face price.</li>
+        <li>If you cannot afford a landed property, buy is disabled and you can auction it or skip.</li>
+        <li>Auction includes all non-bankrupt players. Bid controls are +100, +200, +500, +1000, or Pass.</li>
+        <li>You cannot place a bid above your current cash. Auction ends when only one non-passed bidder remains with a valid high bid, or everyone passes.</li>
+        <li>If all pass, the property remains unsold (owner stays none).</li>
+        <li>Rent on normal properties: base rent, or double base if color monopoly and no buildings, or house/hotel rent tiers from the deed.</li>
+        <li>Railroad rent depends on owner total railroads: 250 / 500 / 1000 / 2000.</li>
+        <li>Utility rent is dice-based: one utility = 4x dice total, both utilities = 10x dice total.</li>
+        <li>Mortgaged assets collect no rent.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h2>5. Building and Mortgage Rules</h2>
+      <ul class="how-to">
+        <li>You can build only after owning all properties in a color group.</li>
+        <li>Build cost per click is that property house cost.</li>
+        <li>At 4 houses, the next build converts that property to a hotel.</li>
+        <li>Selling buildings returns 50% of one house cost per sell action.</li>
+        <li>Selling a hotel converts it back to 4 houses first in this build.</li>
+        <li>Even-building distribution across a color set is not enforced by this build.</li>
+        <li>You can mortgage owned assets (property, railroad, utility) for 50% of purchase price, if that asset has no buildings.</li>
+        <li>You cannot mortgage a color property while any property in that same color group still has buildings.</li>
+        <li>Unmortgage cost is 110% of mortgage value (10% interest).</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h2>6. Jail Rules</h2>
+      <ul class="how-to">
+        <li>You can be jailed by Go to Jail square, jail-type cards, or rolling 3 doubles in one turn.</li>
+        <li>When your jailed turn starts, choose to roll for doubles or leave immediately by paying bail/using a card.</li>
+        <li>Bail is 500, unless you use a Get Out of Jail Free card.</li>
+        <li>If you roll doubles in jail, you are released and move by that roll.</li>
+        <li>If you fail doubles, jail turn count increases. On the 3rd failed roll, you must pay 500, then move by that roll.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h2>7. Chance and Community Actions (Implemented Set)</h2>
+      <ul class="how-to">
+        <li>Chance deck actions: Advance to GO; Bank dividend +500; Go to Jail; General repairs (500 per house, 2000 per hotel); School fees -1500; Speeding fine -500; Advance to nearest Railway; Building prize +1500; Get Out of Jail Free; Bank error +2000; Doctor fees -1000; Street repairs (400 per house, 1500 per hotel).</li>
+        <li>Community Chest actions: Bank error +2000; Doctor fees -500; Go to Jail; Sale of stock +500; Consultancy fee +1000; Hospital fees -1000; Get Out of Jail Free; Advance to GO; Life insurance +1000; School fees -1500; Income tax refund +500; Birthday card (+1000 from each non-bankrupt opponent).</li>
+        <li>Get Out of Jail Free cards increase your stored jail-free card count.</li>
+        <li>Decks are shuffled at game start and drawn in order; when index exceeds length, drawing wraps back through the same shuffled deck order.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h2>8. Debt, Bankruptcy, and Asset Transfer</h2>
+      <ul class="how-to">
+        <li>If a human player cannot pay a charge, a debt prompt appears. You must raise money (sell buildings/mortgage) or declare bankruptcy.</li>
+        <li>You cannot end your turn while unresolved debt prompt is active.</li>
+        <li>If debt is paid after raising funds, the exact owed amount is transferred to the creditor (or bank) and play continues.</li>
+        <li>Bankruptcy to another player transfers remaining cash and all owned assets to that creditor.</li>
+        <li>If transferred assets are mortgaged, the creditor pays 10% mortgage-interest to the bank for those assets.</li>
+        <li>Bankruptcy to bank clears ownership, removes all buildings/hotel/mortgage status, and queues each asset for bank auction.</li>
+        <li>Bank auctions run in sequence until queue is empty.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h2>9. Trading and Timer Rules</h2>
+      <ul class="how-to">
+        <li>Trades can include properties and cash from both sides.</li>
+        <li>Properties with buildings cannot be included in trade offers.</li>
+        <li>Recipient can accept or decline. Proposer can cancel while pending.</li>
+        <li>Trade is validated again on response (ownership and available cash must still be valid).</li>
+        <li>Auto-advance timer (Off / 10 / 20 / 30 / 45 / 60 seconds) runs only during end phase after movement resolves.</li>
+        <li>Timer pauses while any modal overlay is open. At zero, turn auto-ends.</li>
+        <li>Online mode rules: only host can launch match or change lobby timer/settings, and all connected players must be ready before start.</li>
+        <li>If someone leaves an online match, leave handling can convert them to AI control or liquidate and auction their assets (host-managed room state).</li>
+      </ul>
     </div>
   </div>
 </div>
