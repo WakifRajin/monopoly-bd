@@ -725,7 +725,7 @@ body{font-family:var(--font-body);background:#0f2318;color:#1a1a1a;overscroll-be
     <div class="card">
       <h3>How to Play</h3>
       <ul class="how-to">
-        <li>Roll dice to move around the Bangladeshi board</li>
+        <li>Roll dice to move around the board</li>
         <li>Buy properties and collect rent from rivals</li>
         <li>Build houses & hotels to multiply your rent</li>
         <li>Trade properties with other players</li>
@@ -1201,6 +1201,8 @@ const ONLINE_MUTATION_FUNCS = [
 ];
 
 const ROOM_SCHEMA_VERSION = 2;
+const GAME_LOG_LIMIT = 250;
+const GAME_LOG_ARCHIVE_LIMIT = 5000;
 const OPEN_ROOM_STALE_MS = 1000 * 60 * 60 * 6;
 const PLAYING_ROOM_STALE_MS = 1000 * 60 * 60 * 24;
 const EMPTY_ROOM_STALE_MS = 1000 * 60 * 15;
@@ -1655,10 +1657,10 @@ const BOARD_THEMES = {
     goSalary: 2000,
     startMoneyDefault: 15000,
     stations: ['Kamalapur Station','Airport Station','Sadarghat Terminal','Sayedabad Bus Stand'],
-    utilities: [{name:'DESA Power',icon:'⚡'},{name:'WASA Water',icon:'💧'}],
+    utilities: [{name:'Desco Power',icon:'⚡'},{name:'WASA Water',icon:'💧'}],
     spaces: [
       {name:'Mirpur Rd',color:'BROWN',price:600,rent:[40,200,600,1800,3200,5000],house:500,mortgage:300,group:0},
-      {name:'Gulshan Ave',color:'BROWN',price:600,rent:[40,200,600,1800,3200,5000],house:500,mortgage:300,group:0},
+      {name:'Kazipara',color:'BROWN',price:600,rent:[40,200,600,1800,3200,5000],house:500,mortgage:300,group:0},
       {name:'New Market',color:'LBLUE',price:1000,rent:[60,300,900,2700,4000,5500],house:500,mortgage:500,group:1},
       {name:'Bangshal Rd',color:'LBLUE',price:1000,rent:[60,300,900,2700,4000,5500],house:500,mortgage:500,group:1},
       {name:'Motijheel Cir',color:'LBLUE',price:1200,rent:[80,400,1000,3000,4500,6000],house:500,mortgage:600,group:1},
@@ -1676,7 +1678,7 @@ const BOARD_THEMES = {
       {name:'Banani',color:'YELLOW',price:2800,rent:[240,1200,3600,8500,10250,12000],house:1500,mortgage:1400,group:5},
       {name:'Niketan',color:'GREEN',price:3000,rent:[260,1300,3900,9000,11000,12750],house:2000,mortgage:1500,group:6},
       {name:'Mohakhali',color:'GREEN',price:3000,rent:[260,1300,3900,9000,11000,12750],house:2000,mortgage:1500,group:6},
-      {name:'Kawran Bazar',color:'GREEN',price:3200,rent:[280,1500,4500,10000,12000,14000],house:2000,mortgage:1600,group:6},
+      {name:'Palashi',color:'GREEN',price:3200,rent:[280,1500,4500,10000,12000,14000],house:2000,mortgage:1600,group:6},
       {name:'Motijheel CA',color:'DBLUE',price:3500,rent:[350,1750,5000,11000,13000,15000],house:2000,mortgage:1750,group:7},
       {name:'Karwan Bazar',color:'DBLUE',price:4000,rent:[500,2000,6000,14000,17000,20000],house:2000,mortgage:2000,group:7},
     ],
@@ -1728,36 +1730,36 @@ const BOARD_THEMES = {
     desc: 'Cities of the globe',
     currency: '$',
     locale: 'en-US',
-    goSalary: 200,
-    startMoneyDefault: 12000,
+    goSalary: 2000,
+    startMoneyDefault: 15000,
     stations: ['Heathrow Airport','JFK Airport','Dubai Airport','Tokyo Airport'],
     utilities: [{name:'Global Power',icon:'⚡'},{name:'City Water',icon:'💧'}],
     spaces: [
-      {name:'Cairo',color:'BROWN',price:60,rent:[4,20,60,180,320,450],house:50,mortgage:30,group:0},
-      {name:'Lagos',color:'BROWN',price:60,rent:[4,20,60,180,320,450],house:50,mortgage:30,group:0},
-      {name:'Istanbul',color:'LBLUE',price:100,rent:[6,30,90,270,400,550],house:50,mortgage:50,group:1},
-      {name:'Bangkok',color:'LBLUE',price:100,rent:[6,30,90,270,400,550],house:50,mortgage:50,group:1},
-      {name:'Mexico City',color:'LBLUE',price:120,rent:[8,40,100,300,450,600],house:50,mortgage:60,group:1},
-      {name:'Buenos Aires',color:'PINK',price:140,rent:[10,50,150,450,625,750],house:100,mortgage:70,group:2},
-      {name:'Mumbai',color:'PINK',price:140,rent:[10,50,150,450,625,750],house:100,mortgage:70,group:2},
-      {name:'Toronto',color:'PINK',price:160,rent:[12,60,180,500,700,900],house:100,mortgage:80,group:2},
-      {name:'Sydney',color:'ORANGE',price:180,rent:[14,70,200,550,750,950],house:100,mortgage:90,group:3},
-      {name:'Amsterdam',color:'ORANGE',price:180,rent:[14,70,200,550,750,950],house:100,mortgage:90,group:3},
-      {name:'Rome',color:'ORANGE',price:200,rent:[16,80,220,600,800,1000],house:100,mortgage:100,group:3},
-      {name:'Berlin',color:'RED',price:220,rent:[18,90,250,700,875,1050],house:150,mortgage:110,group:4},
-      {name:'Madrid',color:'RED',price:220,rent:[18,90,250,700,875,1050],house:150,mortgage:110,group:4},
-      {name:'Paris',color:'RED',price:240,rent:[20,100,300,750,925,1100],house:150,mortgage:120,group:4},
-      {name:'Singapore',color:'YELLOW',price:260,rent:[22,110,330,800,975,1150],house:150,mortgage:130,group:5},
-      {name:'Seoul',color:'YELLOW',price:260,rent:[22,110,330,800,975,1150],house:150,mortgage:130,group:5},
-      {name:'Shanghai',color:'YELLOW',price:280,rent:[24,120,360,850,1025,1200],house:150,mortgage:140,group:5},
-      {name:'Tokyo',color:'GREEN',price:300,rent:[26,130,390,900,1100,1275],house:200,mortgage:150,group:6},
-      {name:'Hong Kong',color:'GREEN',price:300,rent:[26,130,390,900,1100,1275],house:200,mortgage:150,group:6},
-      {name:'Los Angeles',color:'GREEN',price:320,rent:[28,150,450,1000,1200,1400],house:200,mortgage:160,group:6},
-      {name:'London',color:'DBLUE',price:350,rent:[35,175,500,1100,1300,1500],house:200,mortgage:175,group:7},
-      {name:'New York',color:'DBLUE',price:400,rent:[50,200,600,1400,1700,2000],house:200,mortgage:200,group:7},
+      {name:'Cairo',color:'BROWN',price:600,rent:[40,200,600,1800,3200,4500],house:500,mortgage:300,group:0},
+      {name:'Lagos',color:'BROWN',price:600,rent:[40,200,600,1800,3200,4500],house:500,mortgage:300,group:0},
+      {name:'Istanbul',color:'LBLUE',price:1000,rent:[60,300,900,2700,4000,5500],house:500,mortgage:500,group:1},
+      {name:'Bangkok',color:'LBLUE',price:1000,rent:[60,300,900,2700,4000,5500],house:500,mortgage:500,group:1},
+      {name:'Mexico City',color:'LBLUE',price:1200,rent:[80,400,1000,3000,4500,6000],house:500,mortgage:600,group:1},
+      {name:'Buenos Aires',color:'PINK',price:1400,rent:[100,500,1500,4500,6250,7500],house:1000,mortgage:700,group:2},
+      {name:'Mumbai',color:'PINK',price:1400,rent:[100,500,1500,4500,6250,7500],house:1000,mortgage:700,group:2},
+      {name:'Toronto',color:'PINK',price:1600,rent:[120,600,1800,5000,7000,9000],house:1000,mortgage:800,group:2},
+      {name:'Sydney',color:'ORANGE',price:1800,rent:[140,700,2000,5500,7500,9500],house:1000,mortgage:900,group:3},
+      {name:'Amsterdam',color:'ORANGE',price:1800,rent:[140,700,2000,5500,7500,9500],house:1000,mortgage:900,group:3},
+      {name:'Rome',color:'ORANGE',price:2000,rent:[160,800,2200,6000,8000,10000],house:1000,mortgage:1000,group:3},
+      {name:'Berlin',color:'RED',price:2200,rent:[180,900,2500,7000,8750,10500],house:1500,mortgage:1100,group:4},
+      {name:'Madrid',color:'RED',price:2200,rent:[180,900,2500,7000,8750,10500],house:1500,mortgage:1100,group:4},
+      {name:'Paris',color:'RED',price:2400,rent:[200,1000,3000,7500,9250,11000],house:1500,mortgage:1200,group:4},
+      {name:'Singapore',color:'YELLOW',price:2600,rent:[220,1100,3300,8000,9750,11500],house:1500,mortgage:1300,group:5},
+      {name:'Seoul',color:'YELLOW',price:2600,rent:[220,1100,3300,8000,9750,11500],house:1500,mortgage:1300,group:5},
+      {name:'Shanghai',color:'YELLOW',price:2800,rent:[240,1200,3600,8500,10250,12000],house:1500,mortgage:1400,group:5},
+      {name:'Tokyo',color:'GREEN',price:3000,rent:[260,1300,3900,9000,11000,12750],house:2000,mortgage:1500,group:6},
+      {name:'Hong Kong',color:'GREEN',price:3000,rent:[260,1300,3900,9000,11000,12750],house:2000,mortgage:1500,group:6},
+      {name:'Los Angeles',color:'GREEN',price:3200,rent:[280,1500,4500,10000,12000,14000],house:2000,mortgage:1600,group:6},
+      {name:'London',color:'DBLUE',price:3500,rent:[350,1750,5000,11000,13000,15000],house:2000,mortgage:1750,group:7},
+      {name:'New York',color:'DBLUE',price:4000,rent:[500,2000,6000,14000,17000,20000],house:2000,mortgage:2000,group:7},
     ],
     taxNames: ['VAT Tax','Luxury Tax'],
-    taxAmounts: [200, 100],
+    taxAmounts: [2000, 1000],
   },
   ancient: {
     id: 'ancient',
@@ -1922,7 +1924,7 @@ const SPACES = [
   {id:0,  name:'GO',              type:'go',         icon:'🏁', desc:'Collect ৳2000 salary each time you pass'},
   {id:1,  name:'Mirpur Rd',       type:'property',   color:'BROWN', price:600,  rent:[40,200,600,1800,3200,5000],  house:500,  mortgage:300,  group:0},
   {id:2,  name:'Community Chest', type:'community',  icon:'📦'},
-  {id:3,  name:'Gulshan Ave',     type:'property',   color:'BROWN', price:600,  rent:[40,200,600,1800,3200,5000],  house:500,  mortgage:300,  group:0},
+  {id:3,  name:'Kazipara',        type:'property',   color:'BROWN', price:600,  rent:[40,200,600,1800,3200,5000],  house:500,  mortgage:300,  group:0},
   {id:4,  name:'Income Tax',      type:'tax',        icon:'💸', amount:2000, desc:'Pay ৳2,000 income tax'},
   {id:5,  name:'Dhaka Station',   type:'railroad',   price:2000, rent:[250,500,1000,2000], mortgage:1000},
   {id:6,  name:'New Market',      type:'property',   color:'LBLUE', price:1000, rent:[60,300,900,2700,4000,5500], house:500,  mortgage:500,  group:1},
@@ -1931,7 +1933,7 @@ const SPACES = [
   {id:9,  name:'Motijheel Cir',   type:'property',   color:'LBLUE', price:1200, rent:[80,400,1000,3000,4500,6000],house:500,  mortgage:600,  group:1},
   {id:10, name:'Jail / Visit',    type:'jail',       icon:'⛓️',  desc:'Just visiting or in jail'},
   {id:11, name:'Dhanmondi Rd',    type:'property',   color:'PINK', price:1400, rent:[100,500,1500,4500,6250,7500],house:1000, mortgage:700,  group:2},
-  {id:12, name:'DESA',            type:'utility',    icon:'⚡', price:1500, mortgage:750},
+  {id:12, name:'Desco',           type:'utility',    icon:'⚡', price:1500, mortgage:750},
   {id:13, name:'Elephant Rd',     type:'property',   color:'PINK', price:1400, rent:[100,500,1500,4500,6250,7500],house:1000, mortgage:700,  group:2},
   {id:14, name:'Panthapath',      type:'property',   color:'PINK', price:1600, rent:[120,600,1800,5000,7000,9000],house:1000, mortgage:800,  group:2},
   {id:15, name:'Ctg Station',     type:'railroad',   price:2000, rent:[250,500,1000,2000], mortgage:1000},
@@ -1953,7 +1955,7 @@ const SPACES = [
   {id:31, name:'Niketan',         type:'property',   color:'GREEN', price:3000, rent:[260,1300,3900,9000,11000,12750],house:2000,mortgage:1500,group:6},
   {id:32, name:'Mohakhali',       type:'property',   color:'GREEN', price:3000, rent:[260,1300,3900,9000,11000,12750],house:2000,mortgage:1500,group:6},
   {id:33, name:'Community Chest', type:'community',  icon:'📦'},
-  {id:34, name:'Kawran Bazar',    type:'property',   color:'GREEN', price:3200, rent:[280,1500,4500,10000,12000,14000],house:2000,mortgage:1600,group:6},
+  {id:34, name:'Palashi',         type:'property',   color:'GREEN', price:3200, rent:[280,1500,4500,10000,12000,14000],house:2000,mortgage:1600,group:6},
   {id:35, name:'Rajshahi Stn',    type:'railroad',   price:2000, rent:[250,500,1000,2000], mortgage:1000},
   {id:36, name:'Chance',          type:'chance',     icon:'❓'},
   {id:37, name:'Motijheel CA',    type:'property',   color:'DBLUE', price:3500, rent:[350,1750,5000,11000,13000,15000],house:2000,mortgage:1750,group:7},
@@ -2024,10 +2026,15 @@ const MOVE_FX = {
 const REMOTE_FX = {
   running: false,
 };
+let LOG_ARCHIVE_GAME_STARTED_AT = 0;
+const LOG_ARCHIVE = [];
+const LOG_ARCHIVE_KEYS = new Set();
 
 function initGameState(players, startMoney) {
+  const gameStartedAt = Date.now();
   const shuffledChance = shuffle([...CHANCE_CARDS]);
   const shuffledComm = shuffle([...COMMUNITY_CARDS]);
+  clearLogArchive(gameStartedAt);
   jailPromptShownKey = '';
   tradeReviewShownKey = '';
   CHAT_PREVIEW.lastShownKey = '';
@@ -2062,6 +2069,7 @@ function initGameState(players, startMoney) {
     communityIdx: 0,
     chanceDeck: shuffledChance,
     communityDeck: shuffledComm,
+    gameStartedAt,
     parkingPot: 0,
     log: [],
     chat: [],
@@ -2182,6 +2190,10 @@ function captureBoardVisualState(state) {
 function hydrateRemoteGameState(raw) {
   if (!raw) return;
   const next = JSON.parse(JSON.stringify(raw));
+  const remoteGameStartedAt = Number(next.gameStartedAt) || 0;
+  if (remoteGameStartedAt && remoteGameStartedAt !== LOG_ARCHIVE_GAME_STARTED_AT) {
+    clearLogArchive(remoteGameStartedAt);
+  }
 
   const remoteThemeId = BOARD_THEMES[next.boardThemeId] ? next.boardThemeId : selectedThemeId;
   applyThemeById(remoteThemeId);
@@ -2242,7 +2254,8 @@ function hydrateRemoteGameState(raw) {
   const dice = indexedObjectToArray(next.dice).map(n => Number(n));
   next.dice = (dice.length >= 2 && dice.every(n => Number.isInteger(n) && n >= 1 && n <= 6)) ? [dice[0], dice[1]] : [1, 1];
 
-  next.log = indexedObjectToArray(next.log).filter(Boolean);
+  next.log = indexedObjectToArray(next.log).map(normalizeLogEntry).filter(Boolean);
+  if (next.log.length > GAME_LOG_LIMIT) next.log = next.log.slice(-GAME_LOG_LIMIT);
   next.chat = indexedObjectToArray(next.chat).filter(Boolean);
   next.chanceDeck = indexedObjectToArray(next.chanceDeck);
   next.communityDeck = indexedObjectToArray(next.communityDeck);
@@ -2821,7 +2834,7 @@ function applyOnlineDepartureRuleToRoomData(roomData, leavingUid, leaveMode = 'l
     const aiMsg = `${quitterName} left the match. AI takeover is active.`;
     if (!Array.isArray(gs.log)) gs.log = [];
     gs.log.push({ text: aiMsg, type: 'important', time: now });
-    if (gs.log.length > 250) gs.log = gs.log.slice(-250);
+    if (gs.log.length > GAME_LOG_LIMIT) gs.log = gs.log.slice(-GAME_LOG_LIMIT);
 
     out.lastDepartureNotice = {
       id: `dep_${now}_${leavingUid}`,
@@ -2967,7 +2980,7 @@ function applyOnlineDepartureRuleToRoomData(roomData, leavingUid, leaveMode = 'l
 
     if (!Array.isArray(gs.log)) gs.log = [];
     gs.log.push({ text: liquidatedMsg, type: 'important', time: now });
-    if (gs.log.length > 250) gs.log = gs.log.slice(-250);
+    if (gs.log.length > GAME_LOG_LIMIT) gs.log = gs.log.slice(-GAME_LOG_LIMIT);
     gs.gameOver = false;
   }
 
@@ -3005,6 +3018,7 @@ async function confirmLeaveOnlineGame(mode) {
 async function leaveOnlineRoom(showToast = true, mutateRoom = true, leaveMode = 'liquidation') {
   if (!ONLINE.connected || !FIREBASE.api) {
     LOBBY_CONTEXT = 'online';
+    clearLogArchive(0);
     ONLINE.connected = false;
     ONLINE.roomId = null;
     ONLINE.isHost = false;
@@ -3035,6 +3049,7 @@ async function leaveOnlineRoom(showToast = true, mutateRoom = true, leaveMode = 
 
   if (ONLINE.unsubRoom) ONLINE.unsubRoom();
   ONLINE.unsubRoom = null;
+  clearLogArchive(0);
   ONLINE.connected = false;
   ONLINE.roomId = null;
   ONLINE.isHost = false;
@@ -3360,7 +3375,8 @@ function syncAuctionOverlay() {
 
 function renderGameLog() {
   const el = document.getElementById('game-log');
-  if (!el || !G.log) return;
+  if (!el || !Array.isArray(G.log)) return;
+  appendLogsToArchive(G.log);
   el.innerHTML = G.log.map(l => {
     const ts = l.time ? new Date(l.time) : new Date();
     const hh = ts.getHours().toString().padStart(2, '0');
@@ -4432,12 +4448,12 @@ async function movePlayer(p, steps, rolledDoubles) {
   const oldPos = p.pos;
   const newPos = (p.pos + steps) % 40;
   const goSalary = getThemeGoSalary();
+  let goPaid = false;
   // Pass GO
   if (newPos < oldPos) {
-    if (newPos !== 0 || steps > 0) {
-      p.money += goSalary;
-      addLog(`${p.name} passed GO! Collected ${fmtCurrency(goSalary)}`, 'success');
-    }
+    p.money += goSalary;
+    goPaid = true;
+    addLog(`${p.name} passed GO! Collected ${fmtCurrency(goSalary)}`, 'success');
   }
 
   G.phase = 'action';
@@ -4445,15 +4461,17 @@ async function movePlayer(p, steps, rolledDoubles) {
   p.pos = newPos;
   renderAll();
   await waitMs(160);
-  landOn(p, rolledDoubles);
+  landOn(p, rolledDoubles, {goPaid});
 }
 
 async function movePlayerTo(p, target, collectGo=true) {
   const oldPos = p.pos;
   const goSalary = getThemeGoSalary();
   const stepsForward = (target - oldPos + 40) % 40;
+  let goPaid = false;
   if (collectGo && stepsForward > 0 && target < oldPos) {
     p.money += goSalary;
+    goPaid = true;
     addLog(`${p.name} passed GO! Collected ${fmtCurrency(goSalary)}`, 'success');
   }
 
@@ -4467,17 +4485,20 @@ async function movePlayerTo(p, target, collectGo=true) {
 
   renderAll();
   await waitMs(140);
-  landOn(p, false);
+  landOn(p, false, {goPaid});
 }
 
-function landOn(p, rolledDoubles) {
+function landOn(p, rolledDoubles, opts = null) {
   const sp = SPACES[p.pos];
   const goSalary = getThemeGoSalary();
+  const goPaid = !!(opts && opts.goPaid);
   addLog(`${p.name} landed on ${sp.name}`);
 
   if (sp.type === 'go') {
-    addLog(`${p.name} landed on GO — collect ${fmtCurrency(goSalary)}!`, 'success');
-    p.money += goSalary;
+    if (!goPaid) {
+      addLog(`${p.name} landed on GO — collect ${fmtCurrency(goSalary)}!`, 'success');
+      p.money += goSalary;
+    }
     G.phase = 'end';
   } else if (sp.type === 'jail') {
     addLog(`${p.name} is just visiting jail.`);
@@ -4573,7 +4594,8 @@ function drawCard(type, p) {
     card = G.communityDeck[G.communityIdx % G.communityDeck.length];
     G.communityIdx++;
   }
-  addLog(`${p.name} drew ${type === 'chance' ? 'Chance' : 'Community Chest'}: ${card.text}`);
+  const cardText = formatThemeCurrencyText(card.text);
+  addLog(`${p.name} drew ${type === 'chance' ? 'Chance' : 'Community Chest'}: ${cardText}`);
 
   if (isOnlineGame() && !ONLINE.isApplyingRemote) {
     ONLINE.pendingCardResolutions = (Number(ONLINE.pendingCardResolutions) || 0) + 1;
@@ -4592,14 +4614,14 @@ function drawCard(type, p) {
 
   document.getElementById('card-icon').textContent = type === 'chance' ? '❓' : '📦';
   document.getElementById('card-title').textContent = type === 'chance' ? 'Chance Card' : 'Community Chest';
-  document.getElementById('card-desc').textContent = card.text;
+  document.getElementById('card-desc').textContent = cardText;
 
   const apply = async () => {
     if (card.action === 'money') {
       if (card.value > 0) {
         p.money += card.value;
         addLog(`${p.name} received ${fmtCurrency(card.value)} from a card effect.`, 'success');
-        toast(`+৳${fmt(card.value)}`, 'gold');
+        toast(`+${fmtCurrency(card.value)}`, 'gold');
       } else {
         const paid = chargeMoney(p, -card.value, null, true);
         if (paid) addLog(`${p.name} paid ${fmtCurrency(-card.value)} due to a card effect.`, 'danger');
@@ -6028,10 +6050,76 @@ function restartGame() {
 // ═══════════════════════════════════════════════
 //  CHAT & LOG
 // ═══════════════════════════════════════════════
+function normalizeLogEntry(entry) {
+  if (!entry || typeof entry !== 'object') return null;
+  const text = String(entry.text || '').trim();
+  if (!text) return null;
+  const time = Number(entry.time) || Date.now();
+  return {
+    id: String(entry.id || ''),
+    text,
+    type: String(entry.type || ''),
+    time,
+  };
+}
+
+function getLogEntryKey(entry) {
+  if (!entry || typeof entry !== 'object') return '';
+  const explicitId = String(entry.id || '');
+  if (explicitId) return explicitId;
+  const ts = Number(entry.time) || 0;
+  const type = String(entry.type || '');
+  const text = String(entry.text || '');
+  return `${ts}|${type}|${text}`;
+}
+
+function clearLogArchive(gameStartedAt = 0) {
+  LOG_ARCHIVE.length = 0;
+  LOG_ARCHIVE_KEYS.clear();
+  LOG_ARCHIVE_GAME_STARTED_AT = Number(gameStartedAt) || 0;
+}
+
+function appendLogsToArchive(entries) {
+  if (!Array.isArray(entries) || !entries.length) return;
+  for (let i = 0; i < entries.length; i++) {
+    const normalized = normalizeLogEntry(entries[i]);
+    if (!normalized) continue;
+    const key = getLogEntryKey(normalized);
+    if (!key || LOG_ARCHIVE_KEYS.has(key)) continue;
+    LOG_ARCHIVE.push(normalized);
+    LOG_ARCHIVE_KEYS.add(key);
+  }
+
+  if (LOG_ARCHIVE.length > GAME_LOG_ARCHIVE_LIMIT) {
+    const overflow = LOG_ARCHIVE.length - GAME_LOG_ARCHIVE_LIMIT;
+    const removed = LOG_ARCHIVE.splice(0, overflow);
+    for (let i = 0; i < removed.length; i++) {
+      const key = getLogEntryKey(removed[i]);
+      if (key) LOG_ARCHIVE_KEYS.delete(key);
+    }
+  }
+}
+
+function getFullLogEntries() {
+  if (Array.isArray(G.log) && G.log.length) {
+    appendLogsToArchive(G.log);
+  }
+  if (LOG_ARCHIVE.length) return LOG_ARCHIVE;
+  return Array.isArray(G.log) ? G.log : [];
+}
+
 function addLog(text, type='') {
+  const entry = normalizeLogEntry({
+    id: `lg_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 9)}`,
+    text,
+    type,
+    time: Date.now(),
+  });
+  if (!entry) return;
   if (!G.log) G.log = [];
-  G.log.push({text, type, time: Date.now()});
-  if (G.log.length > 250) G.log = G.log.slice(-250);
+  G.log.push(entry);
+  appendLogsToArchive([entry]);
+  if (G.log.length > GAME_LOG_LIMIT) G.log = G.log.slice(-GAME_LOG_LIMIT);
   renderGameLog();
 }
 
@@ -6208,6 +6296,14 @@ function fmtCurrency(n) {
   const t = window.ACTIVE_THEME || BOARD_THEMES.dhaka;
   return `${t.currency}${Math.abs(n).toLocaleString(t.locale)}`;
 }
+function formatThemeCurrencyText(text) {
+  const raw = String(text || '');
+  if (!raw) return '';
+  return raw.replace(/৳\s*([0-9][0-9,]*)/g, (m, digits) => {
+    const amount = Number(String(digits).replace(/,/g, ''));
+    return Number.isFinite(amount) ? fmtCurrency(amount) : m;
+  });
+}
 function shuffle(arr) { for (let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]]}; return arr; }
 function removeFrom(arr, val) { const i = arr.indexOf(val); if (i >= 0) arr.splice(i, 1); }
 function escHtml(t) { return String(t ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -6275,20 +6371,27 @@ function classifyMoneyLogForPlayer(logEntry, playerName) {
   return null;
 }
 
-function getPlayerMoneyHistory(playerIdx) {
+function getPlayerActivityHistory(playerIdx) {
   const player = G.players[playerIdx];
-  if (!player || !Array.isArray(G.log)) return [];
+  if (!player) return [];
+  const allLogs = getFullLogEntries();
+  if (!allLogs.length) return [];
+
+  const safeName = escapeRegExp(player.name);
+  const nameRegex = new RegExp(`\\b${safeName}\\b`);
 
   const rows = [];
-  for (let i = 0; i < G.log.length; i++) {
-    const entry = G.log[i] || {};
-    const parsed = classifyMoneyLogForPlayer(entry, player.name);
-    if (!parsed) continue;
+  for (let i = 0; i < allLogs.length; i++) {
+    const entry = allLogs[i] || {};
+    const text = String(entry.text || '');
+    if (!nameRegex.test(text)) continue;
+    const parsedMoney = classifyMoneyLogForPlayer(entry, player.name);
     rows.push({
-      kind: parsed.kind,
-      amount: parsed.amount,
-      text: String(entry.text || ''),
+      kind: parsedMoney?.kind || '',
+      amount: parsedMoney?.amount || 0,
+      text,
       time: Number(entry.time) || 0,
+      type: String(entry.type || ''),
     });
   }
   return rows.reverse();
@@ -6332,9 +6435,9 @@ function showPlayerPortfolio(playerIdx, tab = '') {
 
   const statusIcon = p.bankrupt ? '💀 BANKRUPT' : p.inJail ? '⛓️ In Jail' : `📍 ${SPACES[p.pos].name}`;
 
-  const moneyHistory = getPlayerMoneyHistory(playerIdx);
-  const totalCredit = moneyHistory.filter(x => x.kind === 'credit').reduce((sum, x) => sum + x.amount, 0);
-  const totalDebit = moneyHistory.filter(x => x.kind === 'debit').reduce((sum, x) => sum + x.amount, 0);
+  const logHistory = getPlayerActivityHistory(playerIdx);
+  const totalCredit = logHistory.filter(x => x.kind === 'credit').reduce((sum, x) => sum + x.amount, 0);
+  const totalDebit = logHistory.filter(x => x.kind === 'debit').reduce((sum, x) => sum + x.amount, 0);
 
   let propsHtml = '';
   if (allProps.length === 0) {
@@ -6355,24 +6458,30 @@ function showPlayerPortfolio(playerIdx, tab = '') {
     });
   }
 
-  const historyHtml = moneyHistory.length
-    ? moneyHistory.map(item => {
+  const historyHtml = logHistory.length
+    ? logHistory.map(item => {
         const credit = item.kind === 'credit';
-        const pillBg = credit ? 'rgba(45,160,90,.28)' : 'rgba(192,57,43,.28)';
-        const pillColor = credit ? '#86efac' : '#fca5a5';
-        const sign = credit ? '+' : '-';
+        const debit = item.kind === 'debit';
+        const hasMoneyTag = credit || debit;
+        const pillBg = credit ? 'rgba(45,160,90,.28)' : debit ? 'rgba(192,57,43,.28)' : 'rgba(148,163,184,.26)';
+        const pillColor = credit ? '#86efac' : debit ? '#fca5a5' : '#e2e8f0';
+        const tagLabel = credit ? 'CREDIT' : debit ? 'DEBIT' : (item.type ? item.type.toUpperCase() : 'LOG');
+        const sign = credit ? '+' : debit ? '-' : '';
+        const amountHtml = hasMoneyTag
+          ? `<span style="font-size:.86rem;font-weight:700;color:${pillColor}">${sign}${fmtCurrency(item.amount)}</span>`
+          : '';
         return `
-          <div style="padding:.6rem .7rem;background:rgba(255,255,255,.06);border-radius:8px;margin-bottom:.42rem;border:1px solid rgba(255,255,255,.08)">
+          <div style="padding:.6rem .7rem;border-radius:8px;margin-bottom:.42rem;border:1px solid rgba(201,151,28,.22);background:rgba(255,255,255,.08)">
             <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.35rem">
-              <span style="font-size:.72rem;font-weight:700;padding:.1rem .42rem;border-radius:999px;background:${pillBg};color:${pillColor}">${credit ? 'CREDIT' : 'DEBIT'}</span>
-              <span style="font-size:.86rem;font-weight:700;color:${pillColor}">${sign}${fmtCurrency(item.amount)}</span>
+              <span style="font-size:.72rem;font-weight:700;padding:.1rem .42rem;border-radius:999px;background:${pillBg};color:${pillColor}">${tagLabel}</span>
+              ${amountHtml}
               <span style="margin-left:auto;font-size:.72rem;color:rgba(255,255,255,.45)">${formatLogTime(item.time)}</span>
             </div>
             <div style="font-size:.8rem;color:rgba(255,255,255,.72);line-height:1.4">${escHtml(item.text)}</div>
           </div>
         `;
       }).join('')
-    : `<div style="color:rgba(255,255,255,.45);font-size:.9rem;text-align:center;padding:1.5rem 0">No credit/debit activity yet</div>`;
+    : `<div style="color:rgba(255,255,255,.45);font-size:.9rem;text-align:center;padding:1.5rem 0">No logs for this player yet</div>`;
 
   const propertiesTabBtnStyle = activeTab === 'properties'
     ? 'background:rgba(201,151,28,.25);border:1px solid rgba(201,151,28,.45);color:var(--gold-light);'
@@ -6413,7 +6522,7 @@ function showPlayerPortfolio(playerIdx, tab = '') {
           <div style="font-size:.95rem;font-weight:800;color:#fca5a5">-${fmtCurrency(totalDebit)}</div>
         </div>
       </div>
-      <div style="font-size:.8rem;font-weight:700;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem">Credit / Debit History</div>
+      <div style="font-size:.8rem;font-weight:700;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem">Player History (Whole Match)</div>
       ${historyHtml}
     </div>
     <button class="btn btn-full" style="background:rgba(255,255,255,.1);color:#fff;margin-top:1rem" onclick="closeOverlay('portfolio-overlay')">Close</button>
