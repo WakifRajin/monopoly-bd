@@ -430,6 +430,18 @@ body{font-family:var(--font-body);background:#0f2318;color:#1a1a1a;overscroll-be
   backdrop-filter:none !important;
 }
 
+#buy-overlay.show,#auction-overlay.show{
+  pointer-events:none;
+}
+
+#buy-overlay .modal,#auction-overlay .modal{
+  pointer-events:none;
+}
+
+#buy-overlay.show .modal,#auction-overlay.show .modal{
+  pointer-events:auto;
+}
+
 #trade-overlay,#trade-review-overlay{
   background:transparent !important;
   backdrop-filter:none !important;
@@ -3399,7 +3411,7 @@ function renderPlayerCards() {
         <div class="ppos">${p.inJail ? '⛓️ In Jail' : `📍 ${SPACES[p.pos].name}`}</div>
         ${propDots ? `<div class="pprops">${propDots}</div>` : ''}
       `;
-      div.title = `Tap to view ${p.name}'s properties`;
+      div.title = `Tap to view ${p.name}'s portfolio and money log`;
       div.onclick = () => showPlayerPortfolio(i);
       el.appendChild(div);
     }
@@ -3414,7 +3426,7 @@ function renderPlayerCards() {
         </div>
         <div class="mobile-player-meta">${fmtCurrency(p.money)} • ${escHtml(location)}</div>
       `;
-      chip.title = `Tap to view ${p.name}'s properties`;
+      chip.title = `Tap to view ${p.name}'s portfolio and money log`;
       chip.onclick = () => showPlayerPortfolio(i);
       mobileEl.appendChild(chip);
     }
@@ -4245,13 +4257,12 @@ function updateActionButtons() {
   const movementLocked = MOVE_FX.active;
   const canHumanAct = turnOwnedByMe && !aiTurnActive && !movementLocked;
   const debtPending = hasPendingDebtPromptForCurrentPlayer();
-  const postRollPhase = G.phase === 'action' || G.phase === 'end';
-  const actionLocked = !!G.pendingBuy || !!G.auctionState || movementLocked;
+  const managementPhase = G.phase === 'roll' || G.phase === 'action' || G.phase === 'end';
   const tradePending = !!G.pendingTrade;
   const canBuyAny = !debtPending && G.phase === 'action' && onProp && onProp.owner === null;
-  const canBuild = !debtPending && postRollPhase && !actionLocked && buildableGroups(p).length > 0;
-  const canMortgage = postRollPhase && !actionLocked && (p.properties.length > 0 || p.railroads.length > 0 || p.utilities.length > 0);
-  const canTrade = !debtPending && postRollPhase && !actionLocked && !tradePending && G.players.filter(x => !x.bankrupt).length > 1;
+  const canBuild = !debtPending && managementPhase && buildableGroups(p).length > 0;
+  const canMortgage = managementPhase && (p.properties.length > 0 || p.railroads.length > 0 || p.utilities.length > 0);
+  const canTrade = !debtPending && managementPhase && !tradePending && G.players.filter(x => !x.bankrupt).length > 1;
   const canEnd = !debtPending && (G.phase === 'action' || G.phase === 'end');
   const inJail = p.inJail;
   const runnerUid = aiTurnActive && isOnlineGame() ? activeOnlineRunnerUid() : '';
@@ -4293,7 +4304,7 @@ function updateActionButtons() {
     }
     else if (!turnOwnedByMe) cm.textContent = `Watching ${p.name}'s turn`;
     else if (inJail && G.phase === 'roll') cm.textContent = `Roll doubles or pay ৳500 bail`;
-    else if (G.phase === 'roll') cm.textContent = `${p.name}'s turn to roll`;
+    else if (G.phase === 'roll') cm.textContent = `${p.name}'s turn to roll (or manage assets first)`;
     else if (G.phase === 'action') cm.textContent = `Landed on ${sp.name}`;
     else cm.textContent = TIMER.duration > 0 ? `Auto-advancing in ${TIMER.duration}s…` : `End turn when ready`;
   }
@@ -4308,7 +4319,7 @@ function updateActionButtons() {
     }
     else if (!turnOwnedByMe) mobileTurnLine.textContent = `⏳ Watching ${p.name}'s turn`;
     else if (inJail && G.phase === 'roll') mobileTurnLine.textContent = '⛓️ Roll doubles or pay bail';
-    else if (G.phase === 'roll') mobileTurnLine.textContent = '🎲 Roll dice to move';
+    else if (G.phase === 'roll') mobileTurnLine.textContent = '🎲 Roll dice or manage assets';
     else if (G.phase === 'action') mobileTurnLine.textContent = `📍 ${sp.name} • choose an action`;
     else mobileTurnLine.textContent = TIMER.duration > 0 ? `⏱ Auto-end: ${TIMER.duration}s after move` : '✅ End your turn when ready';
   }
@@ -4587,9 +4598,11 @@ function drawCard(type, p) {
     if (card.action === 'money') {
       if (card.value > 0) {
         p.money += card.value;
+        addLog(`${p.name} received ${fmtCurrency(card.value)} from a card effect.`, 'success');
         toast(`+৳${fmt(card.value)}`, 'gold');
       } else {
-        chargeMoney(p, -card.value, null, true);
+        const paid = chargeMoney(p, -card.value, null, true);
+        if (paid) addLog(`${p.name} paid ${fmtCurrency(-card.value)} due to a card effect.`, 'danger');
       }
     } else if (card.action === 'goto') {
       await movePlayerTo(p, card.value, card.value < p.pos);
@@ -4982,8 +4995,8 @@ function buildHouse(propId) {
   const cost = sp.house;
   if (p.money < cost) { toast('Not enough money!', 'danger'); return; }
   p.money -= cost;
-  if (prop.houses === 4) { prop.hotel = true; prop.houses = 0; addLog(`${p.name} built a hotel on ${sp.name}!`, 'success'); }
-  else { prop.houses++; addLog(`${p.name} built house #${prop.houses} on ${sp.name}.`, 'success'); }
+  if (prop.houses === 4) { prop.hotel = true; prop.houses = 0; addLog(`${p.name} built a hotel on ${sp.name} for ${fmtCurrency(cost)}.`, 'success'); }
+  else { prop.houses++; addLog(`${p.name} built house #${prop.houses} on ${sp.name} for ${fmtCurrency(cost)}.`, 'success'); }
   renderAll();
   if (actorIsAi) closeOverlay('build-overlay');
   else openBuildModal(); // refresh
@@ -6201,8 +6214,109 @@ function escHtml(t) { return String(t ?? '').replace(/&/g,'&amp;').replace(/</g,
 function escAttr(t) { return escHtml(String(t)).replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
 function rolledDoublesThisTurn() { return G.lastDoubles; }
 
-function showPlayerPortfolio(playerIdx) {
+const PORTFOLIO_VIEW = {
+  playerIdx: -1,
+  tab: 'properties',
+};
+
+function escapeRegExp(value) {
+  return String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function parseMoneyAmountFromText(text) {
+  const raw = String(text || '');
+  if (!raw) return 0;
+
+  const symbols = Array.from(new Set([
+    ...Object.values(BOARD_THEMES || {}).map(t => String(t?.currency || '').trim()).filter(Boolean),
+    '৳', '$', '⚜'
+  ]));
+  if (!symbols.length) return 0;
+
+  const pattern = symbols.map(escapeRegExp).join('|');
+  const match = raw.match(new RegExp(`(?:${pattern})\\s*([0-9][0-9,]*)`));
+  if (!match) return 0;
+
+  const amount = Number(match[1].replace(/,/g, ''));
+  return Number.isFinite(amount) ? amount : 0;
+}
+
+function classifyMoneyLogForPlayer(logEntry, playerName) {
+  const text = String(logEntry?.text || '');
+  if (!text) return null;
+
+  const lower = text.toLowerCase();
+  // Card draw description can contain fee text that is not the final settled amount.
+  if (lower.includes('drew chance') || lower.includes('drew community chest')) return null;
+
+  const amount = parseMoneyAmountFromText(text);
+  if (!amount) return null;
+
+  const safeName = escapeRegExp(playerName);
+  const startsWithPlayer = new RegExp(`^${safeName}\\b`).test(text);
+
+  const isRentPayer = new RegExp(`^${safeName}\\s+pays\\s+.*\\s+rent\\s+to\\s+`).test(text);
+  if (isRentPayer) return { kind: 'debit', amount };
+
+  const isRentReceiver = new RegExp(`^.+\\s+pays\\s+.*\\s+rent\\s+to\\s+${safeName}\\b`).test(text);
+  if (isRentReceiver) return { kind: 'credit', amount };
+
+  const isDebtPayer = new RegExp(`^${safeName}\\s+settled\\s+debt\\s+of\\s+`).test(text);
+  if (isDebtPayer) return { kind: 'debit', amount };
+
+  const isDebtReceiver = new RegExp(`^.+\\s+settled\\s+debt\\s+of\\s+.*\\s+to\\s+${safeName}\\b`).test(text);
+  if (isDebtReceiver) return { kind: 'credit', amount };
+
+  if (!startsWithPlayer) return null;
+
+  if (lower.includes('wins auction')) return { kind: 'debit', amount };
+  if (/\b(pays|paid|bought|unmortgaged|built|tax|bail|must pay|interest)\b/.test(lower)) return { kind: 'debit', amount };
+  if (/\b(collected|collect|sold|mortgaged|refund|dividend|raised|received)\b/.test(lower)) return { kind: 'credit', amount };
+  return null;
+}
+
+function getPlayerMoneyHistory(playerIdx) {
+  const player = G.players[playerIdx];
+  if (!player || !Array.isArray(G.log)) return [];
+
+  const rows = [];
+  for (let i = 0; i < G.log.length; i++) {
+    const entry = G.log[i] || {};
+    const parsed = classifyMoneyLogForPlayer(entry, player.name);
+    if (!parsed) continue;
+    rows.push({
+      kind: parsed.kind,
+      amount: parsed.amount,
+      text: String(entry.text || ''),
+      time: Number(entry.time) || 0,
+    });
+  }
+  return rows.reverse();
+}
+
+function formatLogTime(ts) {
+  const d = new Date(Number(ts) || Date.now());
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  return `${hh}:${mm}`;
+}
+
+function setPortfolioTab(tab) {
+  if (!Number.isInteger(PORTFOLIO_VIEW.playerIdx) || PORTFOLIO_VIEW.playerIdx < 0) return;
+  PORTFOLIO_VIEW.tab = tab === 'log' ? 'log' : 'properties';
+  showPlayerPortfolio(PORTFOLIO_VIEW.playerIdx, PORTFOLIO_VIEW.tab);
+}
+
+function showPlayerPortfolio(playerIdx, tab = '') {
   const p = G.players[playerIdx];
+  if (!p) return;
+
+  const previousPlayerIdx = PORTFOLIO_VIEW.playerIdx;
+  PORTFOLIO_VIEW.playerIdx = playerIdx;
+  if (tab) PORTFOLIO_VIEW.tab = tab === 'log' ? 'log' : 'properties';
+  else if (previousPlayerIdx !== playerIdx) PORTFOLIO_VIEW.tab = 'properties';
+
+  const activeTab = PORTFOLIO_VIEW.tab === 'log' ? 'log' : 'properties';
   const modal = document.getElementById('portfolio-modal');
   const allProps = [...p.properties, ...p.railroads, ...p.utilities];
   
@@ -6217,6 +6331,10 @@ function showPlayerPortfolio(playerIdx) {
   });
 
   const statusIcon = p.bankrupt ? '💀 BANKRUPT' : p.inJail ? '⛓️ In Jail' : `📍 ${SPACES[p.pos].name}`;
+
+  const moneyHistory = getPlayerMoneyHistory(playerIdx);
+  const totalCredit = moneyHistory.filter(x => x.kind === 'credit').reduce((sum, x) => sum + x.amount, 0);
+  const totalDebit = moneyHistory.filter(x => x.kind === 'debit').reduce((sum, x) => sum + x.amount, 0);
 
   let propsHtml = '';
   if (allProps.length === 0) {
@@ -6237,6 +6355,32 @@ function showPlayerPortfolio(playerIdx) {
     });
   }
 
+  const historyHtml = moneyHistory.length
+    ? moneyHistory.map(item => {
+        const credit = item.kind === 'credit';
+        const pillBg = credit ? 'rgba(45,160,90,.28)' : 'rgba(192,57,43,.28)';
+        const pillColor = credit ? '#86efac' : '#fca5a5';
+        const sign = credit ? '+' : '-';
+        return `
+          <div style="padding:.6rem .7rem;background:rgba(255,255,255,.06);border-radius:8px;margin-bottom:.42rem;border:1px solid rgba(255,255,255,.08)">
+            <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.35rem">
+              <span style="font-size:.72rem;font-weight:700;padding:.1rem .42rem;border-radius:999px;background:${pillBg};color:${pillColor}">${credit ? 'CREDIT' : 'DEBIT'}</span>
+              <span style="font-size:.86rem;font-weight:700;color:${pillColor}">${sign}${fmtCurrency(item.amount)}</span>
+              <span style="margin-left:auto;font-size:.72rem;color:rgba(255,255,255,.45)">${formatLogTime(item.time)}</span>
+            </div>
+            <div style="font-size:.8rem;color:rgba(255,255,255,.72);line-height:1.4">${escHtml(item.text)}</div>
+          </div>
+        `;
+      }).join('')
+    : `<div style="color:rgba(255,255,255,.45);font-size:.9rem;text-align:center;padding:1.5rem 0">No credit/debit activity yet</div>`;
+
+  const propertiesTabBtnStyle = activeTab === 'properties'
+    ? 'background:rgba(201,151,28,.25);border:1px solid rgba(201,151,28,.45);color:var(--gold-light);'
+    : 'background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);color:rgba(255,255,255,.78);';
+  const logTabBtnStyle = activeTab === 'log'
+    ? 'background:rgba(37,99,235,.25);border:1px solid rgba(125,211,252,.45);color:#dbeafe;'
+    : 'background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);color:rgba(255,255,255,.78);';
+
   modal.innerHTML = `
     <div style="display:flex;align-items:center;gap:.8rem;margin-bottom:1rem">
       <div style="font-size:2rem;color:${p.color}">${p.token}</div>
@@ -6250,8 +6394,28 @@ function showPlayerPortfolio(playerIdx) {
       </div>
     </div>
     ${p.jailFreeCards > 0 ? `<div style="background:rgba(201,151,28,.15);border:1px solid rgba(201,151,28,.3);border-radius:7px;padding:.5rem .8rem;margin-bottom:.75rem;color:var(--gold-light);font-size:.82rem">🎴 ${p.jailFreeCards}× Get Out of Jail Free card</div>` : ''}
-    <div style="font-size:.8rem;font-weight:700;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem">Properties</div>
-    ${propsHtml}
+    <div style="display:flex;gap:.45rem;margin-bottom:.75rem">
+      <button style="flex:1;padding:.45rem .6rem;border-radius:8px;cursor:pointer;font-size:.82rem;font-weight:700;${propertiesTabBtnStyle}" onclick="setPortfolioTab('properties')">🏘 Properties</button>
+      <button style="flex:1;padding:.45rem .6rem;border-radius:8px;cursor:pointer;font-size:.82rem;font-weight:700;${logTabBtnStyle}" onclick="setPortfolioTab('log')">📋 Game Log</button>
+    </div>
+    <div style="display:${activeTab === 'properties' ? '' : 'none'}">
+      <div style="font-size:.8rem;font-weight:700;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem">Properties</div>
+      ${propsHtml}
+    </div>
+    <div style="display:${activeTab === 'log' ? '' : 'none'}">
+      <div style="display:flex;gap:.6rem;margin-bottom:.6rem">
+        <div style="flex:1;background:rgba(45,160,90,.15);border:1px solid rgba(45,160,90,.35);border-radius:8px;padding:.42rem .55rem">
+          <div style="font-size:.68rem;letter-spacing:.05em;text-transform:uppercase;color:rgba(134,239,172,.8)">Total Credit</div>
+          <div style="font-size:.95rem;font-weight:800;color:#86efac">+${fmtCurrency(totalCredit)}</div>
+        </div>
+        <div style="flex:1;background:rgba(192,57,43,.15);border:1px solid rgba(192,57,43,.35);border-radius:8px;padding:.42rem .55rem">
+          <div style="font-size:.68rem;letter-spacing:.05em;text-transform:uppercase;color:rgba(252,165,165,.8)">Total Debit</div>
+          <div style="font-size:.95rem;font-weight:800;color:#fca5a5">-${fmtCurrency(totalDebit)}</div>
+        </div>
+      </div>
+      <div style="font-size:.8rem;font-weight:700;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem">Credit / Debit History</div>
+      ${historyHtml}
+    </div>
     <button class="btn btn-full" style="background:rgba(255,255,255,.1);color:#fff;margin-top:1rem" onclick="closeOverlay('portfolio-overlay')">Close</button>
   `;
   openOverlay('portfolio-overlay');
