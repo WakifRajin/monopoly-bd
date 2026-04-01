@@ -1177,6 +1177,7 @@ const ONLINE = {
   lastSnapshotAt: 0,
   aiRunner: null,
   aiRunnerRequestAt: 0,
+  pendingCardResolutions: 0,
   roomCleanupRunning: false,
   lastRoomCleanupAt: 0,
 };
@@ -2025,6 +2026,7 @@ function initGameState(players, startMoney) {
   DEBT_PROMPT.toParking = false;
   MOVE_FX.active = false;
   MOVE_FX.playerId = null;
+  ONLINE.pendingCardResolutions = 0;
   G = {
     players: players.map((p, i) => ({
       id: i,
@@ -2457,6 +2459,7 @@ function attachRoomListener(roomId) {
   ONLINE.lastSnapshotAt = Date.now();
   ONLINE.aiRunner = null;
   ONLINE.aiRunnerRequestAt = 0;
+  ONLINE.pendingCardResolutions = 0;
   const ref = FIREBASE.api.ref(FIREBASE.db, `rooms/${roomId}`);
   ONLINE.unsubRoom = FIREBASE.api.onValue(ref, snap => {
     if (!snap.exists()) {
@@ -3000,6 +3003,7 @@ async function leaveOnlineRoom(showToast = true, mutateRoom = true, leaveMode = 
     ONLINE.lastSnapshotAt = 0;
     ONLINE.aiRunner = null;
     ONLINE.aiRunnerRequestAt = 0;
+    ONLINE.pendingCardResolutions = 0;
     updateOnlineLobbyUI();
     showScreen('online-screen');
     return;
@@ -3030,6 +3034,7 @@ async function leaveOnlineRoom(showToast = true, mutateRoom = true, leaveMode = 
   ONLINE.lastSnapshotAt = 0;
   ONLINE.aiRunner = null;
   ONLINE.aiRunnerRequestAt = 0;
+  ONLINE.pendingCardResolutions = 0;
   LOBBY_CONTEXT = 'online';
   updateOnlineLobbyUI();
   renderLobby();
@@ -4417,7 +4422,7 @@ async function movePlayer(p, steps, rolledDoubles) {
   const newPos = (p.pos + steps) % 40;
   const goSalary = getThemeGoSalary();
   // Pass GO
-  if (newPos < oldPos || (oldPos === 0 && steps > 0)) {
+  if (newPos < oldPos) {
     if (newPos !== 0 || steps > 0) {
       p.money += goSalary;
       addLog(`${p.name} passed GO! Collected ${fmtCurrency(goSalary)}`, 'success');
@@ -4559,6 +4564,21 @@ function drawCard(type, p) {
   }
   addLog(`${p.name} drew ${type === 'chance' ? 'Chance' : 'Community Chest'}: ${card.text}`);
 
+  if (isOnlineGame() && !ONLINE.isApplyingRemote) {
+    ONLINE.pendingCardResolutions = (Number(ONLINE.pendingCardResolutions) || 0) + 1;
+  }
+
+  const finalizeCardResolution = async (shouldSync = true) => {
+    try {
+      if (shouldSync && isOnlineGame() && !ONLINE.isApplyingRemote) {
+        await syncRoomState('drawCard');
+      }
+    } finally {
+      const pending = Number(ONLINE.pendingCardResolutions) || 0;
+      ONLINE.pendingCardResolutions = Math.max(0, pending - 1);
+    }
+  };
+
   document.getElementById('card-icon').textContent = type === 'chance' ? '❓' : '📦';
   document.getElementById('card-title').textContent = type === 'chance' ? 'Chance Card' : 'Community Chest';
   document.getElementById('card-desc').textContent = card.text;
@@ -4608,7 +4628,12 @@ function drawCard(type, p) {
 
   if (shouldAutoActForAi(p)) {
     closeOverlay('card-overlay');
-    apply().catch(err => console.error(err));
+    apply()
+      .then(() => finalizeCardResolution(true))
+      .catch(err => {
+        console.error(err);
+        finalizeCardResolution(false).catch(syncErr => console.error(syncErr));
+      });
     return;
   }
 
@@ -4616,7 +4641,13 @@ function drawCard(type, p) {
   openOverlay('card-overlay');
   document.querySelector('#card-overlay .btn').onclick = async () => {
     closeOverlay('card-overlay');
-    await apply();
+    try {
+      await apply();
+      await finalizeCardResolution(true);
+    } catch (err) {
+      console.error(err);
+      await finalizeCardResolution(false);
+    }
   };
 }
 
@@ -6360,6 +6391,9 @@ function installOnlineMutationHooks() {
         await result;
       }
       if (isOnlineGame() && !ONLINE.isApplyingRemote) {
+        if (name === 'rollDice' && (Number(ONLINE.pendingCardResolutions) || 0) > 0) {
+          return result;
+        }
         await syncRoomState(name);
       }
       return result;
