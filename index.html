@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Bangladeshi Monopoly</title>
 <link rel="icon" type="image/svg+xml" href="logo.svg">
+<link rel="prefetch" href="whats-new.html">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-QPMD9QD5H7"></script>
@@ -37,6 +38,8 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;overflow:hidden}
 body{font-family:var(--font-body);background:#0f2318;color:#1a1a1a;overscroll-behavior:none;-webkit-tap-highlight-color:transparent}
+body::after{content:'';position:fixed;inset:0;background:rgba(10,31,16,.0);opacity:0;pointer-events:none;transition:opacity .2s ease;background:linear-gradient(145deg,rgba(10,31,16,.2) 0%,rgba(26,61,37,.28) 50%,rgba(13,43,26,.25) 100%);z-index:9999}
+body.route-leaving::after{opacity:1}
 
 /* ── SCREENS ── */
 .screen{position:fixed;inset:0;display:flex;flex-direction:column;transition:opacity .35s,transform .35s;will-change:opacity}
@@ -46,6 +49,22 @@ body{font-family:var(--font-body);background:#0f2318;color:#1a1a1a;overscroll-be
 .page-top-actions{display:flex;justify-content:flex-start;padding:1rem 1rem 0;max-width:700px;margin:0 auto;width:100%}
 .page-back-btn{background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.2)}
 .home-actions{display:grid;grid-template-columns:1fr;gap:.75rem}
+#home-screen .lobby-body{padding-bottom:5.2rem}
+.report-bug-fab{
+  position:fixed;
+  right:1rem;
+  bottom:max(1rem, env(safe-area-inset-bottom));
+  border-radius:999px;
+  padding:.42rem .72rem;
+  font-size:.76rem;
+  font-weight:700;
+  background:linear-gradient(135deg,#7f1d1d,#c0392b);
+  color:#fff;
+  border:1px solid rgba(255,255,255,.22);
+  box-shadow:0 8px 18px rgba(0,0,0,.34);
+  z-index:45;
+}
+.report-bug-fab:hover{filter:brightness(1.07);transform:translateY(-1px)}
 .credits-body{max-width:700px;margin:0 auto;width:100%;padding:1rem 1rem 2rem}
 .credits-link{color:#93c5fd;text-decoration:none;font-weight:700}
 .credits-link:hover{text-decoration:underline}
@@ -430,6 +449,21 @@ body{font-family:var(--font-body);background:#0f2318;color:#1a1a1a;overscroll-be
   backdrop-filter:none !important;
 }
 
+#auction-overlay{
+  background:transparent !important;
+  align-items:center;
+  justify-content:center;
+  padding:1rem;
+}
+
+#auction-overlay .modal{
+  width:min(420px,96vw);
+  max-width:min(420px,96vw);
+  max-height:calc((var(--vh, 1vh) * 100) - 160px);
+  overflow:auto;
+  margin:0;
+}
+
 #buy-overlay.show,#auction-overlay.show{
   pointer-events:none;
 }
@@ -472,6 +506,7 @@ body{font-family:var(--font-body);background:#0f2318;color:#1a1a1a;overscroll-be
 /* Auction */
 .auction-display{text-align:center;padding:1rem;background:rgba(201,151,28,.1);border:1px solid rgba(201,151,28,.3);border-radius:10px;margin-bottom:1rem}
 .auction-prop{font-size:1.1rem;font-weight:700;color:#fff;margin-bottom:.3rem}
+.auction-base{font-size:.8rem;color:rgba(255,255,255,.68);margin-bottom:.3rem}
 .auction-bid{font-size:2rem;font-weight:900;color:var(--gold-light)}
 .auction-leader{font-size:.85rem;color:rgba(255,255,255,.6)}
 .bid-btns{display:flex;gap:.5rem;flex-wrap:wrap;justify-content:center;margin-top:.75rem}
@@ -553,11 +588,45 @@ body{font-family:var(--font-body);background:#0f2318;color:#1a1a1a;overscroll-be
 .anim-slide-up{animation:slideUp .4s ease}
 
 /* Winner screen */
-#winner-screen{background:radial-gradient(ellipse at center,#2a6e3a,#0a1a10);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:2rem}
+#winner-screen{background:radial-gradient(ellipse at center,#2a6e3a,#0a1a10);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:2rem;z-index:1200}
 .winner-trophy{font-size:clamp(4rem,12vw,8rem);animation:bounceWinner 1.5s ease infinite}
 @keyframes bounceWinner{0%,100%{transform:translateY(0) rotate(-5deg)}50%{transform:translateY(-20px) rotate(5deg)}}
 .winner-name{font-family:var(--font-display);font-size:clamp(2rem,6vw,4rem);font-weight:900;color:var(--gold-light);text-shadow:0 4px 20px rgba(240,192,64,.5);margin:.5rem 0}
-.winner-sub{color:rgba(255,255,255,.7);font-size:1.1rem;margin-bottom:2rem}
+.winner-sub{color:rgba(255,255,255,.7);font-size:1.1rem;margin-bottom:1rem}
+.winner-leaderboard{
+  width:min(480px,92vw);
+  margin:0 auto 1.25rem;
+  padding:.7rem .8rem;
+  background:rgba(8,24,14,.58);
+  border:1px solid rgba(255,255,255,.2);
+  border-radius:12px;
+  backdrop-filter:blur(4px);
+}
+.winner-leader-title{
+  color:rgba(255,255,255,.72);
+  font-size:.78rem;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  font-weight:800;
+  margin-bottom:.4rem;
+}
+.winner-leader-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:.75rem;
+  padding:.32rem 0;
+  border-top:1px solid rgba(255,255,255,.08);
+}
+.winner-leader-row:first-of-type{border-top:none}
+.winner-leader-left{display:flex;align-items:center;gap:.45rem;min-width:0}
+.winner-leader-rank{font-size:.75rem;color:rgba(240,192,64,.9);font-weight:800;min-width:1.8rem;text-align:left}
+.winner-leader-token{font-size:1rem;line-height:1}
+.winner-leader-name{color:rgba(255,255,255,.86);font-size:.88rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.winner-leader-money{color:#fde68a;font-size:.86rem;font-weight:800;flex-shrink:0}
+.winner-leader-empty{color:rgba(255,255,255,.6);font-size:.85rem;padding:.35rem 0}
+.winner-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:.75rem}
+.winner-actions .btn{min-width:170px}
 .confetti{position:absolute;pointer-events:none;font-size:1.5rem;animation:fall 3s linear infinite}
 @keyframes fall{0%{transform:translateY(-100px) rotate(0deg);opacity:1}100%{transform:translateY(110vh) rotate(720deg);opacity:0}}
 </style>
@@ -583,14 +652,15 @@ body{font-family:var(--font-body);background:#0f2318;color:#1a1a1a;overscroll-be
       </div>
     </div>
     <div class="card">
-      <h2>Credits</h2>
-      <button class="btn btn-gold btn-full" onclick="showScreen('credits-screen')">🏅 View Credits</button>
+      <h2>Credits & Patch Logs</h2>
+      <button class="btn btn-gold btn-full" id="credits-logs-btn" onclick="openWhatsNewPage()">🏅 Open Credits & Logs</button>
     </div>
     <div class="card">
       <h2>How to Play</h2>
       <button class="btn btn-secondary btn-full" onclick="showScreen('how-to-screen')">📘 Open Guide</button>
     </div>
   </div>
+  <button class="btn btn-sm report-bug-fab" onclick="openBugReport()" title="Report bugs">🐞 Report Bug</button>
 </div>
 
 <!-- ═══════════════ ONLINE SETUP SCREEN ═══════════════ -->
@@ -633,7 +703,7 @@ body{font-family:var(--font-body);background:#0f2318;color:#1a1a1a;overscroll-be
             <input type="password" id="host-room-password" maxlength="20" placeholder="Set password">
           </div>
         </div>
-        <button class="btn btn-secondary btn-sm btn-full" id="create-room-btn" onclick="createOnlineRoom()">Create Room</button>
+        <button class="btn btn-primary btn-sm btn-full" id="create-room-btn" onclick="createOnlineRoom()">Create Room</button>
       </div>
 
       <div id="join-options" style="margin-top:.75rem;display:none">
@@ -720,6 +790,16 @@ body{font-family:var(--font-body);background:#0f2318;color:#1a1a1a;overscroll-be
           <option value="45">45 seconds</option>
           <option value="60">60 seconds</option>
         </select>
+      </div>
+      <div class="input-group">
+        <label>🔨 Auction System</label>
+        <select id="auction-enabled">
+          <option value="on" selected>On</option>
+          <option value="off">Off</option>
+        </select>
+        <div style="margin-top:.35rem;font-size:.76rem;color:rgba(255,255,255,.55)">
+          When enabled, property auctions open around 60%-80% of base price.
+        </div>
       </div>
     </div>
     <div class="card">
@@ -810,7 +890,8 @@ body{font-family:var(--font-body);background:#0f2318;color:#1a1a1a;overscroll-be
       <ul class="how-to">
         <li>Landing on an unowned property/railroad/utility lets you buy it at face price.</li>
         <li>If you cannot afford a landed property, buy is disabled and you can auction it or skip.</li>
-        <li>Auction includes all non-bankrupt players. Bid controls are +100, +200, +500, +1000, or Pass.</li>
+        <li>Auction includes all non-bankrupt players. You can toggle auctions on/off in lobby settings. Bid controls are +100, +200, +500, +1000, or Pass.</li>
+        <li>When enabled, auctions start from an opening value (about 60%-80% of base property price), not from 0.</li>
         <li>You cannot place a bid above your current cash. Auction ends when only one non-passed bidder remains with a valid high bid, or everyone passes.</li>
         <li>If all pass, the property remains unsold (owner stays none).</li>
         <li>Rent on normal properties: base rent, or double base if color monopoly and no buildings, or house/hotel rent tiers from the deed.</li>
@@ -902,6 +983,7 @@ body{font-family:var(--font-body);background:#0f2318;color:#1a1a1a;overscroll-be
       <button class="btn btn-sm topbar-tool-btn" onclick="openDrawer('players')" title="Players">👥</button>
       <button class="btn btn-sm topbar-tool-btn" onclick="openDrawer('log')" title="Game log">📋</button>
       <button class="btn btn-sm topbar-tool-btn" onclick="openDrawer('chat')" title="Chat">💬</button>
+      <button class="btn btn-sm topbar-tool-btn" onclick="openBugReport()" title="Report bug">🐞</button>
       <button class="btn btn-sm topbar-tool-btn" onclick="openDrawer('settings')" title="Timer settings">⚙️</button>
       <button class="btn btn-sm topbar-tool-btn" id="leave-game-btn" onclick="openLeaveGameModal()" title="Leave game" style="display:none;background:rgba(192,57,43,.35)">🚪</button>
     </div>
@@ -971,7 +1053,14 @@ body{font-family:var(--font-body);background:#0f2318;color:#1a1a1a;overscroll-be
   <div class="winner-trophy" id="winner-trophy">🏆</div>
   <div class="winner-name" id="winner-name">Champion!</div>
   <div class="winner-sub" id="winner-sub">Congratulations!</div>
-  <button class="btn btn-primary btn-lg" onclick="restartGame()">🔄 Play Again</button>
+  <div class="winner-leaderboard">
+    <div class="winner-leader-title">Other Players</div>
+    <div id="winner-leaderboard"></div>
+  </div>
+  <div class="winner-actions">
+    <button class="btn btn-secondary btn-lg" onclick="viewBoardAfterWin()">👀 View Board</button>
+    <button class="btn btn-primary btn-lg" onclick="restartGame()">🔄 Play Again</button>
+  </div>
 </div>
 
 <!-- ═══════════════ OVERLAYS / MODALS ═══════════════ -->
@@ -988,7 +1077,7 @@ body{font-family:var(--font-body);background:#0f2318;color:#1a1a1a;overscroll-be
     <p id="buy-desc"></p>
     <div class="modal-actions">
       <button class="btn btn-primary" onclick="confirmBuy()">✅ Buy</button>
-      <button class="btn btn-gold" onclick="startAuction()">🔨 Auction</button>
+      <button class="btn btn-gold" id="buy-auction-btn" onclick="startAuction()">🔨 Auction</button>
       <button class="btn" style="background:rgba(255,255,255,.1);color:#fff" onclick="closeOverlay('buy-overlay')">Skip</button>
     </div>
   </div>
@@ -1000,6 +1089,7 @@ body{font-family:var(--font-body);background:#0f2318;color:#1a1a1a;overscroll-be
     <h2>🔨 Property Auction</h2>
     <div class="auction-display">
       <div class="auction-prop" id="auc-prop-name"></div>
+      <div class="auction-base">Base Price: ৳<span id="auc-base-price">0</span></div>
       <div style="color:rgba(255,255,255,.5);font-size:.8rem;margin:.2rem 0">Current Bid</div>
       <div class="auction-bid">৳<span id="auc-bid">0</span></div>
       <div class="auction-leader">Leader: <span id="auc-leader">None</span></div>
@@ -1208,6 +1298,9 @@ const PLAYING_ROOM_STALE_MS = 1000 * 60 * 60 * 24;
 const EMPTY_ROOM_STALE_MS = 1000 * 60 * 15;
 const ROOM_CLEANUP_INTERVAL_MS = 1000 * 60 * 2;
 const ROOM_CLEANUP_BATCH_LIMIT = 16;
+const AUCTION_OPENING_MIN_PERCENT = 60;
+const AUCTION_OPENING_MAX_PERCENT = 80;
+const BUG_REPORT_URL = 'https://github.com/WakifRajin/monopoly-bd/issues/new?title=Bug%20Report&body=Describe%20the%20issue%20here&labels=bug';
 let LOBBY_CONTEXT = 'offline';
 
 function ensureLocalUid() {
@@ -1563,6 +1656,35 @@ function isOnlineGame() {
   return ONLINE.connected && ONLINE.roomId;
 }
 
+function sanitizeAuctionEnabled(value, fallback = true) {
+  if (typeof value === 'boolean') return value;
+  if (value === 'on') return true;
+  if (value === 'off') return false;
+  return !!fallback;
+}
+
+function isAuctionSystemEnabled(state = G) {
+  if (state && typeof state === 'object' && typeof state.auctionEnabled === 'boolean') {
+    return state.auctionEnabled;
+  }
+  const uiValue = document.getElementById('auction-enabled')?.value;
+  return sanitizeAuctionEnabled(uiValue, true);
+}
+
+function pickAuctionOpeningPercent() {
+  return rand(AUCTION_OPENING_MIN_PERCENT, AUCTION_OPENING_MAX_PERCENT);
+}
+
+function getAuctionOpeningBid(price, openingPercent = null) {
+  const base = Number(price) || 0;
+  if (base <= 0) return 0;
+  const rawPct = Number(openingPercent);
+  const pct = Number.isFinite(rawPct)
+    ? Math.max(AUCTION_OPENING_MIN_PERCENT, Math.min(AUCTION_OPENING_MAX_PERCENT, Math.round(rawPct)))
+    : pickAuctionOpeningPercent();
+  return Math.max(0, Math.floor(base * pct / 100));
+}
+
 function resolveLocalPlayerIndex() {
   if (!G.players || !G.players.length) return -1;
 
@@ -1617,6 +1739,10 @@ function canLocalControlAuctionAction() {
 }
 
 function requireTurnControl() {
+  if (G?.gameOver) {
+    toast('Game is over. Use Winner actions to view board or play again.', 'gold');
+    return false;
+  }
   if (!canLocalControlTurn()) {
     toast(`Wait for ${curPlayer().name}'s turn.`, 'danger');
     return false;
@@ -2030,10 +2156,11 @@ let LOG_ARCHIVE_GAME_STARTED_AT = 0;
 const LOG_ARCHIVE = [];
 const LOG_ARCHIVE_KEYS = new Set();
 
-function initGameState(players, startMoney) {
+function initGameState(players, startMoney, options = {}) {
   const gameStartedAt = Date.now();
   const shuffledChance = shuffle([...CHANCE_CARDS]);
   const shuffledComm = shuffle([...COMMUNITY_CARDS]);
+  const auctionEnabled = sanitizeAuctionEnabled(options.auctionEnabled, true);
   clearLogArchive(gameStartedAt);
   jailPromptShownKey = '';
   tradeReviewShownKey = '';
@@ -2074,10 +2201,12 @@ function initGameState(players, startMoney) {
     log: [],
     chat: [],
     pendingBuy: null,
+    debtPrompt: null,
     auctionState: null,
     bankAuctionQueue: [],
     pendingTrade: null,
     boardThemeId: selectedThemeId,
+    auctionEnabled,
     gameOver: false,
   };
 }
@@ -2139,10 +2268,12 @@ function getRoomRef() {
 
 function defaultLobbySettings() {
   const rawStart = Number.parseInt(document.getElementById('starting-money')?.value, 10);
+  const auctionEnabled = sanitizeAuctionEnabled(document.getElementById('auction-enabled')?.value, true);
   return {
     startMoney: Number.isFinite(rawStart) && rawStart > 0 ? rawStart : getThemeStartMoneyDefault(selectedThemeId),
     timerDuration: parseInt(document.getElementById('lobby-timer')?.value, 10) || 0,
     themeId: selectedThemeId,
+    auctionEnabled,
   };
 }
 
@@ -2260,6 +2391,27 @@ function hydrateRemoteGameState(raw) {
   next.chanceDeck = indexedObjectToArray(next.chanceDeck);
   next.communityDeck = indexedObjectToArray(next.communityDeck);
   next.bankAuctionQueue = indexedObjectToArray(next.bankAuctionQueue).filter(Number.isInteger);
+  next.auctionEnabled = sanitizeAuctionEnabled(next.auctionEnabled, true);
+  const debtPromptRaw = next.debtPrompt && typeof next.debtPrompt === 'object' ? next.debtPrompt : null;
+  if (debtPromptRaw && debtPromptRaw.active !== false) {
+    const payerId = Number(debtPromptRaw.payerId);
+    const payerValid = Number.isInteger(payerId) && payerId >= 0 && payerId < next.players.length;
+    const recipientIdRaw = Number(debtPromptRaw.recipientId);
+    const recipientId = Number.isInteger(recipientIdRaw) && recipientIdRaw >= 0 && recipientIdRaw < next.players.length
+      ? recipientIdRaw
+      : null;
+    next.debtPrompt = payerValid && !next.players[payerId]?.bankrupt
+      ? {
+          active: true,
+          payerId,
+          amount: Math.max(0, Number(debtPromptRaw.amount) || 0),
+          recipientId,
+          toParking: !!debtPromptRaw.toParking,
+        }
+      : null;
+  } else {
+    next.debtPrompt = null;
+  }
 
   const pendingTradeRaw = next.pendingTrade && typeof next.pendingTrade === 'object' ? next.pendingTrade : null;
   if (pendingTradeRaw) {
@@ -2289,6 +2441,7 @@ function hydrateRemoteGameState(raw) {
   }
 
   G = next;
+  restoreDebtPromptFromGameState(G);
   if (G.auctionState) {
     const activePlayersRaw = indexedObjectToArray(G.auctionState.activePlayers)
       .map(v => Number(v))
@@ -2337,6 +2490,7 @@ async function syncRoomState(reason = '') {
   try {
     const baseRevision = Number(ONLINE.revision) || 0;
     const nextRevision = baseRevision + 1;
+    syncDebtPromptToGameState();
     const nextGameState = safeGameStateForRoom();
     const nextSettings = ONLINE.isHost ? defaultLobbySettings() : null;
 
@@ -2441,6 +2595,10 @@ async function applyRoomSnapshot(data) {
     if (lt) lt.value = settings.timerDuration;
     TIMER.duration = settings.timerDuration;
   }
+  if (typeof settings.auctionEnabled === 'boolean') {
+    const auctionSelect = document.getElementById('auction-enabled');
+    if (auctionSelect) auctionSelect.value = settings.auctionEnabled ? 'on' : 'off';
+  }
 
   if (ONLINE.status === 'playing' && data.gameState) {
     ONLINE.isApplyingRemote = true;
@@ -2457,6 +2615,9 @@ async function applyRoomSnapshot(data) {
           const winner = (G.players || []).find(p => !p.bankrupt);
           if (winner) showWinner(winner);
         }
+      }
+      if (!departureEndsMatch) {
+        maybeShowWinnerFromState();
       }
       const nextLast = getLastChatMessage();
       if (prevLastChatKey && chatMessageKey(nextLast) !== prevLastChatKey) {
@@ -2783,6 +2944,8 @@ function applyOnlineDepartureRuleToRoomData(roomData, leavingUid, leaveMode = 'l
   }
 
   const gs = JSON.parse(JSON.stringify(roomData.gameState || {}));
+  const auctionsEnabled = sanitizeAuctionEnabled(gs.auctionEnabled, roomData?.settings?.auctionEnabled !== false);
+  gs.auctionEnabled = auctionsEnabled;
   const gamePlayers = indexedObjectToArray(gs.players).filter(p => p && typeof p === 'object');
   if (!gamePlayers.length) {
     out.gameState = gs;
@@ -2898,17 +3061,22 @@ function applyOnlineDepartureRuleToRoomData(roomData, leavingUid, leaveMode = 'l
   }
   gs.pendingBuy = null;
 
-  let queue = indexedObjectToArray(gs.bankAuctionQueue).map(Number).filter(Number.isInteger);
-  queuedIds.forEach(id => {
-    if (!queue.includes(id)) queue.push(id);
-  });
-  gs.bankAuctionQueue = queue;
+  if (auctionsEnabled) {
+    let queue = indexedObjectToArray(gs.bankAuctionQueue).map(Number).filter(Number.isInteger);
+    queuedIds.forEach(id => {
+      if (!queue.includes(id)) queue.push(id);
+    });
+    gs.bankAuctionQueue = queue;
 
-  if (gs.auctionState && typeof gs.auctionState === 'object') {
-    const auctionPropId = Number(gs.auctionState.propId);
-    if (Number.isInteger(auctionPropId) && props[auctionPropId] && props[auctionPropId].owner === null) {
-      if (!gs.bankAuctionQueue.includes(auctionPropId)) gs.bankAuctionQueue.unshift(auctionPropId);
+    if (gs.auctionState && typeof gs.auctionState === 'object') {
+      const auctionPropId = Number(gs.auctionState.propId);
+      if (Number.isInteger(auctionPropId) && props[auctionPropId] && props[auctionPropId].owner === null) {
+        if (!gs.bankAuctionQueue.includes(auctionPropId)) gs.bankAuctionQueue.unshift(auctionPropId);
+      }
+      gs.auctionState = null;
     }
+  } else {
+    gs.bankAuctionQueue = [];
     gs.auctionState = null;
   }
 
@@ -2942,38 +3110,42 @@ function applyOnlineDepartureRuleToRoomData(roomData, leavingUid, leaveMode = 'l
       time: now,
     };
   } else {
-    while (gs.bankAuctionQueue.length && !gs.auctionState) {
-      const nextId = Number(gs.bankAuctionQueue[0]);
-      if (!Number.isInteger(nextId) || !props[nextId] || props[nextId].owner !== null) {
+    if (auctionsEnabled) {
+      while (gs.bankAuctionQueue.length && !gs.auctionState) {
+        const nextId = Number(gs.bankAuctionQueue[0]);
+        if (!Number.isInteger(nextId) || !props[nextId] || props[nextId].owner !== null) {
+          gs.bankAuctionQueue.shift();
+          continue;
+        }
+        const bidderStartIdx = activeIds.includes(Number(gs.currentPlayerIdx))
+          ? activeIds.indexOf(Number(gs.currentPlayerIdx))
+          : 0;
+        gs.auctionState = {
+          propId: nextId,
+          propName: SPACES[nextId]?.name || 'Property',
+          currentBid: getAuctionOpeningBid(SPACES[nextId]?.price),
+          highBidder: null,
+          passed: [],
+          bidderIdx: bidderStartIdx,
+          activePlayers: activeIds,
+          source: 'bank',
+        };
         gs.bankAuctionQueue.shift();
-        continue;
       }
-      const bidderStartIdx = activeIds.includes(Number(gs.currentPlayerIdx))
-        ? activeIds.indexOf(Number(gs.currentPlayerIdx))
-        : 0;
-      gs.auctionState = {
-        propId: nextId,
-        propName: SPACES[nextId]?.name || 'Property',
-        currentBid: 0,
-        highBidder: null,
-        passed: [],
-        bidderIdx: bidderStartIdx,
-        activePlayers: activeIds,
-        source: 'bank',
-      };
-      gs.bankAuctionQueue.shift();
     }
 
     const liquidatedCount = queuedIds.length;
     const liquidatedMsg = liquidatedCount > 0
-      ? `${quitterName} left the match. Bank liquidated assets and queued ${liquidatedCount} ${liquidatedCount === 1 ? 'property' : 'properties'} for auction.`
+      ? auctionsEnabled
+        ? `${quitterName} left the match. Bank liquidated assets and queued ${liquidatedCount} ${liquidatedCount === 1 ? 'property' : 'properties'} for auction.`
+        : `${quitterName} left the match. Bank liquidated ${liquidatedCount} ${liquidatedCount === 1 ? 'property' : 'properties'} to unsold bank inventory (auction disabled).`
       : `${quitterName} left the match. Bank liquidated assets.`;
 
     out.lastDepartureNotice = {
       id: `dep_${now}_${leavingUid}`,
       type: 'leave-liquidation',
       name: quitterName,
-      auctionsQueued: liquidatedCount,
+      auctionsQueued: auctionsEnabled ? liquidatedCount : 0,
       message: liquidatedMsg,
       time: now,
     };
@@ -3123,7 +3295,7 @@ function renderLobby() {
   }
 
   const hostEditable = !online || ONLINE.isHost;
-  ['starting-money', 'max-houses', 'lobby-timer'].forEach(id => {
+  ['starting-money', 'max-houses', 'lobby-timer', 'auction-enabled'].forEach(id => {
     const input = document.getElementById(id);
     if (input) input.disabled = !hostEditable;
   });
@@ -3269,16 +3441,22 @@ async function startGame() {
     ? parsedStartMoney
     : getThemeStartMoneyDefault(selectedThemeId);
   TIMER.duration = parseInt(document.getElementById('lobby-timer').value) || 0;
+  const auctionEnabled = sanitizeAuctionEnabled(document.getElementById('auction-enabled')?.value, true);
 
   // Apply selected theme
   applyThemeById(selectedThemeId);
   const t = BOARD_THEMES[selectedThemeId];
 
-  initGameState(names, startMoney);
+  initGameState(names, startMoney, { auctionEnabled });
   buildBoard();
   renderAll();
   showScreen('game-screen');
   addLog(`Game started with ${G.players.length} players! ${t.currency}${fmt(startMoney)} starting money. Board: ${t.flag} ${t.name}`, 'important');
+  if (auctionEnabled) {
+    addLog(`🔨 Auctions enabled. Opening bid starts around ${AUCTION_OPENING_MIN_PERCENT}%–${AUCTION_OPENING_MAX_PERCENT}% of base property price.`, 'important');
+  } else {
+    addLog('🔕 Auctions disabled. Unpurchased properties remain unsold.', 'important');
+  }
   if (TIMER.duration > 0) addLog(`⏱ Auto-advance timer: ${TIMER.duration}s`, 'important');
   updateActionButtons();
 
@@ -3364,6 +3542,11 @@ function renderAll() {
 function syncAuctionOverlay() {
   const overlay = document.getElementById('auction-overlay');
   if (!overlay) return;
+
+  if (G?.gameOver) {
+    closeOverlay('auction-overlay');
+    return;
+  }
 
   if (G.auctionState) {
     renderAuction();
@@ -3778,6 +3961,17 @@ function offlineAiStateKey() {
   const tradePart = G.pendingTrade
     ? `${G.pendingTrade.id || 'trade'}:${G.pendingTrade.fromId}:${G.pendingTrade.toId}`
     : 'no-trade';
+  const debtRaw = G.debtPrompt && typeof G.debtPrompt === 'object' && G.debtPrompt.active !== false
+    ? G.debtPrompt
+    : null;
+  const debtPart = debtRaw
+    ? [
+        Number.isInteger(Number(debtRaw.payerId)) ? Number(debtRaw.payerId) : 'na',
+        Math.max(0, Number(debtRaw.amount) || 0),
+        Number.isInteger(Number(debtRaw.recipientId)) ? Number(debtRaw.recipientId) : 'bank',
+        debtRaw.toParking ? 1 : 0,
+      ].join(':')
+    : 'no-debt';
   return [
     G.currentPlayerIdx,
     current?.kind || 'human',
@@ -3785,6 +3979,7 @@ function offlineAiStateKey() {
     G.pendingBuy === null ? 'no-buy' : G.pendingBuy,
     auctionPart,
     tradePart,
+    debtPart,
     current?.inJail ? 1 : 0,
     current?.bankrupt ? 1 : 0,
   ].join('|');
@@ -4042,10 +4237,19 @@ function maybeScheduleOfflineAiTurn() {
   const bidderId = currentAuctionBidderId();
   const bidder = Number.isInteger(bidderId) ? G.players[bidderId] : null;
   const tradeRecipient = G.pendingTrade ? G.players[Number(G.pendingTrade.toId)] : null;
+  const debtRaw = DEBT_PROMPT.active
+    ? DEBT_PROMPT
+    : (G?.debtPrompt && G.debtPrompt.active ? G.debtPrompt : null);
+  const debtPayerId = Number(debtRaw?.payerId);
+  const debtPayer = Number.isInteger(debtPayerId) ? G.players[debtPayerId] : null;
+  const debtTurnMismatch = !!(debtRaw && debtPayer && !debtPayer.bankrupt && Number(G.currentPlayerIdx) !== debtPayer.id);
+  const aiDebtNeedsAction = !!(debtRaw && debtPayer && !debtPayer.bankrupt && isAiPlayer(debtPayer));
   const aiNeedsAction = (isAiPlayer(current) && !current.bankrupt)
     || (isAiPlayer(current) && current.bankrupt)
     || (!!G.auctionState && isAiPlayer(bidder) && !bidder.bankrupt)
-    || (!!G.pendingTrade && isAiPlayer(tradeRecipient) && !tradeRecipient.bankrupt);
+    || (!!G.pendingTrade && isAiPlayer(tradeRecipient) && !tradeRecipient.bankrupt)
+    || aiDebtNeedsAction
+    || debtTurnMismatch;
 
   if (!aiNeedsAction) {
     clearOfflineAiTimer(true);
@@ -4156,6 +4360,18 @@ function runOfflineAiStep() {
     return;
   }
 
+  restoreDebtPromptFromGameState();
+  const debtStateAdjusted = normalizeDebtPromptTurn();
+  if (debtStateAdjusted) {
+    renderAll();
+    updateActionButtons();
+    if (isOnlineGame() && !ONLINE.isApplyingRemote) {
+      syncRoomState('normalize-debt-turn').catch(err => {
+        console.error(err);
+      });
+    }
+  }
+
   if (G.pendingTrade) {
     const trade = G.pendingTrade;
     const recipient = G.players[Number(trade.toId)];
@@ -4204,6 +4420,11 @@ function runOfflineAiStep() {
   if (tryAutoResolveAiDebtPrompt()) {
     renderAll();
     updateActionButtons();
+    if (isOnlineGame() && !ONLINE.isApplyingRemote) {
+      syncRoomState('ai-debt-resolution').catch(err => {
+        console.error(err);
+      });
+    }
     return;
   }
 
@@ -4268,11 +4489,21 @@ function updateActionButtons() {
   const p = curPlayer();
   const onProp = G.properties[p.pos];
   const sp = SPACES[p.pos];
+  restoreDebtPromptFromGameState();
   const turnOwnedByMe = canLocalControlTurn();
   const aiTurnActive = isAiPlayer(p) && !p.bankrupt;
   const movementLocked = MOVE_FX.active;
   const canHumanAct = turnOwnedByMe && !aiTurnActive && !movementLocked;
-  const debtPending = hasPendingDebtPromptForCurrentPlayer();
+  const debtRaw = DEBT_PROMPT.active
+    ? DEBT_PROMPT
+    : (G?.debtPrompt && G.debtPrompt.active ? G.debtPrompt : null);
+  const debtPayerId = Number(debtRaw?.payerId);
+  const debtPayer = Number.isInteger(debtPayerId) ? G.players[debtPayerId] : null;
+  const debtPromptActive = !!(debtRaw && debtPayer && !debtPayer.bankrupt);
+  const debtPending = debtPromptActive && debtPayer.id === G.currentPlayerIdx;
+  const debtShortBy = debtPromptActive
+    ? Math.max(0, Number(debtRaw.amount || 0) - Number(debtPayer.money || 0))
+    : 0;
   const managementPhase = G.phase === 'roll' || G.phase === 'action' || G.phase === 'end';
   const tradePending = !!G.pendingTrade;
   const canBuyAny = !debtPending && G.phase === 'action' && onProp && onProp.owner === null;
@@ -4287,6 +4518,33 @@ function updateActionButtons() {
     : 'another client';
   const aiWaitingForRunner = aiTurnActive && isOnlineGame() && !canRunAiController();
 
+  if (G.gameOver) {
+    ['btn-buy','mb-buy','btn-build','mb-build','btn-mortgage','mb-mortgage','btn-trade','mb-trade','btn-end','mb-end'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.disabled = true;
+    });
+
+    ['btn-pay-jail','mb-pay-jail'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = 'none';
+    });
+
+    const rollBtn = document.getElementById('roll-btn');
+    if (rollBtn) {
+      rollBtn.disabled = true;
+      rollBtn.textContent = '🏆 Game Over';
+    }
+
+    const cm = document.getElementById('center-msg');
+    if (cm) cm.textContent = '🏆 Match finished. Use Winner actions to view board or start a new game.';
+
+    const mobileTurnLine = document.getElementById('mobile-turnline');
+    if (mobileTurnLine) mobileTurnLine.textContent = '🏆 Match finished';
+
+    stopTimer();
+    return;
+  }
+
   ['btn-buy','mb-buy'].forEach(id => { const el = document.getElementById(id); if(el) el.disabled = !canHumanAct || !canBuyAny; });
   ['btn-build','mb-build'].forEach(id => { const el = document.getElementById(id); if(el) el.disabled = !canHumanAct || !canBuild; });
   ['btn-mortgage','mb-mortgage'].forEach(id => { const el = document.getElementById(id); if(el) el.disabled = !canHumanAct || !canMortgage; });
@@ -4295,9 +4553,13 @@ function updateActionButtons() {
   
   const rollBtn = document.getElementById('roll-btn');
   if (rollBtn) {
-    rollBtn.disabled = G.phase !== 'roll' || !canHumanAct;
+      rollBtn.disabled = debtPromptActive || G.phase !== 'roll' || !canHumanAct;
     rollBtn.textContent = movementLocked
       ? `🏃 ${p.name} is moving...`
+        : debtPromptActive
+        ? (debtPending && turnOwnedByMe
+            ? `💀 Resolve debt / bankruptcy`
+            : `💀 ${debtPayer?.name || 'Player'} resolving debt`)
       : aiTurnActive
       ? (aiWaitingForRunner ? `🤖 Waiting for ${runnerName}` : `🤖 ${p.name} is thinking...`)
       : !turnOwnedByMe
@@ -4313,11 +4575,12 @@ function updateActionButtons() {
   const cm = document.getElementById('center-msg');
   if (cm) {
     if (movementLocked) cm.textContent = `${p.name} is hopping across the board...`;
-    else if (aiTurnActive) cm.textContent = aiWaitingForRunner ? `🤖 Waiting for ${runnerName} to run AI` : `🤖 ${p.name} is making a move`;
-    else if (debtPending) {
-      const shortBy = Math.max(0, Number(DEBT_PROMPT.amount || 0) - Number(p.money || 0));
-      cm.textContent = `💰 Short ৳${fmt(shortBy)}. Sell buildings, mortgage assets, or declare bankruptcy`;
+    else if (debtPromptActive) {
+      cm.textContent = debtPending
+        ? `💀 Debt alert: short by ৳${fmt(debtShortBy)}. Mortgage/sell or declare bankruptcy.`
+        : `💀 ${debtPayer?.name || 'Player'} is resolving debt (short ৳${fmt(debtShortBy)}).`;
     }
+    else if (aiTurnActive) cm.textContent = aiWaitingForRunner ? `🤖 Waiting for ${runnerName} to run AI` : `🤖 ${p.name} is making a move`;
     else if (!turnOwnedByMe) cm.textContent = `Watching ${p.name}'s turn`;
     else if (inJail && G.phase === 'roll') cm.textContent = `Roll doubles or pay ৳500 bail`;
     else if (G.phase === 'roll') cm.textContent = `${p.name}'s turn to roll (or manage assets first)`;
@@ -4328,11 +4591,12 @@ function updateActionButtons() {
   const mobileTurnLine = document.getElementById('mobile-turnline');
   if (mobileTurnLine) {
     if (movementLocked) mobileTurnLine.textContent = `🏃 ${p.name} is moving...`;
-    else if (aiTurnActive) mobileTurnLine.textContent = aiWaitingForRunner ? `🤖 Waiting for ${runnerName}` : `🤖 ${p.name} is thinking`;
-    else if (debtPending) {
-      const shortBy = Math.max(0, Number(DEBT_PROMPT.amount || 0) - Number(p.money || 0));
-      mobileTurnLine.textContent = `💰 Short ৳${fmt(shortBy)} • sell buildings or mortgage`;
+    else if (debtPromptActive) {
+      mobileTurnLine.textContent = debtPending
+        ? `💀 Debt short ৳${fmt(debtShortBy)} • mortgage/sell or bankrupt`
+        : `💀 ${debtPayer?.name || 'Player'} is resolving debt`;
     }
+    else if (aiTurnActive) mobileTurnLine.textContent = aiWaitingForRunner ? `🤖 Waiting for ${runnerName}` : `🤖 ${p.name} is thinking`;
     else if (!turnOwnedByMe) mobileTurnLine.textContent = `⏳ Watching ${p.name}'s turn`;
     else if (inJail && G.phase === 'roll') mobileTurnLine.textContent = '⛓️ Roll doubles or pay bail';
     else if (G.phase === 'roll') mobileTurnLine.textContent = '🎲 Roll dice or manage assets';
@@ -4705,17 +4969,29 @@ function promptBuy(p, sp) {
     return;
   }
 
+  const buyBtn = document.querySelector('#buy-overlay .btn-primary');
+  const auctionBtn = document.getElementById('buy-auction-btn');
+  const auctionsEnabled = isAuctionSystemEnabled();
+
   if (p.money < sp.price) {
-    // Can't afford — auto auction
-    document.getElementById('buy-title').textContent = `Can't Afford — Auction!`;
-    document.getElementById('buy-desc').textContent = `${sp.name} costs ${fmtCurrency(sp.price)} but you only have ${fmtCurrency(p.money)}. It goes to auction.`;
+    if (buyBtn) buyBtn.style.display = 'none';
+    if (auctionBtn) auctionBtn.style.display = auctionsEnabled ? '' : 'none';
+    document.getElementById('buy-title').textContent = auctionsEnabled
+      ? `Can't Afford — Auction!`
+      : `Can't Afford`;
+    document.getElementById('buy-desc').textContent = auctionsEnabled
+      ? `${sp.name} costs ${fmtCurrency(sp.price)} but you only have ${fmtCurrency(p.money)}. It goes to auction.`
+      : `${sp.name} costs ${fmtCurrency(sp.price)} but you only have ${fmtCurrency(p.money)}. Auctions are OFF, so this property remains unsold.`;
     openOverlay('buy-overlay');
-    document.querySelector('#buy-overlay .btn-primary').style.display = 'none';
     return;
   }
-  document.querySelector('#buy-overlay .btn-primary').style.display = '';
+
+  if (buyBtn) buyBtn.style.display = '';
+  if (auctionBtn) auctionBtn.style.display = auctionsEnabled ? '' : 'none';
   document.getElementById('buy-title').textContent = `Buy ${sp.name}?`;
-  document.getElementById('buy-desc').textContent = `Price: ${fmtCurrency(sp.price)}. You have ${fmtCurrency(p.money)}. Buy now or send to auction.`;
+  document.getElementById('buy-desc').textContent = auctionsEnabled
+    ? `Price: ${fmtCurrency(sp.price)}. You have ${fmtCurrency(p.money)}. Buy now or send to auction.`
+    : `Price: ${fmtCurrency(sp.price)}. You have ${fmtCurrency(p.money)}. Auctions are OFF for this match.`;
   openOverlay('buy-overlay');
 }
 
@@ -4751,6 +5027,16 @@ function startAuction() {
   closeOverlay('buy-overlay');
   const id = G.pendingBuy;
   G.pendingBuy = null;
+  const sp = SPACES[id];
+  if (!isAuctionSystemEnabled()) {
+    if (sp) {
+      addLog(`Auction is disabled. ${sp.name} remains unsold.`, 'important');
+    }
+    G.phase = 'end';
+    renderAll();
+    updateActionButtons();
+    return;
+  }
   if (!beginAuction(id, { source: 'market', bidderStartIdx: G.currentPlayerIdx })) {
     addLog('Auction could not start (no eligible bidders).', 'danger');
     G.phase = 'end';
@@ -4760,6 +5046,7 @@ function startAuction() {
 }
 
 function beginAuction(propId, { source = 'market', bidderStartIdx = 0 } = {}) {
+  if (!isAuctionSystemEnabled()) return false;
   const sp = SPACES[propId];
   const prop = G.properties[propId];
   if (!sp || !prop || prop.owner !== null) return false;
@@ -4768,17 +5055,20 @@ function beginAuction(propId, { source = 'market', bidderStartIdx = 0 } = {}) {
   const startPos = activePlayers.includes(bidderStartIdx)
     ? activePlayers.indexOf(bidderStartIdx)
     : 0;
+  const openingPercent = pickAuctionOpeningPercent();
+  const openingBid = getAuctionOpeningBid(sp.price, openingPercent);
 
   G.auctionState = {
     propId,
     propName: sp.name,
-    currentBid: 0,
+    currentBid: openingBid,
     highBidder: null,
     passed: new Set(),
     bidderIdx: startPos,
     activePlayers,
     source,
   };
+  addLog(`Auction opened for ${sp.name} at ${fmtCurrency(openingBid)} (${openingPercent}% opening bid).`);
   renderAuction();
   openOverlay('auction-overlay');
   maybeScheduleOfflineAiTurn();
@@ -4786,6 +5076,7 @@ function beginAuction(propId, { source = 'market', bidderStartIdx = 0 } = {}) {
 }
 
 function queueBankAuctions(propIds = []) {
+  if (!isAuctionSystemEnabled()) return;
   if (!Array.isArray(G.bankAuctionQueue)) G.bankAuctionQueue = [];
   propIds.forEach(id => {
     if (!Number.isInteger(id)) return;
@@ -4794,6 +5085,11 @@ function queueBankAuctions(propIds = []) {
 }
 
 function launchNextBankAuction() {
+  if (!isAuctionSystemEnabled()) {
+    G.auctionState = null;
+    G.bankAuctionQueue = [];
+    return false;
+  }
   if (G.auctionState) return true;
   if (!Array.isArray(G.bankAuctionQueue)) G.bankAuctionQueue = [];
 
@@ -4817,7 +5113,9 @@ function renderAuction() {
   const bidderId = currentAuctionBidderId();
   const bidder = Number.isInteger(bidderId) ? G.players[bidderId] : null;
   const leader = Number.isInteger(a.highBidder) ? G.players[a.highBidder] : null;
+  const basePrice = Number(SPACES[a.propId]?.price) || 0;
   document.getElementById('auc-prop-name').textContent = a.propName;
+  document.getElementById('auc-base-price').textContent = fmt(basePrice);
   document.getElementById('auc-bid').textContent = fmt(a.currentBid);
   document.getElementById('auc-leader').textContent = leader?.name || 'None';
   document.getElementById('auc-bidder').textContent = bidder
@@ -5656,16 +5954,88 @@ function clearOwnedAsset(player, id) {
   removeFrom(player.utilities, id);
 }
 
+function syncDebtPromptToGameState() {
+  if (!G || typeof G !== 'object') return;
+  if (!DEBT_PROMPT.active) {
+    G.debtPrompt = null;
+    return;
+  }
+  const payerIdRaw = Number(DEBT_PROMPT.payerId);
+  const recipientIdRaw = Number(DEBT_PROMPT.recipientId);
+  G.debtPrompt = {
+    active: true,
+    payerId: Number.isInteger(payerIdRaw) ? payerIdRaw : null,
+    amount: Math.max(0, Number(DEBT_PROMPT.amount) || 0),
+    recipientId: Number.isInteger(recipientIdRaw) ? recipientIdRaw : null,
+    toParking: !!DEBT_PROMPT.toParking,
+  };
+}
+
+function restoreDebtPromptFromGameState(state = G) {
+  if (!state || typeof state !== 'object') {
+    resetDebtPrompt(false);
+    return false;
+  }
+  const raw = state.debtPrompt && typeof state.debtPrompt === 'object' ? state.debtPrompt : null;
+  if (!raw || raw.active === false) {
+    resetDebtPrompt(false);
+    if (state === G) state.debtPrompt = null;
+    return false;
+  }
+
+  const payerId = Number(raw.payerId);
+  const payerValid = Number.isInteger(payerId) && Array.isArray(state.players) && payerId >= 0 && payerId < state.players.length;
+  const payer = payerValid ? state.players[payerId] : null;
+  if (!payer || payer.bankrupt) {
+    resetDebtPrompt(false);
+    if (state === G) state.debtPrompt = null;
+    return false;
+  }
+
+  const recipientIdRaw = Number(raw.recipientId);
+  const recipientId = Number.isInteger(recipientIdRaw) && recipientIdRaw >= 0 && recipientIdRaw < state.players.length
+    ? recipientIdRaw
+    : null;
+
+  DEBT_PROMPT.active = true;
+  DEBT_PROMPT.payerId = payerId;
+  DEBT_PROMPT.amount = Math.max(0, Number(raw.amount) || 0);
+  DEBT_PROMPT.recipientId = recipientId;
+  DEBT_PROMPT.toParking = !!raw.toParking;
+
+  if (state === G) syncDebtPromptToGameState();
+  return true;
+}
+
+function normalizeDebtPromptTurn() {
+  if (!DEBT_PROMPT.active || !G || !Array.isArray(G.players) || !G.players.length) return false;
+  const payerId = Number(DEBT_PROMPT.payerId);
+  if (!Number.isInteger(payerId) || payerId < 0 || payerId >= G.players.length || G.players[payerId]?.bankrupt) {
+    resetDebtPrompt();
+    closeOverlay('bankrupt-overlay');
+    return true;
+  }
+  if (Number(G.currentPlayerIdx) !== payerId) {
+    G.currentPlayerIdx = payerId;
+    if (G.phase === 'roll') G.phase = 'action';
+    return true;
+  }
+  return false;
+}
+
 function hasPendingDebtPromptForCurrentPlayer() {
   return !!(DEBT_PROMPT.active && Number(DEBT_PROMPT.payerId) === Number(G.currentPlayerIdx));
 }
 
-function resetDebtPrompt() {
+function resetDebtPrompt(updateGameState = true) {
   DEBT_PROMPT.active = false;
   DEBT_PROMPT.payerId = null;
   DEBT_PROMPT.amount = 0;
   DEBT_PROMPT.recipientId = null;
   DEBT_PROMPT.toParking = false;
+  if (updateGameState && G && typeof G === 'object') {
+    G.debtPrompt = null;
+  }
 }
 
 function showDebtPrompt(p, amount, recipient = null, toParking = false) {
@@ -5693,6 +6063,7 @@ function showDebtPrompt(p, amount, recipient = null, toParking = false) {
     const hasBuildings = (p.properties || []).some(id => propertyHasBuildings(id));
     sellBtn.style.display = hasBuildings ? '' : 'none';
   }
+  syncDebtPromptToGameState();
   openOverlay('bankrupt-overlay');
 }
 
@@ -5801,10 +6172,7 @@ function checkBankruptcy() {
     if (p.bankrupt || p.money >= 0) return;
     declareBankruptcy(p, null, Math.abs(p.money), true);
   });
-  const active = G.players.filter(p => !p.bankrupt);
-  if (active.length === 1) {
-    showWinner(active[0]);
-  }
+  maybeShowWinnerFromState();
 }
 
 function declareBankruptcy(p, creditor = null, debtAmount = 0, toBank = false) {
@@ -5827,6 +6195,7 @@ function declareBankruptcy(p, creditor = null, debtAmount = 0, toBank = false) {
   p.inJail = false;
 
   const assets = [...p.properties, ...p.railroads, ...p.utilities];
+  const auctionsEnabled = isAuctionSystemEnabled();
 
   if (creditor && !creditor.bankrupt && creditor.id !== p.id) {
     addLog(`${p.name} is BANKRUPT to ${creditor.name}! Assets transferred.`, 'danger');
@@ -5860,7 +6229,12 @@ function declareBankruptcy(p, creditor = null, debtAmount = 0, toBank = false) {
     document.getElementById('bankrupt-desc').textContent = `${p.name} could not pay ${creditor.name} and turned over all assets.`;
   } else {
     const debtTxt = debtAmount > 0 ? ` (৳${fmt(debtAmount)})` : '';
-    addLog(`${p.name} is BANKRUPT to the Bank${debtTxt}. Bank auctions all properties.`, 'danger');
+    addLog(
+      auctionsEnabled
+        ? `${p.name} is BANKRUPT to the Bank${debtTxt}. Bank auctions all properties.`
+        : `${p.name} is BANKRUPT to the Bank${debtTxt}. Auction system is OFF, so properties return to the bank unsold.`,
+      'danger'
+    );
     p.money = 0;
 
     const auctionIds = [];
@@ -5875,13 +6249,20 @@ function declareBankruptcy(p, creditor = null, debtAmount = 0, toBank = false) {
       auctionIds.push(id);
     });
 
-    queueBankAuctions(auctionIds);
-    if (auctionIds.length) {
-      addLog(`Bank queued ${auctionIds.length} property auction${auctionIds.length > 1 ? 's' : ''}.`, 'important');
+    if (auctionsEnabled) {
+      queueBankAuctions(auctionIds);
+      if (auctionIds.length) {
+        addLog(`Bank queued ${auctionIds.length} property auction${auctionIds.length > 1 ? 's' : ''}.`, 'important');
+      }
+    } else {
+      G.bankAuctionQueue = [];
+      G.auctionState = null;
     }
 
     document.getElementById('bankrupt-name').textContent = `${p.name} is Bankrupt!`;
-    document.getElementById('bankrupt-desc').textContent = `${p.name} could not pay the Bank. Their properties are queued for auction.`;
+    document.getElementById('bankrupt-desc').textContent = auctionsEnabled
+      ? `${p.name} could not pay the Bank. Their properties are queued for auction.`
+      : `${p.name} could not pay the Bank. Their properties returned to the bank without auction.`;
   }
 
   const continueBtn = document.getElementById('bankrupt-continue-btn');
@@ -6021,10 +6402,16 @@ function showSpaceInfo(id) {
 //  WINNER
 // ═══════════════════════════════════════════════
 function showWinner(p) {
+  if (!p) return;
   G.gameOver = true;
+  G.auctionState = null;
+  G.bankAuctionQueue = [];
+  closeAllOverlays();
+  closeDrawer();
   document.getElementById('winner-trophy').textContent = p.token;
   document.getElementById('winner-name').textContent = p.name + ' Wins!';
   document.getElementById('winner-sub').textContent = `${p.name} is the ${(window.ACTIVE_THEME||BOARD_THEMES.dhaka).name} Monopoly champion with ${fmtCurrency(p.money)}!`;
+  renderWinnerLeaderboard(p.id);
   // Confetti
   const cont = document.getElementById('confetti-container');
   cont.innerHTML = '';
@@ -6039,6 +6426,86 @@ function showWinner(p) {
     cont.appendChild(span);
   }
   showScreen('winner-screen');
+}
+
+function renderWinnerLeaderboard(winnerId) {
+  const host = document.getElementById('winner-leaderboard');
+  if (!host) return;
+  if (!G || !Array.isArray(G.players) || !G.players.length) {
+    host.innerHTML = '';
+    return;
+  }
+
+  const entries = G.players.map(player => {
+    const assetIds = [
+      ...(Array.isArray(player.properties) ? player.properties : []),
+      ...(Array.isArray(player.railroads) ? player.railroads : []),
+      ...(Array.isArray(player.utilities) ? player.utilities : []),
+    ];
+    const assetsValue = assetIds.reduce((sum, id) => sum + estimateAssetValue(id), 0);
+    const cash = Number(player.money) || 0;
+    return {
+      player,
+      cash,
+      score: cash + assetsValue,
+    };
+  });
+
+  entries.sort((a, b) => {
+    if (!!a.player.bankrupt !== !!b.player.bankrupt) return a.player.bankrupt ? 1 : -1;
+    if (b.score !== a.score) return b.score - a.score;
+    if (b.cash !== a.cash) return b.cash - a.cash;
+    return String(a.player.name || '').localeCompare(String(b.player.name || ''));
+  });
+
+  const winnerIdx = entries.findIndex(entry => Number(entry.player.id) === Number(winnerId));
+  if (winnerIdx > 0) {
+    const [winnerEntry] = entries.splice(winnerIdx, 1);
+    entries.unshift(winnerEntry);
+  }
+
+  const others = entries
+    .filter(entry => Number(entry.player.id) !== Number(winnerId))
+    .slice(0, 5);
+
+  if (!others.length) {
+    host.innerHTML = '<div class="winner-leader-empty">No other players.</div>';
+    return;
+  }
+
+  host.innerHTML = others.map((entry, idx) => {
+    const rank = idx + 2;
+    const player = entry.player;
+    const status = player.bankrupt ? ' • Bankrupt' : '';
+    return `
+      <div class="winner-leader-row">
+        <div class="winner-leader-left">
+          <span class="winner-leader-rank">#${rank}</span>
+          <span class="winner-leader-token">${escHtml(player.token || '👤')}</span>
+          <span class="winner-leader-name">${escHtml(player.name || 'Player')}${status}</span>
+        </div>
+        <span class="winner-leader-money">${fmtCurrency(entry.cash)}</span>
+      </div>
+    `;
+  }).join('');
+}
+
+function maybeShowWinnerFromState() {
+  if (!G || !Array.isArray(G.players) || !G.players.length) return false;
+  const active = G.players.filter(player => !player.bankrupt);
+  if (active.length !== 1) return false;
+  const winnerScreen = document.getElementById('winner-screen');
+  if (winnerScreen && !winnerScreen.classList.contains('hidden')) return true;
+  showWinner(active[0]);
+  return true;
+}
+
+function viewBoardAfterWin() {
+  if (!G || !G.gameOver) return;
+  closeAllOverlays();
+  closeDrawer();
+  renderAll();
+  showScreen('game-screen');
 }
 
 function restartGame() {
@@ -6271,6 +6738,9 @@ function openOverlay(id) {
 }
 function closeOverlay(id) {
   document.getElementById(id).classList.remove('show');
+}
+function closeAllOverlays() {
+  document.querySelectorAll('.overlay.show').forEach(el => el.classList.remove('show'));
 }
 
 // ═══════════════════════════════════════════════
@@ -6534,6 +7004,33 @@ function openHomePage() {
   showScreen('home-screen');
 }
 
+function openBugReport() {
+  let opened = false;
+  try {
+    const win = window.open(BUG_REPORT_URL, '_blank', 'noopener,noreferrer');
+    opened = !!win;
+    if (opened) {
+      try { win.opener = null; } catch (_e) {}
+    }
+  } catch (_err) {
+    opened = false;
+  }
+  if (!opened) {
+    toast('Could not open bug report in a new tab. Allow pop-ups and try again.', 'danger');
+  }
+}
+
+function openWhatsNewPage() {
+  if (openWhatsNewPage._busy) return;
+  openWhatsNewPage._busy = true;
+  const btn = document.getElementById('credits-logs-btn');
+  if (btn) btn.disabled = true;
+  document.body.classList.add('route-leaving');
+  window.setTimeout(() => {
+    window.location.href = 'whats-new.html';
+  }, 170);
+}
+
 function openOfflineSetupPage() {
   LOBBY_CONTEXT = 'offline';
   renderLobby();
@@ -6683,6 +7180,7 @@ function installLobbyEvents() {
   const visSelect = document.getElementById('room-visibility');
   const startMoney = document.getElementById('starting-money');
   const timerSelect = document.getElementById('lobby-timer');
+  const auctionSelect = document.getElementById('auction-enabled');
 
   const rememberedName = localStorage.getItem('monopoly_online_name');
   if (nameInput && rememberedName) nameInput.value = rememberedName;
@@ -6726,6 +7224,12 @@ function installLobbyEvents() {
 
   if (timerSelect) {
     timerSelect.addEventListener('change', () => {
+      syncLobbySettingsToRoom();
+    });
+  }
+
+  if (auctionSelect) {
+    auctionSelect.addEventListener('change', () => {
       syncLobbySettingsToRoom();
     });
   }
