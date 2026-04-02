@@ -1,1 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Bangladeshi Monopoly - Credits & Patch Logs</title>
+<link rel="icon" type="image/svg+xml" href="logo.svg">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --green: #1a7a3c;
+  --green-light: #2da05a;
+  --gold: #c9971c;
+  --gold-light: #f0c040;
+  --radius: 12px;
+  --font-display: 'Playfair Display', Georgia, serif;
+  --font-body: 'DM Sans', system-ui, sans-serif;
+}
 
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100%}
+body{
+  font-family:var(--font-body);
+  background:linear-gradient(145deg,#0a1f10 0%,#1a3d25 50%,#0d2b1a 100%);
+  color:#fff;
+}
+
+.page{
+  max-width:760px;
+  margin:0 auto;
+  padding:1.2rem 1rem 2rem;
+}
+
+.top-actions{
+  margin-bottom:1rem;
+}
+
+.btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:.5rem;
+  font-family:var(--font-body);
+  font-weight:600;
+  border:none;
+  border-radius:8px;
+  cursor:pointer;
+  transition:all .2s;
+  font-size:.95rem;
+  padding:.65rem 1.15rem;
+  line-height:1;
+  text-decoration:none;
+}
+
+.btn:hover{transform:translateY(-1px)}
+.btn-back{background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.2)}
+
+.header{text-align:center;padding:.5rem 0 1rem}
+.logo-wrap{display:flex;align-items:center;justify-content:center;gap:.65rem;margin-bottom:.35rem}
+.logo-mark{width:2.45rem;height:2.45rem;display:block;filter:drop-shadow(0 5px 12px rgba(0,0,0,.45))}
+.logo{font-family:var(--font-display);font-size:clamp(1.8rem,5.8vw,2.8rem);font-weight:900;line-height:1}
+.logo span{color:var(--gold-light)}
+.subtitle{color:rgba(255,255,255,.68);font-size:.95rem}
+
+.tag{
+  margin-top:.7rem;
+  display:inline-block;
+  background:rgba(201,151,28,.2);
+  border:1px solid rgba(201,151,28,.4);
+  color:var(--gold-light);
+  font-size:.78rem;
+  padding:.28rem .82rem;
+  border-radius:20px;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+
+.card{
+  background:rgba(255,255,255,.07);
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:var(--radius);
+  padding:1.1rem;
+  margin-bottom:.85rem;
+  backdrop-filter:blur(10px);
+}
+
+.card h2{
+  font-family:var(--font-display);
+  font-size:1.35rem;
+  margin-bottom:.3rem;
+}
+
+.card h3{
+  font-size:.98rem;
+  color:#fde68a;
+  margin-bottom:.5rem;
+}
+
+.note{
+  color:rgba(255,255,255,.78);
+  line-height:1.65;
+  font-size:.92rem;
+}
+
+.credits-link{color:#93c5fd;text-decoration:none;font-weight:700}
+.credits-link:hover{text-decoration:underline}
+
+.changes{
+  list-style:none;
+  margin-top:.35rem;
+}
+
+.changes li{
+  color:rgba(255,255,255,.84);
+  font-size:.92rem;
+  line-height:1.55;
+  margin-bottom:.3rem;
+  padding-left:.95rem;
+  position:relative;
+}
+
+.changes li::before{
+  content:'';
+  width:7px;
+  height:7px;
+  border-radius:50%;
+  background:var(--green-light);
+  position:absolute;
+  left:0;
+  top:.48rem;
+}
+
+.footer-note{
+  text-align:center;
+  color:rgba(255,255,255,.56);
+  font-size:.82rem;
+  margin-top:.75rem;
+}
+</style>
+</head>
+<body>
+  <main class="page">
+    <div class="top-actions">
+      <a class="btn btn-back" href="w2.html">Back to Home</a>
+    </div>
+
+    <header class="header">
+      <div class="logo-wrap">
+        <img src="logo.svg" alt="Monopoly logo" class="logo-mark">
+        <div class="logo"><span>Credits</span> & Logs</div>
+      </div>
+      <div class="subtitle">Credits and patch logs for Bangladeshi Monopoly</div>
+      <div class="tag">Credits + Changelog</div>
+    </header>
+
+    <section class="card">
+      <h2>Credits</h2>
+      <h3>Made by</h3>
+      <p class="note">
+        Made by <strong style="color:#fff">wakifrajin</strong>.
+      </p>
+      <p style="margin-top:.45rem">
+        <a class="credits-link" href="https://github.com/WakifRajin" target="_blank" rel="noopener noreferrer">https://github.com/WakifRajin</a>
+      </p>
+    </section>
+
+    <section class="card">
+      <h2>Update 0.0.6 - Winner Screen Upgrade</h2>
+      <h3>Cleaner endgame flow</h3>
+      <ul class="changes">
+        <li>Winner screen now always stays above overlays, including bank auctions.</li>
+        <li>Added winner actions: View Board and Play Again.</li>
+        <li>Added a compact leaderboard showing other players and their final cash.</li>
+        <li>Post-game board view is now read-only to prevent accidental extra actions.</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>Update 0.0.5 - Bankruptcy and Online Reliability</h2>
+      <h3>Debt resolution stability</h3>
+      <ul class="changes">
+        <li>Improved AI debt handling so AI can sell, mortgage, or declare bankruptcy without getting stuck.</li>
+        <li>Debt prompt state now syncs into game snapshots for better online consistency.</li>
+        <li>Center turn messaging now shows active debt resolution status in online matches.</li>
+        <li>Added winner fallback checks so endgame winner display appears more reliably online.</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>Update 0.0.4 - Home and Patch Notes</h2>
+      <h3>New discoverability for updates</h3>
+      <ul class="changes">
+        <li>Added a small circular What's New button at the bottom of the home screen.</li>
+        <li>Patch notes are now tracked in update-version format instead of dates.</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>Update 0.0.3 - Auction System Revamp</h2>
+      <h3>Gameplay and menu improvements</h3>
+      <ul class="changes">
+        <li>Added a new Auction System toggle in lobby settings (On or Off).</li>
+        <li>Auction opening bid no longer starts at zero.</li>
+        <li>Opening bid now starts around 60% to 80% of the property base price.</li>
+        <li>Auction base price is now shown inside the auction panel.</li>
+        <li>When auctions are disabled, unsold properties remain with the bank instead of opening auctions.</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>Update 0.0.2 - Online Sync and Stability</h2>
+      <h3>Host room settings and rule consistency</h3>
+      <ul class="changes">
+        <li>Auction settings now sync correctly in online rooms.</li>
+        <li>Host controls are respected for lobby game-setting updates.</li>
+        <li>Bankruptcy and leave-liquidation flows now follow auction on/off state consistently.</li>
+        <li>Auction states are validated and normalized during online snapshot hydration.</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>Update 0.0.1 - UI Updates</h2>
+      <h3>Auction panel improvements</h3>
+      <ul class="changes">
+        <li>Auction panel has improved display content for bidding context.</li>
+        <li>Current bid, leader, bidder cash, and base price are shown together for clarity.</li>
+      </ul>
+    </section>
+
+    <p class="footer-note">This page can be updated with each release to track balancing and bug fixes.</p>
+  </main>
+</body>
+</html>
