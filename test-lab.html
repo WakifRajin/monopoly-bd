@@ -4616,7 +4616,7 @@ body::before{
     let tx = null;
     try {
       tx = await TEST_ROOM.api.runTransaction(roomRef, current => {
-        const roomData = (current && typeof current === 'object') ? current : baseRoom;
+        const roomData = (current && typeof current === 'object') ? current : null;
         if (!roomData || typeof roomData !== 'object') {
           txError = 'Room not found.';
           return;

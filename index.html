@@ -2846,9 +2846,10 @@ async function joinOnlineRoom() {
   try {
     let txError = '';
     const result = await FIREBASE.api.runTransaction(roomRef, data => {
-      const roomData = (data && typeof data === 'object') ? data : baseRoom;
+      const roomData = (data && typeof data === 'object') ? data : null;
       if (!roomData) {
-        throw new Error('Room not found');
+        txError = 'Room not found';
+        return;
       }
       if (Number(roomData.schemaVersion || 0) !== ROOM_SCHEMA_VERSION) {
         txError = 'Room is from an older version. Ask host to recreate the room.';
@@ -4766,7 +4767,7 @@ async function movePlayer(player, steps, rolledDoubles) {
   landOn(livePlayer, rolledDoubles, {goPaid});
 }
 
-async function movePlayerTo(player, target, collectGo=true) {
+async function movePlayerTo(player, target, collectGo=true, rolledDoubles=false) {
   const p = getLivePlayer(player);
   if (!p || p.bankrupt) return;
   const playerId = p.id;
@@ -4796,7 +4797,7 @@ async function movePlayerTo(player, target, collectGo=true) {
   livePlayer.pos = target;
   renderAll();
   await waitMs(140);
-  landOn(livePlayer, false, {goPaid});
+  landOn(livePlayer, rolledDoubles, {goPaid});
 }
 
 function landOn(p, rolledDoubles, opts = null) {
@@ -4932,6 +4933,7 @@ function drawCard(type, p) {
   const apply = async () => {
     const actor = getLivePlayer(playerId);
     if (!actor || actor.bankrupt) return;
+    let allowDoublesContinuation = rolledDoublesThisTurn();
 
     if (card.action === 'money') {
       if (card.value > 0) {
@@ -4943,16 +4945,17 @@ function drawCard(type, p) {
         if (paid) addLog(`${actor.name} paid ${fmtCurrency(-card.value)} due to a card effect.`, 'danger');
       }
     } else if (card.action === 'goto') {
-      await movePlayerTo(actor.id, card.value, card.value < actor.pos);
+      await movePlayerTo(actor.id, card.value, card.value < actor.pos, allowDoublesContinuation);
       return;
     } else if (card.action === 'jail') {
       sendToJail(actor);
+      allowDoublesContinuation = false;
     } else if (card.action === 'jailcard') {
       actor.jailFreeCards++;
       addLog(`${actor.name} got a Get Out of Jail Free card!`, 'success');
     } else if (card.action === 'nearest') {
       const nearest = nearestRailroad(actor.pos);
-      await movePlayerTo(actor.id, nearest);
+      await movePlayerTo(actor.id, nearest, true, allowDoublesContinuation);
       return;
     } else if (card.action === 'repairs') {
       let cost = 0;
@@ -4963,15 +4966,27 @@ function drawCard(type, p) {
       });
       if (cost > 0) { chargeMoney(actor, cost, null, true); addLog(`${actor.name} paid ৳${fmt(cost)} for repairs.`, 'danger'); }
     } else if (card.action === 'birthday') {
-      G.players.forEach((op, oi) => {
-        if (oi !== actor.id && !op.bankrupt) {
-          op.money -= card.value;
-          actor.money += card.value;
+      for (let oi = 0; oi < G.players.length; oi++) {
+        const op = G.players[oi];
+        if (oi === actor.id || !op || op.bankrupt) continue;
+
+        const paid = chargeMoney(op, card.value, actor);
+        if (paid) continue;
+
+        // Human debt resolution can interrupt birthday collection; hand them control.
+        if (DEBT_PROMPT.active && Number(DEBT_PROMPT.payerId) === oi) {
+          G.currentPlayerIdx = oi;
+          G.phase = 'action';
+          addLog(`${op.name} must settle birthday debt to ${actor.name}.`, 'danger');
+          renderAll();
+          updateActionButtons();
+          checkBankruptcy();
+          return;
         }
-      });
-      addLog(`${actor.name} collected ৳${card.value} from each player for birthday!`, 'success');
+      }
+      addLog(`${actor.name} collected birthday payouts from other players.`, 'success');
     }
-    G.phase = rolledDoublesThisTurn() ? 'roll' : 'end';
+    G.phase = allowDoublesContinuation ? 'roll' : 'end';
     renderAll();
     updateActionButtons();
     checkBankruptcy();
@@ -5335,6 +5350,7 @@ function openBuildModal() {
   el.innerHTML = '';
   if (groups.length === 0) { el.innerHTML = '<p style="color:rgba(255,255,255,.5);font-size:.85rem">No complete color groups to build on.</p>'; }
   groups.forEach(ids => {
+    const groupMortgaged = ids.some(groupId => G.properties[groupId]?.mortgaged);
     ids.forEach(id => {
       const sp = SPACES[id];
       const prop = G.properties[id];
@@ -5342,12 +5358,12 @@ function openBuildModal() {
       row.style.cssText = 'display:flex;align-items:center;gap:.7rem;padding:.6rem;background:rgba(255,255,255,.06);border-radius:7px;margin-bottom:.4rem';
       const c = COLOR[sp.color];
       const houseCost = sp.house;
-      const canBuildMore = !prop.hotel && prop.houses < 4 && p.money >= houseCost;
-      const canBuildHotel = prop.houses === 4 && !prop.hotel && p.money >= houseCost;
+      const canBuildMore = !groupMortgaged && !prop.mortgaged && !prop.hotel && prop.houses < 4 && p.money >= houseCost;
+      const canBuildHotel = !groupMortgaged && !prop.mortgaged && prop.houses === 4 && !prop.hotel && p.money >= houseCost;
       const canSell = prop.houses > 0 || prop.hotel;
       row.innerHTML = `
         <div style="width:10px;height:10px;border-radius:2px;background:${c};flex-shrink:0"></div>
-        <div style="flex:1;color:#fff;font-size:.85rem;font-weight:600">${sp.name}</div>
+        <div style="flex:1;color:#fff;font-size:.85rem;font-weight:600">${sp.name}${prop.mortgaged ? ' (mortgaged)' : ''}</div>
         <div style="color:rgba(255,255,255,.5);font-size:.78rem">${prop.hotel ? '🏨' : '🏠'.repeat(prop.houses) || '—'}</div>
         <button onclick="buildHouse(${id})" ${canBuildMore && !prop.hotel ? '' : canBuildHotel ? '' : 'disabled'} style="background:${canBuildMore||canBuildHotel?'#2ecc71':'rgba(255,255,255,.1)'};border:none;color:#fff;border-radius:5px;padding:.3rem .5rem;cursor:pointer;font-size:.75rem">${prop.houses===4&&!prop.hotel?'🏨 Hotel (৳'+fmt(houseCost)+')':'🏠 Build (৳'+fmt(houseCost)+')'}</button>
         <button onclick="sellHouse(${id})" ${canSell ? '' : 'disabled'} style="background:${canSell?'#e74c3c':'rgba(255,255,255,.1)'};border:none;color:#fff;border-radius:5px;padding:.3rem .5rem;cursor:pointer;font-size:.75rem">Sell (৳${fmt(Math.floor(houseCost/2))})</button>
@@ -5364,6 +5380,17 @@ function buildHouse(propId) {
   const actorIsAi = shouldAutoActForAi(p);
   const sp = SPACES[propId];
   const prop = G.properties[propId];
+  if (prop.mortgaged) {
+    toast('Unmortgage this property before building.', 'danger');
+    return;
+  }
+  const groupMortgaged = SPACES
+    .filter(s => s.type === 'property' && s.group === sp.group)
+    .some(s => G.properties[s.id]?.mortgaged);
+  if (groupMortgaged) {
+    toast('Unmortgage every property in this color group before building.', 'danger');
+    return;
+  }
   const cost = sp.house;
   if (p.money < cost) { toast('Not enough money!', 'danger'); return; }
   p.money -= cost;
