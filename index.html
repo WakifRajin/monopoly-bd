@@ -1287,6 +1287,8 @@ const ONLINE = {
   pendingCardResolutions: 0,
   roomCleanupRunning: false,
   lastRoomCleanupAt: 0,
+  heartbeatInFlight: false,
+  lastHeartbeatAt: 0,
 };
 
 const ONLINE_MUTATION_FUNCS = [
@@ -1298,11 +1300,12 @@ const ONLINE_MUTATION_FUNCS = [
 const ROOM_SCHEMA_VERSION = 2;
 const GAME_LOG_LIMIT = 250;
 const GAME_LOG_ARCHIVE_LIMIT = 5000;
-const OPEN_ROOM_STALE_MS = 1000 * 60 * 60 * 6;
+const OPEN_ROOM_STALE_MS = 1000 * 60 * 10;
 const PLAYING_ROOM_STALE_MS = 1000 * 60 * 60 * 24;
-const EMPTY_ROOM_STALE_MS = 1000 * 60 * 15;
+const EMPTY_ROOM_STALE_MS = 1000 * 60 * 5;
 const ROOM_CLEANUP_INTERVAL_MS = 1000 * 60 * 2;
 const ROOM_CLEANUP_BATCH_LIMIT = 16;
+const ROOM_HEARTBEAT_INTERVAL_MS = 1000 * 20;
 const AUCTION_OPENING_MIN_PERCENT = 60;
 const AUCTION_OPENING_MAX_PERCENT = 80;
 const BUG_REPORT_URL = 'https://github.com/WakifRajin/monopoly-bd/issues/new?title=Bug%20Report&body=Describe%20the%20issue%20here&labels=bug';
@@ -1434,6 +1437,35 @@ function isRoomAbandoned(roomData, now = Date.now()) {
   if (players.length === 0) return age > EMPTY_ROOM_STALE_MS;
   if (status === 'playing') return age > PLAYING_ROOM_STALE_MS;
   return age > OPEN_ROOM_STALE_MS;
+}
+
+async function pulseRoomHeartbeat(force = false) {
+  if (!isOnlineGame() || !FIREBASE.api) return;
+  if (ONLINE.status !== 'lobby' || !ONLINE.isHost) return;
+  if (ONLINE.heartbeatInFlight) return;
+
+  const now = Date.now();
+  if (!force && now - ONLINE.lastHeartbeatAt < ROOM_HEARTBEAT_INTERVAL_MS) return;
+
+  ONLINE.heartbeatInFlight = true;
+  ONLINE.lastHeartbeatAt = now;
+
+  try {
+    await FIREBASE.api.runTransaction(getRoomRef(), current => {
+      if (!current || typeof current !== 'object') return current;
+      if ((current.status || 'lobby') !== 'lobby') return current;
+      const players = indexedObjectToArray(current.players).filter(p => p && p.uid);
+      if (!players.some(p => p.uid === ONLINE.localUid)) return current;
+      return {
+        ...current,
+        updatedAt: now,
+      };
+    });
+  } catch (err) {
+    console.warn('Room heartbeat failed.', err);
+  } finally {
+    ONLINE.heartbeatInFlight = false;
+  }
 }
 
 async function cleanupAbandonedRooms(candidateRoomIds = null, force = false) {
@@ -2663,6 +2695,8 @@ function attachRoomListener(roomId) {
   ONLINE.connected = true;
   ONLINE.lastDepartureNoticeId = '';
   ONLINE.lastSnapshotAt = Date.now();
+  ONLINE.heartbeatInFlight = false;
+  ONLINE.lastHeartbeatAt = 0;
   ONLINE.aiRunner = null;
   ONLINE.aiRunnerRequestAt = 0;
   ONLINE.pendingCardResolutions = 0;
@@ -2685,6 +2719,7 @@ function attachRoomListener(roomId) {
     const msg = firebaseErrorMessage(err, 'Failed to subscribe to room updates.');
     updateOnlineStatus(msg, true);
   });
+  pulseRoomHeartbeat(true);
 }
 
 function updateOnlineLobbyUI() {
@@ -2846,10 +2881,9 @@ async function joinOnlineRoom() {
   try {
     let txError = '';
     const result = await FIREBASE.api.runTransaction(roomRef, data => {
-      const roomData = (data && typeof data === 'object') ? data : null;
+      const roomData = (data && typeof data === 'object') ? data : baseRoom;
       if (!roomData) {
-        txError = 'Room not found';
-        return;
+        throw new Error('Room not found');
       }
       if (Number(roomData.schemaVersion || 0) !== ROOM_SCHEMA_VERSION) {
         txError = 'Room is from an older version. Ask host to recreate the room.';
@@ -3221,6 +3255,8 @@ async function leaveOnlineRoom(showToast = true, mutateRoom = true, leaveMode = 
     ONLINE.status = 'offline';
     ONLINE.lastDepartureNoticeId = '';
     ONLINE.lastSnapshotAt = 0;
+    ONLINE.heartbeatInFlight = false;
+    ONLINE.lastHeartbeatAt = 0;
     ONLINE.aiRunner = null;
     ONLINE.aiRunnerRequestAt = 0;
     ONLINE.pendingCardResolutions = 0;
@@ -3253,6 +3289,8 @@ async function leaveOnlineRoom(showToast = true, mutateRoom = true, leaveMode = 
   ONLINE.revision = 0;
   ONLINE.lastDepartureNoticeId = '';
   ONLINE.lastSnapshotAt = 0;
+  ONLINE.heartbeatInFlight = false;
+  ONLINE.lastHeartbeatAt = 0;
   ONLINE.aiRunner = null;
   ONLINE.aiRunnerRequestAt = 0;
   ONLINE.pendingCardResolutions = 0;
@@ -4767,7 +4805,7 @@ async function movePlayer(player, steps, rolledDoubles) {
   landOn(livePlayer, rolledDoubles, {goPaid});
 }
 
-async function movePlayerTo(player, target, collectGo=true, rolledDoubles=false) {
+async function movePlayerTo(player, target, collectGo=true) {
   const p = getLivePlayer(player);
   if (!p || p.bankrupt) return;
   const playerId = p.id;
@@ -4797,7 +4835,7 @@ async function movePlayerTo(player, target, collectGo=true, rolledDoubles=false)
   livePlayer.pos = target;
   renderAll();
   await waitMs(140);
-  landOn(livePlayer, rolledDoubles, {goPaid});
+  landOn(livePlayer, false, {goPaid});
 }
 
 function landOn(p, rolledDoubles, opts = null) {
@@ -4933,7 +4971,6 @@ function drawCard(type, p) {
   const apply = async () => {
     const actor = getLivePlayer(playerId);
     if (!actor || actor.bankrupt) return;
-    let allowDoublesContinuation = rolledDoublesThisTurn();
 
     if (card.action === 'money') {
       if (card.value > 0) {
@@ -4945,17 +4982,16 @@ function drawCard(type, p) {
         if (paid) addLog(`${actor.name} paid ${fmtCurrency(-card.value)} due to a card effect.`, 'danger');
       }
     } else if (card.action === 'goto') {
-      await movePlayerTo(actor.id, card.value, card.value < actor.pos, allowDoublesContinuation);
+      await movePlayerTo(actor.id, card.value, card.value < actor.pos);
       return;
     } else if (card.action === 'jail') {
       sendToJail(actor);
-      allowDoublesContinuation = false;
     } else if (card.action === 'jailcard') {
       actor.jailFreeCards++;
       addLog(`${actor.name} got a Get Out of Jail Free card!`, 'success');
     } else if (card.action === 'nearest') {
       const nearest = nearestRailroad(actor.pos);
-      await movePlayerTo(actor.id, nearest, true, allowDoublesContinuation);
+      await movePlayerTo(actor.id, nearest);
       return;
     } else if (card.action === 'repairs') {
       let cost = 0;
@@ -4966,27 +5002,15 @@ function drawCard(type, p) {
       });
       if (cost > 0) { chargeMoney(actor, cost, null, true); addLog(`${actor.name} paid ৳${fmt(cost)} for repairs.`, 'danger'); }
     } else if (card.action === 'birthday') {
-      for (let oi = 0; oi < G.players.length; oi++) {
-        const op = G.players[oi];
-        if (oi === actor.id || !op || op.bankrupt) continue;
-
-        const paid = chargeMoney(op, card.value, actor);
-        if (paid) continue;
-
-        // Human debt resolution can interrupt birthday collection; hand them control.
-        if (DEBT_PROMPT.active && Number(DEBT_PROMPT.payerId) === oi) {
-          G.currentPlayerIdx = oi;
-          G.phase = 'action';
-          addLog(`${op.name} must settle birthday debt to ${actor.name}.`, 'danger');
-          renderAll();
-          updateActionButtons();
-          checkBankruptcy();
-          return;
+      G.players.forEach((op, oi) => {
+        if (oi !== actor.id && !op.bankrupt) {
+          op.money -= card.value;
+          actor.money += card.value;
         }
-      }
-      addLog(`${actor.name} collected birthday payouts from other players.`, 'success');
+      });
+      addLog(`${actor.name} collected ৳${card.value} from each player for birthday!`, 'success');
     }
-    G.phase = allowDoublesContinuation ? 'roll' : 'end';
+    G.phase = rolledDoublesThisTurn() ? 'roll' : 'end';
     renderAll();
     updateActionButtons();
     checkBankruptcy();
@@ -5350,7 +5374,6 @@ function openBuildModal() {
   el.innerHTML = '';
   if (groups.length === 0) { el.innerHTML = '<p style="color:rgba(255,255,255,.5);font-size:.85rem">No complete color groups to build on.</p>'; }
   groups.forEach(ids => {
-    const groupMortgaged = ids.some(groupId => G.properties[groupId]?.mortgaged);
     ids.forEach(id => {
       const sp = SPACES[id];
       const prop = G.properties[id];
@@ -5358,12 +5381,12 @@ function openBuildModal() {
       row.style.cssText = 'display:flex;align-items:center;gap:.7rem;padding:.6rem;background:rgba(255,255,255,.06);border-radius:7px;margin-bottom:.4rem';
       const c = COLOR[sp.color];
       const houseCost = sp.house;
-      const canBuildMore = !groupMortgaged && !prop.mortgaged && !prop.hotel && prop.houses < 4 && p.money >= houseCost;
-      const canBuildHotel = !groupMortgaged && !prop.mortgaged && prop.houses === 4 && !prop.hotel && p.money >= houseCost;
+      const canBuildMore = !prop.hotel && prop.houses < 4 && p.money >= houseCost;
+      const canBuildHotel = prop.houses === 4 && !prop.hotel && p.money >= houseCost;
       const canSell = prop.houses > 0 || prop.hotel;
       row.innerHTML = `
         <div style="width:10px;height:10px;border-radius:2px;background:${c};flex-shrink:0"></div>
-        <div style="flex:1;color:#fff;font-size:.85rem;font-weight:600">${sp.name}${prop.mortgaged ? ' (mortgaged)' : ''}</div>
+        <div style="flex:1;color:#fff;font-size:.85rem;font-weight:600">${sp.name}</div>
         <div style="color:rgba(255,255,255,.5);font-size:.78rem">${prop.hotel ? '🏨' : '🏠'.repeat(prop.houses) || '—'}</div>
         <button onclick="buildHouse(${id})" ${canBuildMore && !prop.hotel ? '' : canBuildHotel ? '' : 'disabled'} style="background:${canBuildMore||canBuildHotel?'#2ecc71':'rgba(255,255,255,.1)'};border:none;color:#fff;border-radius:5px;padding:.3rem .5rem;cursor:pointer;font-size:.75rem">${prop.houses===4&&!prop.hotel?'🏨 Hotel (৳'+fmt(houseCost)+')':'🏠 Build (৳'+fmt(houseCost)+')'}</button>
         <button onclick="sellHouse(${id})" ${canSell ? '' : 'disabled'} style="background:${canSell?'#e74c3c':'rgba(255,255,255,.1)'};border:none;color:#fff;border-radius:5px;padding:.3rem .5rem;cursor:pointer;font-size:.75rem">Sell (৳${fmt(Math.floor(houseCost/2))})</button>
@@ -5380,17 +5403,6 @@ function buildHouse(propId) {
   const actorIsAi = shouldAutoActForAi(p);
   const sp = SPACES[propId];
   const prop = G.properties[propId];
-  if (prop.mortgaged) {
-    toast('Unmortgage this property before building.', 'danger');
-    return;
-  }
-  const groupMortgaged = SPACES
-    .filter(s => s.type === 'property' && s.group === sp.group)
-    .some(s => G.properties[s.id]?.mortgaged);
-  if (groupMortgaged) {
-    toast('Unmortgage every property in this color group before building.', 'danger');
-    return;
-  }
   const cost = sp.house;
   if (p.money < cost) { toast('Not enough money!', 'danger'); return; }
   p.money -= cost;
@@ -7350,7 +7362,11 @@ function installLobbyEvents() {
   }
 
   setInterval(() => {
-    if (!ONLINE.ready || isOnlineGame()) return;
+    if (!ONLINE.ready) return;
+    if (isOnlineGame()) {
+      pulseRoomHeartbeat();
+      return;
+    }
     if (ONLINE.mode === 'join') {
       refreshOpenRoomsList();
       return;
