@@ -6,6 +6,7 @@
 <title>Bangladeshi Monopoly</title>
 <link rel="icon" type="image/svg+xml" href="logo.svg">
 <link rel="prefetch" href="whats-new.html">
+<link rel="prefetch" href="test-lab.html">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-QPMD9QD5H7"></script>
@@ -658,6 +659,10 @@ body.route-leaving::after{opacity:1}
     <div class="card">
       <h2>How to Play</h2>
       <button class="btn btn-secondary btn-full" onclick="showScreen('how-to-screen')">📘 Open Guide</button>
+    </div>
+    <div class="card">
+      <h2>Testing</h2>
+      <button class="btn btn-secondary btn-full" onclick="openTestLabPage()">Run Scenario Test Lab</button>
     </div>
   </div>
   <button class="btn btn-sm report-bug-fab" onclick="openBugReport()" title="Report bugs">🐞 Report Bug</button>
@@ -1741,6 +1746,10 @@ function canLocalControlAuctionAction() {
 function requireTurnControl() {
   if (G?.gameOver) {
     toast('Game is over. Use Winner actions to view board or play again.', 'gold');
+    return false;
+  }
+  if (isOnlineGame() && ONLINE.isApplyingRemote) {
+    toast('Syncing latest board state. Try again in a moment.', 'gold');
     return false;
   }
   if (!canLocalControlTurn()) {
@@ -3778,23 +3787,29 @@ function renderMarkers(hopPlayerId = null) {
 }
 
 async function animatePlayerStepMovement(player, steps) {
-  if (!player || !Number.isInteger(steps) || steps <= 0) return;
+  const startPlayer = getLivePlayer(player);
+  if (!startPlayer || !Number.isInteger(steps) || steps <= 0) return false;
+  const playerId = startPlayer.id;
 
   MOVE_FX.active = true;
-  MOVE_FX.playerId = player.id;
+  MOVE_FX.playerId = playerId;
   updateActionButtons();
 
   try {
     for (let i = 0; i < steps; i++) {
-      player.pos = (player.pos + 1) % 40;
-      renderMarkers(player.id);
-      pulseBoardSpace(player.pos, i === steps - 1 ? 'step-arrive' : 'step-trail', i === steps - 1 ? 340 : 240);
+      const livePlayer = getLivePlayer(playerId);
+      if (!livePlayer || livePlayer.bankrupt) return false;
+      livePlayer.pos = ((Number(livePlayer.pos) || 0) + 1) % 40;
+      renderMarkers(playerId);
+      pulseBoardSpace(livePlayer.pos, i === steps - 1 ? 'step-arrive' : 'step-trail', i === steps - 1 ? 340 : 240);
       await waitMs(180);
     }
   } finally {
     MOVE_FX.active = false;
     MOVE_FX.playerId = null;
   }
+
+  return true;
 }
 
 function renderBoardOwnership() {
@@ -4640,7 +4655,8 @@ function updateActionButtons() {
 // ═══════════════════════════════════════════════
 async function rollDice() {
   if (!requireTurnControl()) return;
-  const p = curPlayer();
+  const p = getLivePlayer(curPlayer());
+  if (!p || p.bankrupt) return;
   if (G.phase !== 'roll' || MOVE_FX.active) return;
 
   const d1 = rand(1,6), d2 = rand(1,6);
@@ -4654,14 +4670,16 @@ async function rollDice() {
     if (el) { el.classList.add('rolling'); setTimeout(() => el.classList.remove('rolling'), 400); }
   });
   setTimeout(() => {
-    document.getElementById('die1').dataset.v = d1;
-    document.getElementById('die2').dataset.v = d2;
+    const die1 = document.getElementById('die1');
+    const die2 = document.getElementById('die2');
+    if (die1) die1.dataset.v = d1;
+    if (die2) die2.dataset.v = d2;
   }, 200);
 
   addLog(`${p.name} rolled ${d1}+${d2}=${d1+d2}${doubles ? ' (DOUBLES! 🎲🎲)' : ''}`);
 
   if (p.inJail) {
-    await handleJailRoll(p, d1, d2, doubles);
+    await handleJailRoll(p.id, d1, d2, doubles);
     return;
   }
 
@@ -4679,16 +4697,18 @@ async function rollDice() {
     p.doublesCount = 0;
   }
 
-  await movePlayer(p, d1 + d2, doubles);
+  await movePlayer(p.id, d1 + d2, doubles);
 }
 
-async function handleJailRoll(p, d1, d2, doubles) {
+async function handleJailRoll(player, d1, d2, doubles) {
+  const p = getLivePlayer(player);
+  if (!p || p.bankrupt) return;
   if (doubles) {
     p.inJail = false;
     p.jailTurns = 0;
     p.doublesCount = 0;
     addLog(`${p.name} rolled doubles — released from jail!`, 'success');
-    await movePlayer(p, d1 + d2, false);
+    await movePlayer(p.id, d1 + d2, false);
   } else {
     p.jailTurns++;
     if (p.jailTurns >= 3) {
@@ -4710,7 +4730,7 @@ async function handleJailRoll(p, d1, d2, doubles) {
       }
       p.inJail = false;
       p.jailTurns = 0;
-      await movePlayer(p, d1 + d2, false);
+      await movePlayer(p.id, d1 + d2, false);
     } else {
       addLog(`${p.name} failed to roll doubles. Jail turn ${p.jailTurns}/3.`);
       G.phase = 'end';
@@ -4720,7 +4740,10 @@ async function handleJailRoll(p, d1, d2, doubles) {
   }
 }
 
-async function movePlayer(p, steps, rolledDoubles) {
+async function movePlayer(player, steps, rolledDoubles) {
+  const p = getLivePlayer(player);
+  if (!p || p.bankrupt || !Number.isInteger(steps) || steps <= 0) return;
+  const playerId = p.id;
   const oldPos = p.pos;
   const newPos = (p.pos + steps) % 40;
   const goSalary = getThemeGoSalary();
@@ -4733,14 +4756,20 @@ async function movePlayer(p, steps, rolledDoubles) {
   }
 
   G.phase = 'action';
-  await animatePlayerStepMovement(p, steps);
-  p.pos = newPos;
+  const moved = await animatePlayerStepMovement(playerId, steps);
+  if (!moved) return;
+  const livePlayer = getLivePlayer(playerId);
+  if (!livePlayer || livePlayer.bankrupt) return;
+  livePlayer.pos = newPos;
   renderAll();
   await waitMs(160);
-  landOn(p, rolledDoubles, {goPaid});
+  landOn(livePlayer, rolledDoubles, {goPaid});
 }
 
-async function movePlayerTo(p, target, collectGo=true) {
+async function movePlayerTo(player, target, collectGo=true) {
+  const p = getLivePlayer(player);
+  if (!p || p.bankrupt) return;
+  const playerId = p.id;
   const oldPos = p.pos;
   const goSalary = getThemeGoSalary();
   const stepsForward = (target - oldPos + 40) % 40;
@@ -4752,16 +4781,22 @@ async function movePlayerTo(p, target, collectGo=true) {
   }
 
   if (stepsForward > 0 && stepsForward <= 12) {
-    await animatePlayerStepMovement(p, stepsForward);
+    const moved = await animatePlayerStepMovement(playerId, stepsForward);
+    if (!moved) return;
   } else {
-    p.pos = target;
+    const live = getLivePlayer(playerId);
+    if (!live || live.bankrupt) return;
+    live.pos = target;
     renderMarkers();
     if (stepsForward > 0) pulseBoardSpace(target, 'step-arrive', 360);
   }
 
+  const livePlayer = getLivePlayer(playerId);
+  if (!livePlayer || livePlayer.bankrupt) return;
+  livePlayer.pos = target;
   renderAll();
   await waitMs(140);
-  landOn(p, false, {goPaid});
+  landOn(livePlayer, false, {goPaid});
 }
 
 function landOn(p, rolledDoubles, opts = null) {
@@ -4870,8 +4905,10 @@ function drawCard(type, p) {
     card = G.communityDeck[G.communityIdx % G.communityDeck.length];
     G.communityIdx++;
   }
+  const playerId = Number(p?.id);
+  const drawPlayer = getLivePlayer(playerId) || p;
   const cardText = formatThemeCurrencyText(card.text);
-  addLog(`${p.name} drew ${type === 'chance' ? 'Chance' : 'Community Chest'}: ${cardText}`);
+  addLog(`${drawPlayer.name} drew ${type === 'chance' ? 'Chance' : 'Community Chest'}: ${cardText}`);
 
   if (isOnlineGame() && !ONLINE.isApplyingRemote) {
     ONLINE.pendingCardResolutions = (Number(ONLINE.pendingCardResolutions) || 0) + 1;
@@ -4893,43 +4930,46 @@ function drawCard(type, p) {
   document.getElementById('card-desc').textContent = cardText;
 
   const apply = async () => {
+    const actor = getLivePlayer(playerId);
+    if (!actor || actor.bankrupt) return;
+
     if (card.action === 'money') {
       if (card.value > 0) {
-        p.money += card.value;
-        addLog(`${p.name} received ${fmtCurrency(card.value)} from a card effect.`, 'success');
+        actor.money += card.value;
+        addLog(`${actor.name} received ${fmtCurrency(card.value)} from a card effect.`, 'success');
         toast(`+${fmtCurrency(card.value)}`, 'gold');
       } else {
-        const paid = chargeMoney(p, -card.value, null, true);
-        if (paid) addLog(`${p.name} paid ${fmtCurrency(-card.value)} due to a card effect.`, 'danger');
+        const paid = chargeMoney(actor, -card.value, null, true);
+        if (paid) addLog(`${actor.name} paid ${fmtCurrency(-card.value)} due to a card effect.`, 'danger');
       }
     } else if (card.action === 'goto') {
-      await movePlayerTo(p, card.value, card.value < p.pos);
+      await movePlayerTo(actor.id, card.value, card.value < actor.pos);
       return;
     } else if (card.action === 'jail') {
-      sendToJail(p);
+      sendToJail(actor);
     } else if (card.action === 'jailcard') {
-      p.jailFreeCards++;
-      addLog(`${p.name} got a Get Out of Jail Free card!`, 'success');
+      actor.jailFreeCards++;
+      addLog(`${actor.name} got a Get Out of Jail Free card!`, 'success');
     } else if (card.action === 'nearest') {
-      const nearest = nearestRailroad(p.pos);
-      await movePlayerTo(p, nearest);
+      const nearest = nearestRailroad(actor.pos);
+      await movePlayerTo(actor.id, nearest);
       return;
     } else if (card.action === 'repairs') {
       let cost = 0;
-      p.properties.forEach(id => {
+      actor.properties.forEach(id => {
         const pr = G.properties[id];
         if (pr.hotel) cost += card.value.hotel;
         else cost += pr.houses * card.value.house;
       });
-      if (cost > 0) { chargeMoney(p, cost, null, true); addLog(`${p.name} paid ৳${fmt(cost)} for repairs.`, 'danger'); }
+      if (cost > 0) { chargeMoney(actor, cost, null, true); addLog(`${actor.name} paid ৳${fmt(cost)} for repairs.`, 'danger'); }
     } else if (card.action === 'birthday') {
       G.players.forEach((op, oi) => {
-        if (oi !== p.id && !op.bankrupt) {
+        if (oi !== actor.id && !op.bankrupt) {
           op.money -= card.value;
-          p.money += card.value;
+          actor.money += card.value;
         }
       });
-      addLog(`${p.name} collected ৳${card.value} from each player for birthday!`, 'success');
+      addLog(`${actor.name} collected ৳${card.value} from each player for birthday!`, 'success');
     }
     G.phase = rolledDoublesThisTurn() ? 'roll' : 'end';
     renderAll();
@@ -4937,7 +4977,7 @@ function drawCard(type, p) {
     checkBankruptcy();
   };
 
-  if (shouldAutoActForAi(p)) {
+  if (shouldAutoActForAi(getLivePlayer(playerId) || p)) {
     closeOverlay('card-overlay');
     apply()
       .then(() => finalizeCardResolution(true))
@@ -6791,6 +6831,14 @@ function toast(msg, type='') {
 //  UTILITIES
 // ═══════════════════════════════════════════════
 function curPlayer() { return G.players[G.currentPlayerIdx]; }
+function getLivePlayer(playerOrId, state = G) {
+  if (!state || !Array.isArray(state.players) || !state.players.length) return null;
+  const id = typeof playerOrId === 'object' && playerOrId !== null
+    ? Number(playerOrId.id)
+    : Number(playerOrId);
+  if (!Number.isInteger(id) || id < 0 || id >= state.players.length) return null;
+  return state.players[id] || null;
+}
 function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
 function fmt(n) { return Math.abs(n).toLocaleString('en-BD'); }
 function fmtCurrency(n) {
@@ -7059,6 +7107,15 @@ function openWhatsNewPage() {
   document.body.classList.add('route-leaving');
   window.setTimeout(() => {
     window.location.href = 'whats-new.html';
+  }, 170);
+}
+
+function openTestLabPage() {
+  if (openTestLabPage._busy) return;
+  openTestLabPage._busy = true;
+  document.body.classList.add('route-leaving');
+  window.setTimeout(() => {
+    window.location.href = 'test-lab.html';
   }, 170);
 }
 
