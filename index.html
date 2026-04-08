@@ -683,7 +683,7 @@ body[data-theme="classic"] .center-sub{
       <div class="lobby-logo"><span>Bangladeshi</span> Monopoly</div>
     </div>
     <div class="lobby-subtitle">Multiplayer Board Game • Pass & Play</div>
-    <div class="lobby-tagline">✦ Choose Your Mode ✦</div>
+    <div class="lobby-tagline">✦ Choose Game Mode ✦</div>
   </div>
   <div class="lobby-body">
     <div class="card">
@@ -1356,6 +1356,10 @@ const DEFAULT_UTILITY_PRICE = 1500;
 const DEFAULT_UTILITY_MORTGAGE = 750;
 const DEFAULT_UTILITY_RENT_ONE_MULTIPLIER = 40;
 const DEFAULT_UTILITY_RENT_BOTH_MULTIPLIER = 100;
+const SFX_PREF_ENABLED_KEY = 'monopoly_sfx_enabled';
+const SFX_PREF_VOLUME_KEY = 'monopoly_sfx_volume';
+const SFX_PREF_BGM_ENABLED_KEY = 'monopoly_bgm_enabled';
+const SFX_DEFAULT_VOLUME = 0.55;
 const BUG_REPORT_URL = 'https://github.com/WakifRajin/monopoly-bd/issues/new?title=Bug%20Report&body=Describe%20the%20issue%20here&labels=bug';
 let LOBBY_CONTEXT = 'offline';
 
@@ -4312,6 +4316,7 @@ function aiTryMortgageToTarget(player, targetCash) {
   const mortgageValue = mortgageValueForSpace(sp);
   prop.mortgaged = true;
   player.money += mortgageValue;
+  playSfx('mortgage');
   addLog(`${player.name} mortgaged ${sp.name} for ${fmtCurrency(mortgageValue)}.`, 'important');
   renderAll();
   updateTopBar();
@@ -4342,6 +4347,7 @@ function aiTryUnmortgage(player) {
     if (!prop || player.money - cost < flexibleReserve) continue;
     prop.mortgaged = false;
     player.money -= cost;
+    playSfx('unmortgage');
     addLog(`${player.name} unmortgaged ${sp.name} for ${fmtCurrency(cost)}.`, 'important');
     renderAll();
     updateTopBar();
@@ -4943,6 +4949,7 @@ async function rollDice() {
   const doubles = d1 === d2;
   G.dice = [d1, d2];
   G.lastDoubles = doubles;
+  playSfx('dice');
 
   // Animate dice
   ['die1','die2'].forEach(id => {
@@ -5131,6 +5138,7 @@ function landOn(p, rolledDoubles, opts = null) {
     return;
   } else if (sp.type === 'tax') {
     addLog(`${p.name} pays ${fmtCurrency(sp.amount)} tax.`, 'danger');
+    playSfx('tax');
     chargeMoney(p, sp.amount, null, true);
     G.phase = 'end';
   } else if (sp.type === 'property' || sp.type === 'railroad' || sp.type === 'utility') {
@@ -5154,6 +5162,7 @@ function landOn(p, rolledDoubles, opts = null) {
       const rent = calcRent(sp, prop);
       const owner = G.players[prop.owner];
       addLog(`${p.name} pays ${fmtCurrency(rent)} rent to ${owner.name} for ${sp.name}.`, 'danger');
+      playSfx('rent');
       showRentModal(p, owner, sp.name, rent);
       chargeMoney(p, rent, owner);
       G.phase = 'end';
@@ -5244,6 +5253,7 @@ function drawCard(type, p) {
   const drawPlayer = getLivePlayer(playerId) || p;
   const cardText = formatThemeCurrencyText(card.text);
   addLog(`${drawPlayer.name} drew ${type === 'chance' ? 'Chance' : 'Community Chest'}: ${cardText}`);
+  playSfx('card');
 
   ONLINE.pendingCardResolutions = (Number(ONLINE.pendingCardResolutions) || 0) + 1;
 
@@ -5411,6 +5421,7 @@ function actionBuy() {
   else if (sp.type === 'utility') p.utilities.push(id);
   G.pendingBuy = null;
   addLog(`${p.name} bought ${sp.name} for ${fmtCurrency(sp.price)}!`, 'success');
+  playSfx('buy');
   toast(`🏠 Bought ${sp.name}!`, 'gold');
   G.phase = 'end';
   renderAll();
@@ -5465,6 +5476,7 @@ function beginAuction(propId, { source = 'market', bidderStartIdx = 0 } = {}) {
     source,
   };
   addLog(`Auction opened for ${sp.name} at ${fmtCurrency(openingBid)} (${openingPercent}% opening bid).`);
+  playSfx('auction-open');
   renderAuction();
   openOverlay('auction-overlay');
   maybeScheduleOfflineAiTurn();
@@ -5562,6 +5574,7 @@ function finalizeAuction(a) {
       addOwnedAsset(winner, a.propId);
       awardedPropId = a.propId;
       addLog(`${winner.name} wins auction for ${sp.name} at ${fmtCurrency(a.currentBid)}!`, 'success');
+      playSfx('auction-win');
     } else {
       addLog(`Auction for ${a.propName} ended with invalid winner state; property remains unsold.`, 'danger');
     }
@@ -5604,6 +5617,7 @@ function placeBid(amount) {
   a.currentBid = newBid;
   a.highBidder = bidder.id;
   addLog(`${bidder.name} bids ${fmtCurrency(newBid)} for ${a.propName}`);
+  playSfx('bid');
 
   const remaining = a.activePlayers.filter(id => !a.passed.has(id));
   if (remaining.length <= 1 && a.highBidder !== null) {
@@ -5711,6 +5725,7 @@ function buildHouse(propId) {
   const cost = sp.house;
   if (p.money < cost) { toast('Not enough money!', 'danger'); return; }
   p.money -= cost;
+  playSfx('build');
   if (prop.houses === 4) { prop.hotel = true; prop.houses = 0; addLog(`${p.name} built a hotel on ${sp.name} for ${fmtCurrency(cost)}.`, 'success'); }
   else { prop.houses++; addLog(`${p.name} built house #${prop.houses} on ${sp.name} for ${fmtCurrency(cost)}.`, 'success'); }
   renderAll();
@@ -5727,6 +5742,7 @@ function sellHouse(propId) {
   const prop = G.properties[propId];
   const refund = Math.floor(sp.house / 2);
   p.money += refund;
+  playSfx('sell');
   if (prop.hotel) { prop.hotel = false; prop.houses = 4; addLog(`${p.name} sold hotel on ${sp.name} for ${fmtCurrency(refund)}.`); }
   else { prop.houses--; addLog(`${p.name} sold house on ${sp.name} for ${fmtCurrency(refund)}.`); }
   renderAll();
@@ -5815,6 +5831,7 @@ function mortgageProp(id) {
   const mortgageValue = mortgageValueForSpace(sp);
   prop.mortgaged = true;
   p.money += mortgageValue;
+  playSfx('mortgage');
   addLog(`${p.name} mortgaged ${sp.name} for ${fmtCurrency(mortgageValue)}.`);
   renderAll();
   if (actorIsAi) closeOverlay('mortgage-overlay');
@@ -5835,6 +5852,7 @@ function unmortgageProp(id) {
   if (p.money < cost) { toast('Not enough money!', 'danger'); return; }
   prop.mortgaged = false;
   p.money -= cost;
+  playSfx('unmortgage');
   addLog(`${p.name} unmortgaged ${sp.name} for ${fmtCurrency(cost)}.`);
   renderAll();
   if (actorIsAi) closeOverlay('mortgage-overlay');
@@ -6283,6 +6301,7 @@ function sendToJail(p) {
   p.pos = 10;
   p.doublesCount = 0;
   addLog(`${p.name} goes to jail! ⛓️`, 'danger');
+  playSfx('jail');
   showJailPrompt(p, 'sent');
 }
 
@@ -6296,11 +6315,13 @@ function payBailout() {
     p.inJail = false;
     p.jailTurns = 0;
     addLog(`${p.name} used a Get Out of Jail Free card!`, 'success');
+    playSfx('bail');
   } else if (p.money >= bailAmount) {
     chargeMoney(p, bailAmount, null, true);
     p.inJail = false;
     p.jailTurns = 0;
     addLog(`${p.name} paid ${fmtCurrency(bailAmount)} bail and is free!`, 'success');
+    playSfx('bail');
   } else {
     toast('Not enough money!', 'danger'); return;
   }
@@ -6591,6 +6612,7 @@ function checkBankruptcy() {
 
 function declareBankruptcy(p, creditor = null, debtAmount = 0, toBank = false) {
   if (!p || p.bankrupt) return;
+  playSfx('bankrupt');
   if (DEBT_PROMPT.active && DEBT_PROMPT.payerId === p.id) {
     resetDebtPrompt();
   }
@@ -6757,6 +6779,7 @@ function endTurn() {
   AI_CTRL.lastTradeAttemptKey = '';
   G.phase = 'roll';
   G.lastDoubles = false;
+  playSfx('turn');
 
   const p = curPlayer();
   addLog(`─────── ${p.name}'s turn ───────`, 'important');
@@ -6824,6 +6847,7 @@ function showSpaceInfo(id) {
 // ═══════════════════════════════════════════════
 function showWinner(p) {
   if (!p) return;
+  playSfx('win');
   G.gameOver = true;
   G.auctionState = null;
   G.bankAuctionQueue = [];
@@ -7115,6 +7139,9 @@ function openDrawer(type) {
     dc.innerHTML = document.getElementById('chat-log').innerHTML;
   } else if (type === 'settings') {
     const dur = TIMER.duration;
+    const sfxVolumePct = Math.round(clampSfxVolume(SFX.volume) * 100);
+    const sfxEnabled = !!SFX.enabled;
+    const bgmEnabled = !!SFX.bgmEnabled;
     const canLeave = isOnlineGame() && ONLINE.status === 'playing';
     const leaveBlock = canLeave
       ? `<hr style="border:none;border-top:1px solid rgba(255,255,255,.12);margin:1rem 0">
@@ -7122,7 +7149,28 @@ function openDrawer(type) {
          <button onclick="closeDrawer();openLeaveGameModal()" style="width:100%;padding:.6rem .9rem;border:none;border-radius:8px;background:linear-gradient(135deg,#7f1d1d,#c0392b);color:#fff;font-weight:700;cursor:pointer">🚪 Leave Game</button>`
       : '';
     content.innerHTML = `
-      <h3 style="color:#fff;margin-bottom:1rem;font-family:var(--font-display)">⚙️ Timer Settings</h3>
+      <h3 style="color:#fff;margin-bottom:1rem;font-family:var(--font-display)">⚙️ Timer & Sound Settings</h3>
+      <div style="margin-bottom:1rem;padding:.75rem;border:1px solid rgba(255,255,255,.14);border-radius:10px;background:rgba(255,255,255,.05)">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:.6rem;margin-bottom:.65rem">
+          <div>
+            <div style="color:#fff;font-size:.88rem;font-weight:700">Sound Effects</div>
+            <div style="color:rgba(255,255,255,.52);font-size:.76rem">Dice, rent, jail, auction, and win sounds</div>
+          </div>
+          <button onclick="toggleSfxEnabled()" style="padding:.42rem .75rem;border:1px solid ${sfxEnabled ? 'rgba(45,160,90,.5)' : 'rgba(255,255,255,.25)'};background:${sfxEnabled ? 'rgba(45,160,90,.22)' : 'rgba(255,255,255,.07)'};color:${sfxEnabled ? '#86efac' : 'rgba(255,255,255,.76)'};border-radius:7px;cursor:pointer;font-family:var(--font-body);font-size:.8rem;font-weight:700">${sfxEnabled ? 'On' : 'Off'}</button>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:.6rem;margin-bottom:.65rem">
+          <div>
+            <div style="color:#fff;font-size:.88rem;font-weight:700">Background Music</div>
+            <div style="color:rgba(255,255,255,.52);font-size:.76rem">Plays during active match</div>
+          </div>
+          <button onclick="toggleBgmEnabled()" style="padding:.42rem .75rem;border:1px solid ${bgmEnabled ? 'rgba(240,192,64,.5)' : 'rgba(255,255,255,.25)'};background:${bgmEnabled ? 'rgba(240,192,64,.18)' : 'rgba(255,255,255,.07)'};color:${bgmEnabled ? 'var(--gold-light)' : 'rgba(255,255,255,.76)'};border-radius:7px;cursor:pointer;font-family:var(--font-body);font-size:.8rem;font-weight:700">${bgmEnabled ? 'On' : 'Off'}</button>
+        </div>
+        <label style="color:rgba(255,255,255,.72);font-size:.82rem;display:flex;justify-content:space-between;align-items:center;margin-bottom:.35rem">
+          <span>Volume</span>
+          <span id="sfx-volume-label">${sfxVolumePct}%</span>
+        </label>
+        <input type="range" min="0" max="100" value="${sfxVolumePct}" oninput="document.getElementById('sfx-volume-label').textContent=this.value+'%';setSfxVolume(Number(this.value)/100,false)" onchange="setSfxVolume(Number(this.value)/100,true)" style="width:100%;accent-color:var(--gold-light)">
+      </div>
       <p style="color:rgba(255,255,255,.6);font-size:.85rem;margin-bottom:1rem">
         After a player finishes their move, a countdown begins. When it hits zero, the turn automatically advances — even if they haven't clicked End Turn.
       </p>
@@ -7166,11 +7214,386 @@ function closeAllOverlays() {
   document.querySelectorAll('.overlay.show').forEach(el => el.classList.remove('show'));
 }
 
+const SFX_EVENT_FILES = Object.freeze({
+  dice: ['sounds/dice_roll_sfx.mp3'],
+  buy: ['sounds/clicktap_sfx.mp3'],
+  rent: ['sounds/decline_sfx.mp3'],
+  tax: ['sounds/decline_sfx.mp3'],
+  card: ['sounds/clicktap_sfx.mp3'],
+  jail: ['sounds/decline_sfx.mp3'],
+  bail: ['sounds/clicktap_sfx.mp3'],
+  build: ['sounds/clicktap_sfx.mp3'],
+  sell: ['sounds/clicktap_sfx.mp3'],
+  mortgage: ['sounds/decline_sfx.mp3'],
+  unmortgage: ['sounds/clicktap_sfx.mp3'],
+  'auction-open': ['sounds/clicktap_sfx.mp3'],
+  bid: ['sounds/clicktap_sfx.mp3'],
+  'auction-win': ['sounds/clicktap_sfx.mp3'],
+  bankrupt: ['sounds/game_over_sfx.mp3'],
+  turn: ['sounds/clicktap_sfx.mp3'],
+  win: ['sounds/win_sfx.mp3'],
+  inability: ['sounds/inability_sfx.mp3'],
+});
+
+const SFX_BGM_FILE = 'sounds/background_01.mp3';
+const SFX_BGM_VOLUME_FACTOR = 0.34;
+
+const SFX = {
+  enabled: true,
+  bgmEnabled: true,
+  volume: SFX_DEFAULT_VOLUME,
+  ctx: null,
+  master: null,
+  noiseBuffer: null,
+  lastPlayedAt: {},
+  assetPool: {},
+  activeClips: new Set(),
+  bgmAudio: null,
+};
+
+function clampSfxVolume(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return SFX_DEFAULT_VOLUME;
+  return Math.max(0, Math.min(1, n));
+}
+
+function getVisibleScreenId() {
+  return document.querySelector('.screen:not(.hidden)')?.id || '';
+}
+
+function getSfxFilesForEvent(name) {
+  const raw = SFX_EVENT_FILES[String(name || '')];
+  if (!raw) return [];
+  return Array.isArray(raw) ? raw.filter(Boolean) : [String(raw)];
+}
+
+function ensureSfxAssetTemplate(src) {
+  if (!src) return null;
+  if (SFX.assetPool[src]) return SFX.assetPool[src];
+  try {
+    const audio = new Audio(src);
+    audio.preload = 'auto';
+    audio.load();
+    SFX.assetPool[src] = audio;
+    return audio;
+  } catch (_err) {
+    return null;
+  }
+}
+
+function preloadSfxAssets() {
+  const files = new Set();
+  Object.values(SFX_EVENT_FILES).forEach(list => {
+    (Array.isArray(list) ? list : [list]).forEach(src => {
+      if (src) files.add(String(src));
+    });
+  });
+  files.add(SFX_BGM_FILE);
+  files.forEach(src => {
+    ensureSfxAssetTemplate(src);
+  });
+}
+
+function ensureBgmAudio() {
+  if (SFX.bgmAudio) return SFX.bgmAudio;
+  try {
+    const bgm = new Audio(SFX_BGM_FILE);
+    bgm.preload = 'auto';
+    bgm.loop = true;
+    bgm.volume = clampSfxVolume(SFX.volume * SFX_BGM_VOLUME_FACTOR);
+    SFX.bgmAudio = bgm;
+    return bgm;
+  } catch (_err) {
+    return null;
+  }
+}
+
+function loadSfxPreferences() {
+  try {
+    const enabledRaw = localStorage.getItem(SFX_PREF_ENABLED_KEY);
+    if (enabledRaw === '0' || enabledRaw === '1') {
+      SFX.enabled = enabledRaw === '1';
+    }
+    const bgmRaw = localStorage.getItem(SFX_PREF_BGM_ENABLED_KEY);
+    if (bgmRaw === '0' || bgmRaw === '1') {
+      SFX.bgmEnabled = bgmRaw === '1';
+    }
+    const volumeRaw = localStorage.getItem(SFX_PREF_VOLUME_KEY);
+    if (volumeRaw !== null) {
+      SFX.volume = clampSfxVolume(volumeRaw);
+    }
+  } catch (_err) {}
+}
+
+function persistSfxPreferences() {
+  try {
+    localStorage.setItem(SFX_PREF_ENABLED_KEY, SFX.enabled ? '1' : '0');
+    localStorage.setItem(SFX_PREF_BGM_ENABLED_KEY, SFX.bgmEnabled ? '1' : '0');
+    localStorage.setItem(SFX_PREF_VOLUME_KEY, String(SFX.volume));
+  } catch (_err) {}
+}
+
+function ensureSfxEngine() {
+  if (SFX.ctx && SFX.master) return SFX.ctx;
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  if (!AudioCtx) return null;
+  try {
+    const ctx = new AudioCtx();
+    const master = ctx.createGain();
+    master.gain.value = SFX.enabled ? SFX.volume : 0;
+    master.connect(ctx.destination);
+    SFX.ctx = ctx;
+    SFX.master = master;
+    return ctx;
+  } catch (_err) {
+    return null;
+  }
+}
+
+function syncBgmForScreen(screenId = getVisibleScreenId()) {
+  const bgm = ensureBgmAudio();
+  if (!bgm) return;
+
+  bgm.volume = clampSfxVolume(SFX.volume * SFX_BGM_VOLUME_FACTOR);
+  const shouldPlay = !!(SFX.enabled && SFX.bgmEnabled && screenId === 'game-screen' && !(G?.gameOver));
+  if (!shouldPlay) {
+    bgm.pause();
+    if (screenId !== 'game-screen') {
+      try { bgm.currentTime = 0; } catch (_err) {}
+    }
+    return;
+  }
+
+  const p = bgm.play();
+  if (p && typeof p.catch === 'function') {
+    p.catch(() => {});
+  }
+}
+
+function updateSfxMasterGain() {
+  if (SFX.ctx && SFX.master) {
+    const target = SFX.enabled ? SFX.volume : 0;
+    SFX.master.gain.setTargetAtTime(target, SFX.ctx.currentTime, 0.015);
+  }
+  syncBgmForScreen();
+}
+
+function unlockSfxEngine() {
+  const ctx = ensureSfxEngine();
+  if (ctx && ctx.state === 'suspended') {
+    ctx.resume().catch(() => {});
+  }
+  syncBgmForScreen();
+}
+
+function installSfxUnlockListeners() {
+  const unlock = () => {
+    unlockSfxEngine();
+  };
+  window.addEventListener('pointerdown', unlock, { passive: true });
+  window.addEventListener('touchstart', unlock, { passive: true });
+  window.addEventListener('keydown', unlock);
+}
+
+function setSfxEnabled(enabled, notify = true) {
+  SFX.enabled = !!enabled;
+  persistSfxPreferences();
+  ensureSfxEngine();
+  updateSfxMasterGain();
+  if (notify) toast(SFX.enabled ? '🔊 Sound enabled' : '🔇 Sound muted', 'gold');
+}
+
+function toggleSfxEnabled() {
+  setSfxEnabled(!SFX.enabled, true);
+  openDrawer('settings');
+}
+
+function setBgmEnabled(enabled, notify = true) {
+  SFX.bgmEnabled = !!enabled;
+  persistSfxPreferences();
+  syncBgmForScreen();
+  if (notify) toast(SFX.bgmEnabled ? '🎵 Music enabled' : '🎵 Music muted', 'gold');
+}
+
+function toggleBgmEnabled() {
+  setBgmEnabled(!SFX.bgmEnabled, true);
+  openDrawer('settings');
+}
+
+function setSfxVolume(volume, notify = false) {
+  SFX.volume = clampSfxVolume(volume);
+  persistSfxPreferences();
+  ensureSfxEngine();
+  updateSfxMasterGain();
+  if (notify) toast(`🔉 SFX volume ${Math.round(SFX.volume * 100)}%`, 'gold');
+}
+
+function ensureSfxNoiseBuffer(ctx) {
+  if (SFX.noiseBuffer && SFX.noiseBuffer.sampleRate === ctx.sampleRate) return SFX.noiseBuffer;
+  const length = Math.max(1, Math.floor(ctx.sampleRate * 0.9));
+  const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < data.length; i++) {
+    data[i] = Math.random() * 2 - 1;
+  }
+  SFX.noiseBuffer = buffer;
+  return buffer;
+}
+
+function playSfxTone(freq, duration, opts = {}) {
+  const ctx = SFX.ctx;
+  if (!ctx || !SFX.master || !Number.isFinite(freq) || freq <= 0) return;
+  const type = String(opts.type || 'sine');
+  const gainValue = Math.max(0.0001, Number(opts.gain) || 0.12);
+  const attack = Math.max(0.001, Number(opts.attack) || 0.003);
+  const release = Math.max(0.01, Number(opts.release) || 0.08);
+  const start = ctx.currentTime + Math.max(0, Number(opts.start) || 0) + 0.004;
+
+  const osc = ctx.createOscillator();
+  const amp = ctx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, start);
+  if (Number.isFinite(Number(opts.detune))) {
+    osc.detune.setValueAtTime(Number(opts.detune), start);
+  }
+
+  amp.gain.setValueAtTime(0.0001, start);
+  amp.gain.exponentialRampToValueAtTime(gainValue, start + attack);
+  amp.gain.exponentialRampToValueAtTime(0.0001, start + Math.max(0.02, duration) + release);
+
+  osc.connect(amp);
+  amp.connect(SFX.master);
+  osc.start(start);
+  osc.stop(start + Math.max(0.02, duration) + release + 0.02);
+}
+
+function playSfxNoise(duration, opts = {}) {
+  const ctx = SFX.ctx;
+  if (!ctx || !SFX.master) return;
+  const start = ctx.currentTime + Math.max(0, Number(opts.start) || 0) + 0.004;
+  const gainValue = Math.max(0.0001, Number(opts.gain) || 0.05);
+  const release = Math.max(0.01, Number(opts.release) || 0.06);
+  const freq = Math.max(120, Number(opts.frequency) || 1100);
+
+  const src = ctx.createBufferSource();
+  src.buffer = ensureSfxNoiseBuffer(ctx);
+
+  const filter = ctx.createBiquadFilter();
+  filter.type = 'bandpass';
+  filter.frequency.setValueAtTime(freq, start);
+  filter.Q.value = 0.9;
+
+  const amp = ctx.createGain();
+  amp.gain.setValueAtTime(gainValue, start);
+  amp.gain.exponentialRampToValueAtTime(0.0001, start + Math.max(0.02, duration) + release);
+
+  src.connect(filter);
+  filter.connect(amp);
+  amp.connect(SFX.master);
+  src.start(start);
+  src.stop(start + Math.max(0.02, duration) + release + 0.02);
+}
+
+function canPlaySfx(name, cooldownMs = 80) {
+  const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+  const key = String(name || 'generic');
+  const last = Number(SFX.lastPlayedAt[key]) || 0;
+  if (now - last < Math.max(0, cooldownMs)) return false;
+  SFX.lastPlayedAt[key] = now;
+  return true;
+}
+
+function playSfxAsset(name, options = {}) {
+  const files = getSfxFilesForEvent(name);
+  if (!files.length) return false;
+  const src = files.length === 1 ? files[0] : files[rand(0, files.length - 1)];
+  const template = ensureSfxAssetTemplate(src);
+  if (!template) return false;
+
+  try {
+    const clip = template.cloneNode(true);
+    clip.preload = 'auto';
+    clip.volume = clampSfxVolume(SFX.volume * Math.max(0, Number(options.volumeFactor) || 1));
+    SFX.activeClips.add(clip);
+    const clear = () => SFX.activeClips.delete(clip);
+    clip.addEventListener('ended', clear, { once: true });
+    clip.addEventListener('error', clear, { once: true });
+    const p = clip.play();
+    if (p && typeof p.catch === 'function') {
+      p.catch(() => {
+        clear();
+      });
+    }
+    return true;
+  } catch (_err) {
+    return false;
+  }
+}
+
+function playSfxSynthFallback(name) {
+  switch (name) {
+    case 'dice':
+      playSfxNoise(0.09, { gain: 0.04, frequency: 1200 });
+      playSfxTone(210 + rand(0, 50), 0.05, { type: 'triangle', gain: 0.07 });
+      playSfxTone(280 + rand(0, 70), 0.06, { type: 'triangle', gain: 0.06, start: 0.055 });
+      break;
+    case 'win':
+      playSfxTone(392, 0.09, { type: 'triangle', gain: 0.08 });
+      playSfxTone(523.25, 0.1, { type: 'triangle', gain: 0.08, start: 0.1 });
+      playSfxTone(659.25, 0.12, { type: 'triangle', gain: 0.08, start: 0.22 });
+      playSfxTone(783.99, 0.16, { type: 'triangle', gain: 0.08, start: 0.34 });
+      break;
+    case 'bankrupt':
+      playSfxNoise(0.14, { gain: 0.04, frequency: 420 });
+      playSfxTone(165, 0.24, { type: 'square', gain: 0.07, start: 0.02 });
+      break;
+    default:
+      playSfxTone(500, 0.05, { type: 'sine', gain: 0.04 });
+      break;
+  }
+}
+
+function playSfx(name, options = {}) {
+  if (!SFX.enabled) return;
+  const ctx = ensureSfxEngine();
+  if (ctx && ctx.state === 'suspended') {
+    ctx.resume().catch(() => {});
+  }
+
+  const cooldownByName = {
+    dice: 130,
+    bid: 90,
+    build: 90,
+    sell: 90,
+    mortgage: 110,
+    unmortgage: 110,
+    turn: 150,
+    rent: 130,
+    jail: 220,
+    card: 120,
+    bankrupt: 260,
+    win: 550,
+    inability: 240,
+  };
+
+  if (!canPlaySfx(name, Number(options.cooldownMs) || cooldownByName[name] || 90)) return;
+  if (playSfxAsset(name, options)) return;
+  playSfxSynthFallback(name);
+}
+
 // ═══════════════════════════════════════════════
 //  TOAST
 // ═══════════════════════════════════════════════
 let toastTimer;
 function toast(msg, type='') {
+  if (type === 'danger') {
+    const lower = String(msg || '').toLowerCase();
+    if (lower.includes('not enough') || lower.includes('must') || lower.includes('cannot') || lower.includes('wait')) {
+      playSfx('inability', { cooldownMs: 260 });
+    } else {
+      playSfx('rent', { cooldownMs: 240 });
+    }
+  }
   const el = document.getElementById('toast');
   el.textContent = msg;
   el.className = type ? `toast-${type}` : '';
@@ -7510,6 +7933,7 @@ function handleLobbyBack() {
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
   document.getElementById(id).classList.remove('hidden');
+  syncBgmForScreen(id);
 }
 
 // ═══════════════════════════════════════════════
@@ -7706,6 +8130,10 @@ window.addEventListener('orientationchange', updateViewportHeightVar);
 if (window.visualViewport) {
   window.visualViewport.addEventListener('resize', updateViewportHeightVar);
 }
+
+loadSfxPreferences();
+preloadSfxAssets();
+installSfxUnlockListeners();
 
 installOnlineMutationHooks();
 installLobbyEvents();
