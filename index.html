@@ -4262,10 +4262,19 @@ function estimateAssetValue(spaceId) {
   return Math.max(0, Math.floor(mortgageValueForSpace(sp) * 2));
 }
 
+function aiEconomyScale(themeId = G?.boardThemeId || selectedThemeId) {
+  const goSalary = getThemeGoSalary(themeId);
+  if (!Number.isFinite(goSalary) || goSalary <= 0) return 1;
+  return Math.max(0.1, goSalary / 2000);
+}
+
 function aiCashReserve(player) {
-  if (!player) return 1500;
+  const scale = aiEconomyScale();
+  if (!player) return Math.floor(1500 * scale);
   const owned = (player.properties?.length || 0) + (player.railroads?.length || 0) + (player.utilities?.length || 0);
-  return Math.max(1500, 900 + owned * 180);
+  const floorReserve = Math.max(120, Math.floor(1500 * scale));
+  const dynamicReserve = Math.floor((900 + owned * 180) * scale);
+  return Math.max(floorReserve, dynamicReserve);
 }
 
 function aiPropertyPriority(player, spaceId) {
@@ -4313,6 +4322,7 @@ function aiTryUnmortgage(player) {
   if (!player || player.bankrupt) return false;
 
   const reserve = aiCashReserve(player);
+  const flexibleReserve = Math.floor(reserve * 0.6);
   const mortgaged = [...player.properties, ...player.railroads, ...player.utilities]
     .filter(id => {
       const prop = G.properties[id];
@@ -4329,7 +4339,7 @@ function aiTryUnmortgage(player) {
     const sp = SPACES[id];
     const prop = G.properties[id];
     const cost = Math.floor(mortgageValueForSpace(sp) * 1.1);
-    if (!prop || player.money - cost < reserve) continue;
+    if (!prop || player.money - cost < flexibleReserve) continue;
     prop.mortgaged = false;
     player.money -= cost;
     addLog(`${player.name} unmortgaged ${sp.name} for ${fmtCurrency(cost)}.`, 'important');
@@ -4713,18 +4723,29 @@ function runOfflineAiStep() {
     const sp = SPACES[spaceId];
     const price = Number(sp?.price) || 0;
     const reserve = aiCashReserve(p);
+    const auctionsEnabled = isAuctionSystemEnabled();
     if (p.money < price && aiTryMortgageToTarget(p, price + Math.floor(reserve * 0.35))) {
       return;
     }
     const score = aiPropertyPriority(p, spaceId);
     const shouldBuy = p.money >= price && (
-      score >= Math.floor(price * 1.2)
+      !auctionsEnabled
+      || score >= Math.floor(price * 1.2)
       || p.money - price >= reserve
       || Math.random() < 0.3
     );
     closeOverlay('buy-overlay');
-    if (shouldBuy) actionBuy();
-    else startAuction();
+    if (shouldBuy) {
+      actionBuy();
+    } else if (auctionsEnabled) {
+      startAuction();
+    } else {
+      G.pendingBuy = null;
+      G.phase = 'end';
+      addLog(`${p.name} skipped ${sp?.name || 'this property'}. Auctions are disabled, so it remains unsold.`, 'important');
+      renderAll();
+      updateActionButtons();
+    }
     return;
   }
 
@@ -4740,7 +4761,7 @@ function runOfflineAiStep() {
 
   if (G.phase === 'action' || G.phase === 'end') {
     const reserve = aiCashReserve(p);
-    if (p.money < Math.floor(reserve * 0.7) && aiTryMortgageToTarget(p, reserve)) {
+    if (p.money < Math.floor(reserve * 0.35) && aiTryMortgageToTarget(p, Math.floor(reserve * 0.85))) {
       return;
     }
     if (aiTryUnmortgage(p)) {
