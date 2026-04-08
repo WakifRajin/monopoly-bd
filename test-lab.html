@@ -490,6 +490,9 @@ body::before{
   const OPEN_MIN = 60;
   const OPEN_MAX = 80;
   const RR_RENT = [250, 500, 1000, 2000];
+  const BOARD_ECONOMY_SCALE = 10;
+  const UTILITY_RENT_ONE_MULTIPLIER = 4 * BOARD_ECONOMY_SCALE;
+  const UTILITY_RENT_BOTH_MULTIPLIER = 10 * BOARD_ECONOMY_SCALE;
   const TEST_ROOM_SCHEMA_VERSION = 1;
   const TEST_ROOM_PATH = 'rooms';
   const TEST_ROOM_MAX_MEMBERS = 8;
@@ -706,8 +709,8 @@ body::before{
         if (i > 0) assert(RR_RENT[i] >= RR_RENT[i - 1], 'Railroad rent must be non-decreasing.');
       }
       for (let diceTotal = 2; diceTotal <= 12; diceTotal++) {
-        const oneUtility = diceTotal * 4;
-        const twoUtilities = diceTotal * 10;
+        const oneUtility = diceTotal * UTILITY_RENT_ONE_MULTIPLIER;
+        const twoUtilities = diceTotal * UTILITY_RENT_BOTH_MULTIPLIER;
         assert(twoUtilities > oneUtility, 'Two-utility multiplier should exceed one-utility multiplier.');
       }
       return { rails: RR_RENT.slice(), utilityDiceRange: '2..12' };
@@ -2588,7 +2591,7 @@ body::before{
       }
       if (space.type === 'utility') {
         const utilities = Math.max(1, countOwnedBy(prop.owner, 'utility'));
-        const multiplier = utilities >= 2 ? 10 : 4;
+        const multiplier = utilities >= 2 ? UTILITY_RENT_BOTH_MULTIPLIER : UTILITY_RENT_ONE_MULTIPLIER;
         return Math.max(0, toMoney(diceTotal, 0) * multiplier);
       }
       if (space.type !== 'property') return 0;

@@ -165,6 +165,19 @@ body{
     </section>
 
     <section class="card">
+      <h2>Update 0.0.7 - Classic Board and Stability Fixes</h2>
+      <h3>Rule parity and turn-flow reliability</h3>
+      <ul class="changes">
+        <li>Added the new Classic board with original Monopoly-style economy: $200 GO, $1500 start money, classic property values, classic railroads/utilities, and $50 jail bail.</li>
+        <li>Added theme-specific Chance and Community card profiles so Classic uses original-scale card values.</li>
+        <li>Utility rent logic is now theme-aware and ownership-safe, fixing incorrect utility rent edge cases.</li>
+        <li>Fixed async turn-flow race issues that could cause mixed turn prompts or wrong-player action locks.</li>
+        <li>Fixed "Resolving card effect" and movement lock stuck states by forcing immediate UI unlock after effect/move completion.</li>
+        <li>Improved Classic AI economy behavior: fewer unnecessary mortgages, better unmortgage recovery, and no auction attempts when auctions are disabled.</li>
+      </ul>
+    </section>
+
+    <section class="card">
       <h2>Update 0.0.6 - Winner Screen Upgrade</h2>
       <h3>Cleaner endgame flow</h3>
       <ul class="changes">

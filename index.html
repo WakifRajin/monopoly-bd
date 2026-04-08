@@ -154,6 +154,47 @@ body.route-leaving::after{opacity:1}
   flex-shrink:0;
 }
 
+body[data-theme="classic"] .board{
+  background:linear-gradient(145deg,#efe4c5 0%,#e5d7b2 52%,#d8c79d 100%);
+  border:3px solid #1a1a1a;
+  box-shadow:0 0 0 8px #f4ecd5,0 0 0 10px #1a1a1a,0 20px 60px rgba(0,0,0,.68);
+}
+
+body[data-theme="classic"] .board::before{
+  background:
+    radial-gradient(circle at 16% 22%,rgba(255,255,255,.24),transparent 42%),
+    radial-gradient(circle at 82% 74%,rgba(120,92,42,.18),transparent 45%),
+    repeating-linear-gradient(45deg,rgba(0,0,0,.03) 0 9px,rgba(255,255,255,.02) 9px 18px);
+  opacity:.62;
+}
+
+body[data-theme="classic"] .space{
+  background:linear-gradient(165deg,#f8f2df 0%,#efe5cd 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.44);
+}
+
+body[data-theme="classic"] .space .sp-name{
+  color:#181818;
+  font-family:'Times New Roman',Georgia,serif;
+}
+
+body[data-theme="classic"] .space .sp-price{
+  color:#3e3120;
+}
+
+body[data-theme="classic"] .center-area{
+  background:#e8dcc1;
+}
+
+body[data-theme="classic"] .center-title{
+  color:#a31515;
+  letter-spacing:.09em;
+}
+
+body[data-theme="classic"] .center-sub{
+  color:#4b3c27;
+}
+
 .board::before{
   content:'';
   position:absolute;
@@ -642,7 +683,7 @@ body.route-leaving::after{opacity:1}
       <div class="lobby-logo"><span>Bangladeshi</span> Monopoly</div>
     </div>
     <div class="lobby-subtitle">Multiplayer Board Game • Pass & Play</div>
-    <div class="lobby-tagline">✦ Choose Your Mode ✦</div>
+    <div class="lobby-tagline">✦ Choose Game Mode ✦</div>
   </div>
   <div class="lobby-body">
     <div class="card">
@@ -900,8 +941,8 @@ body.route-leaving::after{opacity:1}
         <li>You cannot place a bid above your current cash. Auction ends when only one non-passed bidder remains with a valid high bid, or everyone passes.</li>
         <li>If all pass, the property remains unsold (owner stays none).</li>
         <li>Rent on normal properties: base rent, or double base if color monopoly and no buildings, or house/hotel rent tiers from the deed.</li>
-        <li>Railroad rent depends on owner total railroads: 250 / 500 / 1000 / 2000.</li>
-        <li>Utility rent is dice-based: one utility = 4x dice total, both utilities = 10x dice total.</li>
+        <li>Railroad rent depends on owner total railroads. Inflated boards use 250 / 500 / 1000 / 2000; Classic uses 25 / 50 / 100 / 200.</li>
+        <li>Utility rent is dice-based. Most boards use inflated economy (40x one utility, 100x both); Classic board uses original multipliers (4x and 10x).</li>
         <li>Mortgaged assets collect no rent.</li>
       </ul>
     </div>
@@ -924,16 +965,16 @@ body.route-leaving::after{opacity:1}
       <ul class="how-to">
         <li>You can be jailed by Go to Jail square, jail-type cards, or rolling 3 doubles in one turn.</li>
         <li>When your jailed turn starts, choose to roll for doubles or leave immediately by paying bail/using a card.</li>
-        <li>Bail is 500, unless you use a Get Out of Jail Free card.</li>
+        <li>Bail follows board economy: 500 on inflated boards, 50 on Classic, unless you use a Get Out of Jail Free card.</li>
         <li>If you roll doubles in jail, you are released and move by that roll.</li>
-        <li>If you fail doubles, jail turn count increases. On the 3rd failed roll, you must pay 500, then move by that roll.</li>
+        <li>If you fail doubles, jail turn count increases. On the 3rd failed roll, you must pay bail, then move by that roll.</li>
       </ul>
     </div>
     <div class="card">
       <h2>7. Chance and Community Actions (Implemented Set)</h2>
       <ul class="how-to">
-        <li>Chance deck actions: Advance to GO; Bank dividend +500; Go to Jail; General repairs (500 per house, 2000 per hotel); School fees -1500; Speeding fine -500; Advance to nearest Railway; Building prize +1500; Get Out of Jail Free; Bank error +2000; Doctor fees -1000; Street repairs (400 per house, 1500 per hotel).</li>
-        <li>Community Chest actions: Bank error +2000; Doctor fees -500; Go to Jail; Sale of stock +500; Consultancy fee +1000; Hospital fees -1000; Get Out of Jail Free; Advance to GO; Life insurance +1000; School fees -1500; Income tax refund +500; Birthday card (+1000 from each non-bankrupt opponent).</li>
+        <li>Chance deck actions include movement cards (GO, nearest railway, key destinations), jail cards, fines, rewards, and repair bills. Card values follow board economy: Classic uses original values, other boards use inflated equivalents.</li>
+        <li>Community Chest includes money gains/losses, GO/Jail moves, jail-free card, and birthday collection from each non-bankrupt opponent, with values scaled by board economy.</li>
         <li>Get Out of Jail Free cards increase your stored jail-free card count.</li>
         <li>Decks are shuffled at game start and drawn in order; when index exceeds length, drawing wraps back through the same shuffled deck order.</li>
       </ul>
@@ -1009,7 +1050,7 @@ body.route-leaving::after{opacity:1}
           <button class="act-btn act-build" id="btn-build" onclick="openBuildModal()" disabled>🏗 Build</button>
           <button class="act-btn act-mortgage" id="btn-mortgage" onclick="openMortgageModal()" disabled>💰 Mortgage</button>
           <button class="act-btn act-trade" id="btn-trade" onclick="openTradeModal()" disabled>🤝 Trade</button>
-          <button class="act-btn act-jail" id="btn-pay-jail" onclick="payBailout()" style="display:none">💳 Pay ৳500 Bail</button>
+          <button class="act-btn act-jail" id="btn-pay-jail" onclick="payBailout()" style="display:none">💳 Pay Bail</button>
           <button class="act-btn act-end" id="btn-end" onclick="endTurn()" disabled>⏩ End Turn</button>
         </div>
       </div>
@@ -1094,19 +1135,19 @@ body.route-leaving::after{opacity:1}
     <h2>🔨 Property Auction</h2>
     <div class="auction-display">
       <div class="auction-prop" id="auc-prop-name"></div>
-      <div class="auction-base">Base Price: ৳<span id="auc-base-price">0</span></div>
+      <div class="auction-base">Base Price: <span id="auc-base-price">0</span></div>
       <div style="color:rgba(255,255,255,.5);font-size:.8rem;margin:.2rem 0">Current Bid</div>
-      <div class="auction-bid">৳<span id="auc-bid">0</span></div>
+      <div class="auction-bid"><span id="auc-bid">0</span></div>
       <div class="auction-leader">Leader: <span id="auc-leader">None</span></div>
     </div>
     <div style="color:rgba(255,255,255,.7);font-size:.85rem;margin-bottom:.5rem">
-      Bidding: <strong id="auc-bidder" style="color:#fff"></strong> (৳<span id="auc-bidder-money"></span>)
+      Bidding: <strong id="auc-bidder" style="color:#fff"></strong> (<span id="auc-bidder-money"></span>)
     </div>
     <div class="bid-btns" id="bid-btns">
-      <button class="btn btn-sm btn-secondary" onclick="placeBid(100)">+৳100</button>
-      <button class="btn btn-sm btn-secondary" onclick="placeBid(200)">+৳200</button>
-      <button class="btn btn-sm btn-secondary" onclick="placeBid(500)">+৳500</button>
-      <button class="btn btn-sm btn-secondary" onclick="placeBid(1000)">+৳1000</button>
+      <button class="btn btn-sm btn-secondary" onclick="placeBid(100)">+100</button>
+      <button class="btn btn-sm btn-secondary" onclick="placeBid(200)">+200</button>
+      <button class="btn btn-sm btn-secondary" onclick="placeBid(500)">+500</button>
+      <button class="btn btn-sm btn-secondary" onclick="placeBid(1000)">+1000</button>
       <button class="btn btn-sm btn-danger" onclick="passAuction()">Pass</button>
     </div>
   </div>
@@ -1221,7 +1262,7 @@ body.route-leaving::after{opacity:1}
   <div class="modal" style="text-align:center">
     <div id="jail-icon" style="font-size:3rem;margin-bottom:.5rem">🚔</div>
     <h2 id="jail-title">Go to Jail!</h2>
-    <p id="jail-desc">You've been sent to jail. You can pay ৳500 bail, use a Get Out of Jail Free card, or roll doubles.</p>
+    <p id="jail-desc">You've been sent to jail. You can pay bail, use a Get Out of Jail Free card, or roll doubles.</p>
     <div class="modal-actions" id="jail-actions" style="justify-content:center">
       <button class="btn btn-primary btn-full" onclick="closeOverlay('jail-overlay')">OK</button>
     </div>
@@ -1308,6 +1349,17 @@ const ROOM_CLEANUP_BATCH_LIMIT = 16;
 const ROOM_HEARTBEAT_INTERVAL_MS = 1000 * 20;
 const AUCTION_OPENING_MIN_PERCENT = 60;
 const AUCTION_OPENING_MAX_PERCENT = 80;
+const DEFAULT_RAILROAD_PRICE = 2000;
+const DEFAULT_RAILROAD_RENT = [250, 500, 1000, 2000];
+const DEFAULT_RAILROAD_MORTGAGE = 1000;
+const DEFAULT_UTILITY_PRICE = 1500;
+const DEFAULT_UTILITY_MORTGAGE = 750;
+const DEFAULT_UTILITY_RENT_ONE_MULTIPLIER = 40;
+const DEFAULT_UTILITY_RENT_BOTH_MULTIPLIER = 100;
+const SFX_PREF_ENABLED_KEY = 'monopoly_sfx_enabled';
+const SFX_PREF_VOLUME_KEY = 'monopoly_sfx_volume';
+const SFX_PREF_BGM_ENABLED_KEY = 'monopoly_bgm_enabled';
+const SFX_DEFAULT_VOLUME = 0.55;
 const BUG_REPORT_URL = 'https://github.com/WakifRajin/monopoly-bd/issues/new?title=Bug%20Report&body=Describe%20the%20issue%20here&labels=bug';
 let LOBBY_CONTEXT = 'offline';
 
@@ -1928,6 +1980,53 @@ const BOARD_THEMES = {
     taxNames: ['VAT Tax','Luxury Tax'],
     taxAmounts: [2000, 1000],
   },
+  classic: {
+    id: 'classic',
+    name: 'Classic',
+    flag: '🎩',
+    desc: 'Original-scale board and values',
+    currency: '$',
+    locale: 'en-US',
+    goSalary: 200,
+    startMoneyDefault: 1500,
+    jailBail: 50,
+    cardProfile: 'classic',
+    railroadPrice: 200,
+    railroadRent: [25, 50, 100, 200],
+    railroadMortgage: 100,
+    utilityPrice: 150,
+    utilityMortgage: 75,
+    utilityRentOneMultiplier: 4,
+    utilityRentBothMultiplier: 10,
+    stations: ['Reading Railroad','Pennsylvania Railroad','B&O Railroad','Short Line'],
+    utilities: [{name:'Electric Company',icon:'⚡'},{name:'Water Works',icon:'💧'}],
+    spaces: [
+      {name:'Mediterranean Avenue',color:'BROWN',price:60,rent:[2,10,30,90,160,250],house:50,mortgage:30,group:0},
+      {name:'Baltic Avenue',color:'BROWN',price:60,rent:[4,20,60,180,320,450],house:50,mortgage:30,group:0},
+      {name:'Oriental Avenue',color:'LBLUE',price:100,rent:[6,30,90,270,400,550],house:50,mortgage:50,group:1},
+      {name:'Vermont Avenue',color:'LBLUE',price:100,rent:[6,30,90,270,400,550],house:50,mortgage:50,group:1},
+      {name:'Connecticut Avenue',color:'LBLUE',price:120,rent:[8,40,100,300,450,600],house:50,mortgage:60,group:1},
+      {name:'St. Charles Place',color:'PINK',price:140,rent:[10,50,150,450,625,750],house:100,mortgage:70,group:2},
+      {name:'States Avenue',color:'PINK',price:140,rent:[10,50,150,450,625,750],house:100,mortgage:70,group:2},
+      {name:'Virginia Avenue',color:'PINK',price:160,rent:[12,60,180,500,700,900],house:100,mortgage:80,group:2},
+      {name:'St. James Place',color:'ORANGE',price:180,rent:[14,70,200,550,750,950],house:100,mortgage:90,group:3},
+      {name:'Tennessee Avenue',color:'ORANGE',price:180,rent:[14,70,200,550,750,950],house:100,mortgage:90,group:3},
+      {name:'New York Avenue',color:'ORANGE',price:200,rent:[16,80,220,600,800,1000],house:100,mortgage:100,group:3},
+      {name:'Kentucky Avenue',color:'RED',price:220,rent:[18,90,250,700,875,1050],house:150,mortgage:110,group:4},
+      {name:'Indiana Avenue',color:'RED',price:220,rent:[18,90,250,700,875,1050],house:150,mortgage:110,group:4},
+      {name:'Illinois Avenue',color:'RED',price:240,rent:[20,100,300,750,925,1100],house:150,mortgage:120,group:4},
+      {name:'Atlantic Avenue',color:'YELLOW',price:260,rent:[22,110,330,800,975,1150],house:150,mortgage:130,group:5},
+      {name:'Ventnor Avenue',color:'YELLOW',price:260,rent:[22,110,330,800,975,1150],house:150,mortgage:130,group:5},
+      {name:'Marvin Gardens',color:'YELLOW',price:280,rent:[24,120,360,850,1025,1200],house:150,mortgage:140,group:5},
+      {name:'Pacific Avenue',color:'GREEN',price:300,rent:[26,130,390,900,1100,1275],house:200,mortgage:150,group:6},
+      {name:'North Carolina Avenue',color:'GREEN',price:300,rent:[26,130,390,900,1100,1275],house:200,mortgage:150,group:6},
+      {name:'Pennsylvania Avenue',color:'GREEN',price:320,rent:[28,150,450,1000,1200,1400],house:200,mortgage:160,group:6},
+      {name:'Park Place',color:'DBLUE',price:350,rent:[35,175,500,1100,1300,1500],house:200,mortgage:175,group:7},
+      {name:'Boardwalk',color:'DBLUE',price:400,rent:[50,200,600,1400,1700,2000],house:200,mortgage:200,group:7},
+    ],
+    taxNames: ['Income Tax','Luxury Tax'],
+    taxAmounts: [200, 100],
+  },
   ancient: {
     id: 'ancient',
     name: 'Ancient Wonders',
@@ -1984,6 +2083,41 @@ function getThemeStartMoneyDefault(themeId = selectedThemeId) {
   return Number.isFinite(startMoney) && startMoney > 0 ? Math.floor(startMoney) : 15000;
 }
 
+function getThemeJailBail(themeId = selectedThemeId) {
+  const bailRaw = Number(getThemeById(themeId).jailBail);
+  return Number.isFinite(bailRaw) && bailRaw > 0 ? Math.floor(bailRaw) : 500;
+}
+
+function getThemeRailroadConfig(themeId = selectedThemeId) {
+  const theme = getThemeById(themeId);
+  const priceRaw = Number(theme.railroadPrice);
+  const price = Number.isFinite(priceRaw) && priceRaw > 0 ? Math.floor(priceRaw) : DEFAULT_RAILROAD_PRICE;
+  const rentRaw = Array.isArray(theme.railroadRent) ? theme.railroadRent : DEFAULT_RAILROAD_RENT;
+  const rent = rentRaw.map(v => Math.max(0, Math.floor(Number(v) || 0))).slice(0, 4);
+  while (rent.length < 4) rent.push(DEFAULT_RAILROAD_RENT[rent.length]);
+  const mortgageRaw = Number(theme.railroadMortgage);
+  const mortgage = Number.isFinite(mortgageRaw) && mortgageRaw >= 0 ? Math.floor(mortgageRaw) : Math.floor(price / 2);
+  return { price, rent, mortgage };
+}
+
+function getThemeUtilityConfig(themeId = selectedThemeId) {
+  const theme = getThemeById(themeId);
+  const priceRaw = Number(theme.utilityPrice);
+  const price = Number.isFinite(priceRaw) && priceRaw > 0 ? Math.floor(priceRaw) : DEFAULT_UTILITY_PRICE;
+  const mortgageRaw = Number(theme.utilityMortgage);
+  const mortgage = Number.isFinite(mortgageRaw) && mortgageRaw >= 0 ? Math.floor(mortgageRaw) : Math.floor(price / 2);
+  return { price, mortgage };
+}
+
+function getThemeUtilityRentMultipliers(themeId = selectedThemeId) {
+  const theme = getThemeById(themeId);
+  const oneRaw = Number(theme.utilityRentOneMultiplier);
+  const bothRaw = Number(theme.utilityRentBothMultiplier);
+  const one = Number.isFinite(oneRaw) && oneRaw > 0 ? Math.floor(oneRaw) : DEFAULT_UTILITY_RENT_ONE_MULTIPLIER;
+  const both = Number.isFinite(bothRaw) && bothRaw >= one ? Math.floor(bothRaw) : DEFAULT_UTILITY_RENT_BOTH_MULTIPLIER;
+  return { one, both };
+}
+
 function refreshStartingMoneyUi(themeId = selectedThemeId, forceValue = false) {
   const theme = getThemeById(themeId);
   const label = document.getElementById('starting-money-label');
@@ -1999,6 +2133,8 @@ function refreshStartingMoneyUi(themeId = selectedThemeId, forceValue = false) {
 function buildSpacesFromTheme(themeId) {
   const t = BOARD_THEMES[themeId];
   const propSpaces = t.spaces;
+  const rrCfg = getThemeRailroadConfig(themeId);
+  const utilCfg = getThemeUtilityConfig(themeId);
   let pi = 0; // property index
   let si = 0; // station index
   let ui = 0; // utility index
@@ -2011,19 +2147,19 @@ function buildSpacesFromTheme(themeId) {
     0:  {id:0,name:'GO',type:'go',icon:'🏁',desc:`Collect ${t.currency}${t.goSalary} salary each time you pass`},
     2:  {id:2,name:'Community Chest',type:'community',icon:'📦'},
     4:  {id:4,name:t.taxNames[0],type:'tax',icon:'💸',amount:t.taxAmounts[0],desc:`Pay ${t.currency}${t.taxAmounts[0]} ${t.taxNames[0]}`},
-    5:  {id:5,name:t.stations[0],type:'railroad',price:2000,rent:[250,500,1000,2000],mortgage:1000},
+    5:  {id:5,name:t.stations[0],type:'railroad',price:rrCfg.price,rent:[...rrCfg.rent],mortgage:rrCfg.mortgage},
     7:  {id:7,name:'Chance',type:'chance',icon:'❓'},
     10: {id:10,name:'Jail / Visit',type:'jail',icon:'⛓️',desc:'Just visiting or in jail'},
-    12: {id:12,name:t.utilities[0].name,type:'utility',icon:t.utilities[0].icon,price:1500,mortgage:750},
-    15: {id:15,name:t.stations[1],type:'railroad',price:2000,rent:[250,500,1000,2000],mortgage:1000},
+    12: {id:12,name:t.utilities[0].name,type:'utility',icon:t.utilities[0].icon,price:utilCfg.price,mortgage:utilCfg.mortgage},
+    15: {id:15,name:t.stations[1],type:'railroad',price:rrCfg.price,rent:[...rrCfg.rent],mortgage:rrCfg.mortgage},
     17: {id:17,name:'Community Chest',type:'community',icon:'📦'},
     20: {id:20,name:'Free Parking',type:'parking',icon:'🅿️',desc:'Free parking — just visiting.'},
     22: {id:22,name:'Chance',type:'chance',icon:'❓'},
-    25: {id:25,name:t.stations[2],type:'railroad',price:2000,rent:[250,500,1000,2000],mortgage:1000},
-    28: {id:28,name:t.utilities[1].name,type:'utility',icon:t.utilities[1].icon,price:1500,mortgage:750},
+    25: {id:25,name:t.stations[2],type:'railroad',price:rrCfg.price,rent:[...rrCfg.rent],mortgage:rrCfg.mortgage},
+    28: {id:28,name:t.utilities[1].name,type:'utility',icon:t.utilities[1].icon,price:utilCfg.price,mortgage:utilCfg.mortgage},
     30: {id:30,name:'Go to Jail',type:'gotojail',icon:'🚔'},
     33: {id:33,name:'Community Chest',type:'community',icon:'📦'},
-    35: {id:35,name:t.stations[3],type:'railroad',price:2000,rent:[250,500,1000,2000],mortgage:1000},
+    35: {id:35,name:t.stations[3],type:'railroad',price:rrCfg.price,rent:[...rrCfg.rent],mortgage:rrCfg.mortgage},
     36: {id:36,name:'Chance',type:'chance',icon:'❓'},
     38: {id:38,name:t.taxNames[1],type:'tax',icon:'👑',amount:t.taxAmounts[1],desc:`Pay ${t.currency}${t.taxAmounts[1]} ${t.taxNames[1]}`},
   };
@@ -2051,6 +2187,7 @@ function applyThemeById(themeId) {
   const nextId = BOARD_THEMES[themeId] ? themeId : 'dhaka';
   selectedThemeId = nextId;
   window.ACTIVE_THEME = BOARD_THEMES[nextId];
+  document.body.dataset.theme = nextId;
   refreshStartingMoneyUi(nextId, false);
   const themedSpaces = buildSpacesFromTheme(nextId);
   for (let i = 0; i < 40; i++) SPACES[i] = themedSpaces[i];
@@ -2130,7 +2267,7 @@ const SPACES = [
   {id:39, name:'Karwan Bazar',    type:'property',   color:'DBLUE', price:4000, rent:[500,2000,6000,14000,17000,20000],house:2000,mortgage:2000,group:7},
 ];
 
-const CHANCE_CARDS = [
+const CHANCE_CARDS_INFLATED = [
   {text:'Advance to GO. Collect ৳2000.',action:'goto',value:0},
   {text:'Bank pays you dividend of ৳500.',action:'money',value:500},
   {text:'Go to Jail. Do not collect ৳2000.',action:'jail',value:0},
@@ -2145,7 +2282,7 @@ const CHANCE_CARDS = [
   {text:'You are assessed street repairs: ৳400 per house, ৳1500 per hotel.',action:'repairs',value:{house:400,hotel:1500}},
 ];
 
-const COMMUNITY_CARDS = [
+const COMMUNITY_CARDS_INFLATED = [
   {text:'Bank error in your favour. Collect ৳2000.',action:'money',value:2000},
   {text:'Doctor fees. Pay ৳500.',action:'money',value:-500},
   {text:'Go to Jail. Do not collect ৳2000.',action:'jail',value:0},
@@ -2159,6 +2296,56 @@ const COMMUNITY_CARDS = [
   {text:'Income tax refund — collect ৳500.',action:'money',value:500},
   {text:'It is your birthday! Collect ৳1000 from each player.',action:'birthday',value:1000},
 ];
+
+const CHANCE_CARDS_CLASSIC = [
+  {text:'Advance to GO. Collect $200.',action:'goto',value:0},
+  {text:'Advance to Illinois Avenue.',action:'goto',value:24},
+  {text:'Advance to St. Charles Place.',action:'goto',value:11},
+  {text:'Take a trip to Reading Railroad.',action:'goto',value:5},
+  {text:'Take a walk on Boardwalk.',action:'goto',value:39},
+  {text:'Advance to nearest Railroad.',action:'nearest',value:'railroad'},
+  {text:'Bank pays you a dividend of $50.',action:'money',value:50},
+  {text:'Building loan matures. Collect $150.',action:'money',value:150},
+  {text:'Pay poor tax of $15.',action:'money',value:-15},
+  {text:'Go to Jail. Do not collect $200.',action:'jail',value:0},
+  {text:'Get Out of Jail Free.',action:'jailcard',value:0},
+  {text:'General repairs: pay $25 per house and $100 per hotel.',action:'repairs',value:{house:25,hotel:100}},
+];
+
+const COMMUNITY_CARDS_CLASSIC = [
+  {text:'Advance to GO. Collect $200.',action:'goto',value:0},
+  {text:'Bank error in your favor. Collect $200.',action:'money',value:200},
+  {text:'Doctor fee. Pay $50.',action:'money',value:-50},
+  {text:'From sale of stock you get $50.',action:'money',value:50},
+  {text:'Receive consultancy fee of $25.',action:'money',value:25},
+  {text:'Get Out of Jail Free.',action:'jailcard',value:0},
+  {text:'Go to Jail. Do not collect $200.',action:'jail',value:0},
+  {text:'Life insurance matures. Collect $100.',action:'money',value:100},
+  {text:'Pay hospital fees of $100.',action:'money',value:-100},
+  {text:'Pay school fees of $50.',action:'money',value:-50},
+  {text:'Income tax refund. Collect $20.',action:'money',value:20},
+  {text:'It is your birthday. Collect $10 from each player.',action:'birthday',value:10},
+];
+
+function cloneCardDeck(deck) {
+  return deck.map(card => ({
+    ...card,
+    value: (card.value && typeof card.value === 'object' && !Array.isArray(card.value))
+      ? { ...card.value }
+      : card.value,
+  }));
+}
+
+function getThemeCardDecks(themeId = selectedThemeId) {
+  const theme = getThemeById(themeId);
+  const isClassicDeck = theme.cardProfile === 'classic';
+  const chance = isClassicDeck ? CHANCE_CARDS_CLASSIC : CHANCE_CARDS_INFLATED;
+  const community = isClassicDeck ? COMMUNITY_CARDS_CLASSIC : COMMUNITY_CARDS_INFLATED;
+  return {
+    chance: cloneCardDeck(chance),
+    community: cloneCardDeck(community),
+  };
+}
 
 const TOKENS = ['🎩','🚗','🐶','👢','🛳️','♟️','🏎️','🦁'];
 const TOKEN_COLORS = ['#e74c3c','#3498db','#2ecc71','#f39c12','#9b59b6','#1abc9c','#e67e22','#e91e63'];
@@ -2199,8 +2386,9 @@ const LOG_ARCHIVE_KEYS = new Set();
 
 function initGameState(players, startMoney, options = {}) {
   const gameStartedAt = Date.now();
-  const shuffledChance = shuffle([...CHANCE_CARDS]);
-  const shuffledComm = shuffle([...COMMUNITY_CARDS]);
+  const themeDecks = getThemeCardDecks(selectedThemeId);
+  const shuffledChance = shuffle(themeDecks.chance);
+  const shuffledComm = shuffle(themeDecks.community);
   const auctionEnabled = sanitizeAuctionEnabled(options.auctionEnabled, true);
   clearLogArchive(gameStartedAt);
   jailPromptShownKey = '';
@@ -3072,6 +3260,7 @@ function applyOnlineDepartureRuleToRoomData(roomData, leavingUid, leaveMode = 'l
   for (let i = 0; i < props.length; i++) {
     const prop = props[i];
     if (!prop || typeof prop !== 'object') continue;
+    if (prop.owner === null || prop.owner === undefined) continue;
     const ownerN = Number(prop.owner);
     if (!Number.isInteger(ownerN) || ownerN !== quitterIdx) continue;
     prop.owner = null;
@@ -3100,7 +3289,9 @@ function applyOnlineDepartureRuleToRoomData(roomData, leavingUid, leaveMode = 'l
     const ownedUtil = [];
     for (let pid = 0; pid < props.length; pid++) {
       const prop = props[pid];
-      if (!prop || Number(prop.owner) !== idx) continue;
+      if (!prop || prop.owner === null || prop.owner === undefined) continue;
+      const propOwnerN = Number(prop.owner);
+      if (!Number.isInteger(propOwnerN) || propOwnerN !== idx) continue;
       const sp = SPACES[pid];
       if (!sp) continue;
       if (sp.type === 'property') ownedProps.push(pid);
@@ -3785,10 +3976,12 @@ async function playRemoteSnapshotAnimations(prevVisualState) {
       const prop = G.properties[id];
       if (!prop || typeof prop !== 'object') continue;
 
-      const oldOwnerN = Number(prevOwners[id]);
-      const oldOwner = Number.isInteger(oldOwnerN) ? oldOwnerN : null;
-      const newOwnerN = Number(prop.owner);
-      const newOwner = Number.isInteger(newOwnerN) ? newOwnerN : null;
+      const oldOwner = (prevOwners[id] === null || prevOwners[id] === undefined)
+        ? null
+        : (Number.isInteger(Number(prevOwners[id])) ? Number(prevOwners[id]) : null);
+      const newOwner = (prop.owner === null || prop.owner === undefined)
+        ? null
+        : (Number.isInteger(Number(prop.owner)) ? Number(prop.owner) : null);
 
       if (oldOwner === null && newOwner !== null && newOwner !== localIdx) {
         bought.push(id);
@@ -3859,6 +4052,7 @@ async function animatePlayerStepMovement(player, steps) {
   } finally {
     MOVE_FX.active = false;
     MOVE_FX.playerId = null;
+    updateActionButtons();
   }
 
   return true;
@@ -4072,10 +4266,19 @@ function estimateAssetValue(spaceId) {
   return Math.max(0, Math.floor(mortgageValueForSpace(sp) * 2));
 }
 
+function aiEconomyScale(themeId = G?.boardThemeId || selectedThemeId) {
+  const goSalary = getThemeGoSalary(themeId);
+  if (!Number.isFinite(goSalary) || goSalary <= 0) return 1;
+  return Math.max(0.1, goSalary / 2000);
+}
+
 function aiCashReserve(player) {
-  if (!player) return 1500;
+  const scale = aiEconomyScale();
+  if (!player) return Math.floor(1500 * scale);
   const owned = (player.properties?.length || 0) + (player.railroads?.length || 0) + (player.utilities?.length || 0);
-  return Math.max(1500, 900 + owned * 180);
+  const floorReserve = Math.max(120, Math.floor(1500 * scale));
+  const dynamicReserve = Math.floor((900 + owned * 180) * scale);
+  return Math.max(floorReserve, dynamicReserve);
 }
 
 function aiPropertyPriority(player, spaceId) {
@@ -4113,7 +4316,8 @@ function aiTryMortgageToTarget(player, targetCash) {
   const mortgageValue = mortgageValueForSpace(sp);
   prop.mortgaged = true;
   player.money += mortgageValue;
-  addLog(`${player.name} mortgaged ${sp.name} for ৳${fmt(mortgageValue)}.`, 'important');
+  playSfx('mortgage');
+  addLog(`${player.name} mortgaged ${sp.name} for ${fmtCurrency(mortgageValue)}.`, 'important');
   renderAll();
   updateTopBar();
   return true;
@@ -4123,6 +4327,7 @@ function aiTryUnmortgage(player) {
   if (!player || player.bankrupt) return false;
 
   const reserve = aiCashReserve(player);
+  const flexibleReserve = Math.floor(reserve * 0.6);
   const mortgaged = [...player.properties, ...player.railroads, ...player.utilities]
     .filter(id => {
       const prop = G.properties[id];
@@ -4139,10 +4344,11 @@ function aiTryUnmortgage(player) {
     const sp = SPACES[id];
     const prop = G.properties[id];
     const cost = Math.floor(mortgageValueForSpace(sp) * 1.1);
-    if (!prop || player.money - cost < reserve) continue;
+    if (!prop || player.money - cost < flexibleReserve) continue;
     prop.mortgaged = false;
     player.money -= cost;
-    addLog(`${player.name} unmortgaged ${sp.name} for ৳${fmt(cost)}.`, 'important');
+    playSfx('unmortgage');
+    addLog(`${player.name} unmortgaged ${sp.name} for ${fmtCurrency(cost)}.`, 'important');
     renderAll();
     updateTopBar();
     return true;
@@ -4284,7 +4490,7 @@ function aiTryProposeTrade(player) {
           createdAt: Date.now(),
         };
         tradeReviewShownKey = '';
-        addLog(`${player.name} offered ${SPACES[propId]?.name || 'a property'} to ${buyer.name} for ৳${fmt(ask)}.`, 'important');
+        addLog(`${player.name} offered ${SPACES[propId]?.name || 'a property'} to ${buyer.name} for ${fmtCurrency(ask)}.`, 'important');
         renderAll();
         updateActionButtons();
         return true;
@@ -4390,7 +4596,7 @@ function tryAutoResolveAiDebtPrompt() {
 
   const raised = sellBuildingsForEmergencyCash(payer);
   if (raised > 0) {
-    addLog(`${payer.name} sold buildings to cover debt (raised ৳${fmt(raised)}).`, 'important');
+    addLog(`${payer.name} sold buildings to cover debt (raised ${fmtCurrency(raised)}).`, 'important');
   }
 
   let usedMortgages = 0;
@@ -4435,6 +4641,11 @@ function runOfflineAiStep() {
   const gameScreen = document.getElementById('game-screen');
   if (!gameScreen || gameScreen.classList.contains('hidden')) return;
   if (MOVE_FX.active) {
+    maybeScheduleOfflineAiTurn();
+    return;
+  }
+  const cardFxPending = (Number(ONLINE.pendingCardResolutions) || 0) > 0;
+  if (cardFxPending) {
     maybeScheduleOfflineAiTurn();
     return;
   }
@@ -4518,23 +4729,35 @@ function runOfflineAiStep() {
     const sp = SPACES[spaceId];
     const price = Number(sp?.price) || 0;
     const reserve = aiCashReserve(p);
+    const auctionsEnabled = isAuctionSystemEnabled();
     if (p.money < price && aiTryMortgageToTarget(p, price + Math.floor(reserve * 0.35))) {
       return;
     }
     const score = aiPropertyPriority(p, spaceId);
     const shouldBuy = p.money >= price && (
-      score >= Math.floor(price * 1.2)
+      !auctionsEnabled
+      || score >= Math.floor(price * 1.2)
       || p.money - price >= reserve
       || Math.random() < 0.3
     );
     closeOverlay('buy-overlay');
-    if (shouldBuy) actionBuy();
-    else startAuction();
+    if (shouldBuy) {
+      actionBuy();
+    } else if (auctionsEnabled) {
+      startAuction();
+    } else {
+      G.pendingBuy = null;
+      G.phase = 'end';
+      addLog(`${p.name} skipped ${sp?.name || 'this property'}. Auctions are disabled, so it remains unsold.`, 'important');
+      renderAll();
+      updateActionButtons();
+    }
     return;
   }
 
   if (G.phase === 'roll') {
-    if (p.inJail && (p.jailTurns >= 2 || (p.money >= 3000 && Math.random() < 0.55))) {
+    const bailAmount = getThemeJailBail(G.boardThemeId || selectedThemeId);
+    if (p.inJail && (p.jailTurns >= 2 || (p.money >= bailAmount * 6 && Math.random() < 0.55))) {
       payBailout();
       return;
     }
@@ -4544,7 +4767,7 @@ function runOfflineAiStep() {
 
   if (G.phase === 'action' || G.phase === 'end') {
     const reserve = aiCashReserve(p);
-    if (p.money < Math.floor(reserve * 0.7) && aiTryMortgageToTarget(p, reserve)) {
+    if (p.money < Math.floor(reserve * 0.35) && aiTryMortgageToTarget(p, Math.floor(reserve * 0.85))) {
       return;
     }
     if (aiTryUnmortgage(p)) {
@@ -4572,7 +4795,8 @@ function updateActionButtons() {
   const turnOwnedByMe = canLocalControlTurn();
   const aiTurnActive = isAiPlayer(p) && !p.bankrupt;
   const movementLocked = MOVE_FX.active;
-  const canHumanAct = turnOwnedByMe && !aiTurnActive && !movementLocked;
+  const cardFxPending = (Number(ONLINE.pendingCardResolutions) || 0) > 0;
+  const canHumanAct = turnOwnedByMe && !aiTurnActive && !movementLocked && !cardFxPending;
   const debtRaw = DEBT_PROMPT.active
     ? DEBT_PROMPT
     : (G?.debtPrompt && G.debtPrompt.active ? G.debtPrompt : null);
@@ -4635,6 +4859,8 @@ function updateActionButtons() {
       rollBtn.disabled = debtPromptActive || G.phase !== 'roll' || !canHumanAct;
     rollBtn.textContent = movementLocked
       ? `🏃 ${p.name} is moving...`
+        : cardFxPending
+        ? `🃏 Resolving card effect...`
         : debtPromptActive
         ? (debtPending && turnOwnedByMe
             ? `💀 Resolve debt / bankruptcy`
@@ -4647,21 +4873,28 @@ function updateActionButtons() {
   }
 
   // Jail bail button
-  const bailVis = canHumanAct && inJail && G.phase === 'roll' && p.money >= 500;
-  ['btn-pay-jail','mb-pay-jail'].forEach(id => { const el = document.getElementById(id); if(el) el.style.display = bailVis ? '' : 'none'; });
+  const bailAmount = getThemeJailBail(G.boardThemeId || selectedThemeId);
+  const bailVis = canHumanAct && inJail && G.phase === 'roll' && p.money >= bailAmount;
+  ['btn-pay-jail','mb-pay-jail'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.style.display = bailVis ? '' : 'none';
+    el.textContent = `💳 Pay ${fmtCurrency(bailAmount)} Bail`;
+  });
 
   // Center message
   const cm = document.getElementById('center-msg');
   if (cm) {
     if (movementLocked) cm.textContent = `${p.name} is hopping across the board...`;
+    else if (cardFxPending) cm.textContent = `Resolving card effect...`;
     else if (debtPromptActive) {
       cm.textContent = debtPending
-        ? `💀 Debt alert: short by ৳${fmt(debtShortBy)}. Mortgage/sell or declare bankruptcy.`
-        : `💀 ${debtPayer?.name || 'Player'} is resolving debt (short ৳${fmt(debtShortBy)}).`;
+        ? `💀 Debt alert: short by ${fmtCurrency(debtShortBy)}. Mortgage/sell or declare bankruptcy.`
+        : `💀 ${debtPayer?.name || 'Player'} is resolving debt (short ${fmtCurrency(debtShortBy)}).`;
     }
     else if (aiTurnActive) cm.textContent = aiWaitingForRunner ? `🤖 Waiting for ${runnerName} to run AI` : `🤖 ${p.name} is making a move`;
     else if (!turnOwnedByMe) cm.textContent = `Watching ${p.name}'s turn`;
-    else if (inJail && G.phase === 'roll') cm.textContent = `Roll doubles or pay ৳500 bail`;
+    else if (inJail && G.phase === 'roll') cm.textContent = `Roll doubles or pay ${fmtCurrency(bailAmount)} bail`;
     else if (G.phase === 'roll') cm.textContent = `${p.name}'s turn to roll (or manage assets first)`;
     else if (G.phase === 'action') cm.textContent = `Landed on ${sp.name}`;
     else cm.textContent = TIMER.duration > 0 ? `Auto-advancing in ${TIMER.duration}s…` : `End turn when ready`;
@@ -4670,14 +4903,15 @@ function updateActionButtons() {
   const mobileTurnLine = document.getElementById('mobile-turnline');
   if (mobileTurnLine) {
     if (movementLocked) mobileTurnLine.textContent = `🏃 ${p.name} is moving...`;
+    else if (cardFxPending) mobileTurnLine.textContent = '🃏 Resolving card effect...';
     else if (debtPromptActive) {
       mobileTurnLine.textContent = debtPending
-        ? `💀 Debt short ৳${fmt(debtShortBy)} • mortgage/sell or bankrupt`
+        ? `💀 Debt short ${fmtCurrency(debtShortBy)} • mortgage/sell or bankrupt`
         : `💀 ${debtPayer?.name || 'Player'} is resolving debt`;
     }
     else if (aiTurnActive) mobileTurnLine.textContent = aiWaitingForRunner ? `🤖 Waiting for ${runnerName}` : `🤖 ${p.name} is thinking`;
     else if (!turnOwnedByMe) mobileTurnLine.textContent = `⏳ Watching ${p.name}'s turn`;
-    else if (inJail && G.phase === 'roll') mobileTurnLine.textContent = '⛓️ Roll doubles or pay bail';
+    else if (inJail && G.phase === 'roll') mobileTurnLine.textContent = `⛓️ Roll doubles or pay ${fmtCurrency(bailAmount)} bail`;
     else if (G.phase === 'roll') mobileTurnLine.textContent = '🎲 Roll dice or manage assets';
     else if (G.phase === 'action') mobileTurnLine.textContent = `📍 ${sp.name} • choose an action`;
     else mobileTurnLine.textContent = TIMER.duration > 0 ? `⏱ Auto-end: ${TIMER.duration}s after move` : '✅ End your turn when ready';
@@ -4715,6 +4949,7 @@ async function rollDice() {
   const doubles = d1 === d2;
   G.dice = [d1, d2];
   G.lastDoubles = doubles;
+  playSfx('dice');
 
   // Animate dice
   ['die1','die2'].forEach(id => {
@@ -4755,6 +4990,7 @@ async function rollDice() {
 async function handleJailRoll(player, d1, d2, doubles) {
   const p = getLivePlayer(player);
   if (!p || p.bankrupt) return;
+  const bailAmount = getThemeJailBail(G.boardThemeId || selectedThemeId);
   if (doubles) {
     p.inJail = false;
     p.jailTurns = 0;
@@ -4765,8 +5001,8 @@ async function handleJailRoll(player, d1, d2, doubles) {
     p.jailTurns++;
     if (p.jailTurns >= 3) {
       // Force pay
-      addLog(`${p.name} must pay ৳500 to leave jail after 3 turns.`, 'danger');
-      const paid = chargeMoney(p, 500);
+      addLog(`${p.name} must pay ${fmtCurrency(bailAmount)} to leave jail after 3 turns.`, 'danger');
+      const paid = chargeMoney(p, bailAmount);
       if (!paid) {
         G.phase = 'end';
         renderAll();
@@ -4798,7 +5034,7 @@ async function movePlayer(player, steps, rolledDoubles) {
   const playerId = p.id;
   const oldPos = p.pos;
   const newPos = (p.pos + steps) % 40;
-  const goSalary = getThemeGoSalary();
+  const goSalary = getThemeGoSalary(G.boardThemeId || selectedThemeId);
   let goPaid = false;
   // Pass GO
   if (newPos < oldPos) {
@@ -4810,12 +5046,21 @@ async function movePlayer(player, steps, rolledDoubles) {
   G.phase = 'action';
   const moved = await animatePlayerStepMovement(playerId, steps);
   if (!moved) return;
-  const livePlayer = getLivePlayer(playerId);
-  if (!livePlayer || livePlayer.bankrupt) return;
-  livePlayer.pos = newPos;
-  renderAll();
-  await waitMs(160);
-  landOn(livePlayer, rolledDoubles, {goPaid});
+  MOVE_FX.active = true;
+  MOVE_FX.playerId = playerId;
+  updateActionButtons();
+  try {
+    const livePlayer = getLivePlayer(playerId);
+    if (!livePlayer || livePlayer.bankrupt) return;
+    livePlayer.pos = newPos;
+    renderAll();
+    await waitMs(160);
+    landOn(livePlayer, rolledDoubles, {goPaid});
+  } finally {
+    MOVE_FX.active = false;
+    MOVE_FX.playerId = null;
+    updateActionButtons();
+  }
 }
 
 async function movePlayerTo(player, target, collectGo=true) {
@@ -4823,7 +5068,7 @@ async function movePlayerTo(player, target, collectGo=true) {
   if (!p || p.bankrupt) return;
   const playerId = p.id;
   const oldPos = p.pos;
-  const goSalary = getThemeGoSalary();
+  const goSalary = getThemeGoSalary(G.boardThemeId || selectedThemeId);
   const stepsForward = (target - oldPos + 40) % 40;
   let goPaid = false;
   if (collectGo && stepsForward > 0 && target < oldPos) {
@@ -4843,17 +5088,30 @@ async function movePlayerTo(player, target, collectGo=true) {
     if (stepsForward > 0) pulseBoardSpace(target, 'step-arrive', 360);
   }
 
-  const livePlayer = getLivePlayer(playerId);
-  if (!livePlayer || livePlayer.bankrupt) return;
-  livePlayer.pos = target;
-  renderAll();
-  await waitMs(140);
-  landOn(livePlayer, false, {goPaid});
+  MOVE_FX.active = true;
+  MOVE_FX.playerId = playerId;
+  updateActionButtons();
+  try {
+    const livePlayer = getLivePlayer(playerId);
+    if (!livePlayer || livePlayer.bankrupt) return;
+    livePlayer.pos = target;
+    renderAll();
+    await waitMs(140);
+    landOn(livePlayer, false, {goPaid});
+  } finally {
+    MOVE_FX.active = false;
+    MOVE_FX.playerId = null;
+    updateActionButtons();
+  }
 }
 
 function landOn(p, rolledDoubles, opts = null) {
+  const playerId = Number(p?.id);
+  if (!Number.isInteger(playerId) || playerId < 0 || playerId >= G.players.length) return;
+  if (Number(G.currentPlayerIdx) !== playerId) return;
+
   const sp = SPACES[p.pos];
-  const goSalary = getThemeGoSalary();
+  const goSalary = getThemeGoSalary(G.boardThemeId || selectedThemeId);
   const goPaid = !!(opts && opts.goPaid);
   addLog(`${p.name} landed on ${sp.name}`);
 
@@ -4879,7 +5137,8 @@ function landOn(p, rolledDoubles, opts = null) {
     drawCard('community', p);
     return;
   } else if (sp.type === 'tax') {
-    addLog(`${p.name} pays ৳${fmt(sp.amount)} tax.`, 'danger');
+    addLog(`${p.name} pays ${fmtCurrency(sp.amount)} tax.`, 'danger');
+    playSfx('tax');
     chargeMoney(p, sp.amount, null, true);
     G.phase = 'end';
   } else if (sp.type === 'property' || sp.type === 'railroad' || sp.type === 'utility') {
@@ -4902,7 +5161,8 @@ function landOn(p, rolledDoubles, opts = null) {
       // Pay rent
       const rent = calcRent(sp, prop);
       const owner = G.players[prop.owner];
-      addLog(`${p.name} pays ৳${fmt(rent)} rent to ${owner.name} for ${sp.name}.`, 'danger');
+      addLog(`${p.name} pays ${fmtCurrency(rent)} rent to ${owner.name} for ${sp.name}.`, 'danger');
+      playSfx('rent');
       showRentModal(p, owner, sp.name, rent);
       chargeMoney(p, rent, owner);
       G.phase = 'end';
@@ -4923,18 +5183,50 @@ function landOn(p, rolledDoubles, opts = null) {
 // ═══════════════════════════════════════════════
 //  RENT CALCULATION
 // ═══════════════════════════════════════════════
+function countOwnedSpacesByType(ownerId, type) {
+  if (!Number.isInteger(ownerId) || !type) return 0;
+  let count = 0;
+  for (let id = 0; id < SPACES.length; id++) {
+    const space = SPACES[id];
+    const prop = G.properties[id];
+    if (!space || !prop || space.type !== type) continue;
+    if (prop.owner === null || prop.owner === undefined) continue;
+    const propOwner = Number(prop.owner);
+    if (Number.isInteger(propOwner) && propOwner === ownerId) count++;
+  }
+  return count;
+}
+
+function currentDiceTotalForUtilityRent() {
+  const rawDie1 = Number(G?.dice?.[0]);
+  const rawDie2 = Number(G?.dice?.[1]);
+  if (!Number.isFinite(rawDie1) || !Number.isFinite(rawDie2)) return 0;
+  const die1 = Math.max(1, Math.min(6, Math.trunc(rawDie1)));
+  const die2 = Math.max(1, Math.min(6, Math.trunc(rawDie2)));
+  return die1 + die2;
+}
+
 function calcRent(sp, prop) {
   if (prop.mortgaged) return 0;
   if (sp.type === 'railroad') {
-    const owner = G.players[prop.owner];
-    const rrCount = owner.railroads.length;
-    return sp.rent[rrCount - 1];
+    if (prop.owner === null || prop.owner === undefined) return 0;
+    const ownerId = Number(prop.owner);
+    if (!Number.isInteger(ownerId) || ownerId < 0 || ownerId >= G.players.length) return 0;
+    const rrCount = Math.max(1, countOwnedSpacesByType(ownerId, 'railroad'));
+    const rentIdx = Math.min(sp.rent.length - 1, rrCount - 1);
+    return Number(sp.rent[rentIdx]) || 0;
   }
   if (sp.type === 'utility') {
-    const owner = G.players[prop.owner];
-    const utilCount = owner.utilities.length;
-    const diceTotal = G.dice[0] + G.dice[1];
-    return utilCount === 2 ? diceTotal * 10 : diceTotal * 4;
+    if (prop.owner === null || prop.owner === undefined) return 0;
+    const ownerId = Number(prop.owner);
+    if (!Number.isInteger(ownerId) || ownerId < 0 || ownerId >= G.players.length) return 0;
+    const utilCount = Math.max(1, countOwnedSpacesByType(ownerId, 'utility'));
+    const diceTotal = currentDiceTotalForUtilityRent();
+    const utilRentCfg = getThemeUtilityRentMultipliers(G.boardThemeId || selectedThemeId);
+    if (diceTotal <= 0) return 0;
+    return utilCount >= 2
+      ? diceTotal * utilRentCfg.both
+      : diceTotal * utilRentCfg.one;
   }
   if (prop.hotel) return sp.rent[5];
   if (prop.houses > 0) return sp.rent[prop.houses];
@@ -4961,19 +5253,23 @@ function drawCard(type, p) {
   const drawPlayer = getLivePlayer(playerId) || p;
   const cardText = formatThemeCurrencyText(card.text);
   addLog(`${drawPlayer.name} drew ${type === 'chance' ? 'Chance' : 'Community Chest'}: ${cardText}`);
+  playSfx('card');
 
-  if (isOnlineGame() && !ONLINE.isApplyingRemote) {
-    ONLINE.pendingCardResolutions = (Number(ONLINE.pendingCardResolutions) || 0) + 1;
-  }
+  ONLINE.pendingCardResolutions = (Number(ONLINE.pendingCardResolutions) || 0) + 1;
 
   const finalizeCardResolution = async (shouldSync = true) => {
+    const pending = Number(ONLINE.pendingCardResolutions) || 0;
+    ONLINE.pendingCardResolutions = Math.max(0, pending - 1);
+    renderAll();
+    updateActionButtons();
+    maybeScheduleOfflineAiTurn();
+
     try {
       if (shouldSync && isOnlineGame() && !ONLINE.isApplyingRemote) {
         await syncRoomState('drawCard');
       }
-    } finally {
-      const pending = Number(ONLINE.pendingCardResolutions) || 0;
-      ONLINE.pendingCardResolutions = Math.max(0, pending - 1);
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -4984,6 +5280,7 @@ function drawCard(type, p) {
   const apply = async () => {
     const actor = getLivePlayer(playerId);
     if (!actor || actor.bankrupt) return;
+    if (Number(G.currentPlayerIdx) !== actor.id) return;
 
     if (card.action === 'money') {
       if (card.value > 0) {
@@ -5013,7 +5310,7 @@ function drawCard(type, p) {
         if (pr.hotel) cost += card.value.hotel;
         else cost += pr.houses * card.value.house;
       });
-      if (cost > 0) { chargeMoney(actor, cost, null, true); addLog(`${actor.name} paid ৳${fmt(cost)} for repairs.`, 'danger'); }
+      if (cost > 0) { chargeMoney(actor, cost, null, true); addLog(`${actor.name} paid ${fmtCurrency(cost)} for repairs.`, 'danger'); }
     } else if (card.action === 'birthday') {
       G.players.forEach((op, oi) => {
         if (oi !== actor.id && !op.bankrupt) {
@@ -5021,7 +5318,7 @@ function drawCard(type, p) {
           actor.money += card.value;
         }
       });
-      addLog(`${actor.name} collected ৳${card.value} from each player for birthday!`, 'success');
+      addLog(`${actor.name} collected ${fmtCurrency(card.value)} from each player for birthday!`, 'success');
     }
     G.phase = rolledDoublesThisTurn() ? 'roll' : 'end';
     renderAll();
@@ -5042,7 +5339,12 @@ function drawCard(type, p) {
 
   closeOverlay('card-overlay');
   openOverlay('card-overlay');
-  document.querySelector('#card-overlay .btn').onclick = async () => {
+  const cardConfirmBtn = document.querySelector('#card-overlay .btn');
+  if (!cardConfirmBtn) {
+    finalizeCardResolution(false).catch(err => console.error(err));
+    return;
+  }
+  cardConfirmBtn.onclick = async () => {
     closeOverlay('card-overlay');
     try {
       await apply();
@@ -5118,7 +5420,8 @@ function actionBuy() {
   else if (sp.type === 'railroad') p.railroads.push(id);
   else if (sp.type === 'utility') p.utilities.push(id);
   G.pendingBuy = null;
-  addLog(`${p.name} bought ${sp.name} for ৳${fmt(sp.price)}!`, 'success');
+  addLog(`${p.name} bought ${sp.name} for ${fmtCurrency(sp.price)}!`, 'success');
+  playSfx('buy');
   toast(`🏠 Bought ${sp.name}!`, 'gold');
   G.phase = 'end';
   renderAll();
@@ -5173,6 +5476,7 @@ function beginAuction(propId, { source = 'market', bidderStartIdx = 0 } = {}) {
     source,
   };
   addLog(`Auction opened for ${sp.name} at ${fmtCurrency(openingBid)} (${openingPercent}% opening bid).`);
+  playSfx('auction-open');
   renderAuction();
   openOverlay('auction-overlay');
   maybeScheduleOfflineAiTurn();
@@ -5219,13 +5523,13 @@ function renderAuction() {
   const leader = Number.isInteger(a.highBidder) ? G.players[a.highBidder] : null;
   const basePrice = Number(SPACES[a.propId]?.price) || 0;
   document.getElementById('auc-prop-name').textContent = a.propName;
-  document.getElementById('auc-base-price').textContent = fmt(basePrice);
-  document.getElementById('auc-bid').textContent = fmt(a.currentBid);
+  document.getElementById('auc-base-price').textContent = fmtCurrency(basePrice);
+  document.getElementById('auc-bid').textContent = fmtCurrency(a.currentBid);
   document.getElementById('auc-leader').textContent = leader?.name || 'None';
   document.getElementById('auc-bidder').textContent = bidder
     ? `${bidder.name}${aiBidderTurn ? ' (AI thinking...)' : ''}`
     : 'Waiting for bidder sync...';
-  document.getElementById('auc-bidder-money').textContent = fmt(bidder?.money || 0);
+  document.getElementById('auc-bidder-money').textContent = fmtCurrency(bidder?.money || 0);
 
   openOverlay('auction-overlay');
 
@@ -5269,7 +5573,8 @@ function finalizeAuction(a) {
       prop.hotel = false;
       addOwnedAsset(winner, a.propId);
       awardedPropId = a.propId;
-      addLog(`${winner.name} wins auction for ${sp.name} at ৳${fmt(a.currentBid)}!`, 'success');
+      addLog(`${winner.name} wins auction for ${sp.name} at ${fmtCurrency(a.currentBid)}!`, 'success');
+      playSfx('auction-win');
     } else {
       addLog(`Auction for ${a.propName} ended with invalid winner state; property remains unsold.`, 'danger');
     }
@@ -5311,7 +5616,8 @@ function placeBid(amount) {
   if (bidder.money < newBid) { toast('Not enough money!', 'danger'); return; }
   a.currentBid = newBid;
   a.highBidder = bidder.id;
-  addLog(`${bidder.name} bids ৳${fmt(newBid)} for ${a.propName}`);
+  addLog(`${bidder.name} bids ${fmtCurrency(newBid)} for ${a.propName}`);
+  playSfx('bid');
 
   const remaining = a.activePlayers.filter(id => !a.passed.has(id));
   if (remaining.length <= 1 && a.highBidder !== null) {
@@ -5401,8 +5707,8 @@ function openBuildModal() {
         <div style="width:10px;height:10px;border-radius:2px;background:${c};flex-shrink:0"></div>
         <div style="flex:1;color:#fff;font-size:.85rem;font-weight:600">${sp.name}</div>
         <div style="color:rgba(255,255,255,.5);font-size:.78rem">${prop.hotel ? '🏨' : '🏠'.repeat(prop.houses) || '—'}</div>
-        <button onclick="buildHouse(${id})" ${canBuildMore && !prop.hotel ? '' : canBuildHotel ? '' : 'disabled'} style="background:${canBuildMore||canBuildHotel?'#2ecc71':'rgba(255,255,255,.1)'};border:none;color:#fff;border-radius:5px;padding:.3rem .5rem;cursor:pointer;font-size:.75rem">${prop.houses===4&&!prop.hotel?'🏨 Hotel (৳'+fmt(houseCost)+')':'🏠 Build (৳'+fmt(houseCost)+')'}</button>
-        <button onclick="sellHouse(${id})" ${canSell ? '' : 'disabled'} style="background:${canSell?'#e74c3c':'rgba(255,255,255,.1)'};border:none;color:#fff;border-radius:5px;padding:.3rem .5rem;cursor:pointer;font-size:.75rem">Sell (৳${fmt(Math.floor(houseCost/2))})</button>
+        <button onclick="buildHouse(${id})" ${canBuildMore && !prop.hotel ? '' : canBuildHotel ? '' : 'disabled'} style="background:${canBuildMore||canBuildHotel?'#2ecc71':'rgba(255,255,255,.1)'};border:none;color:#fff;border-radius:5px;padding:.3rem .5rem;cursor:pointer;font-size:.75rem">${prop.houses===4&&!prop.hotel?`🏨 Hotel (${fmtCurrency(houseCost)})`:`🏠 Build (${fmtCurrency(houseCost)})`}</button>
+        <button onclick="sellHouse(${id})" ${canSell ? '' : 'disabled'} style="background:${canSell?'#e74c3c':'rgba(255,255,255,.1)'};border:none;color:#fff;border-radius:5px;padding:.3rem .5rem;cursor:pointer;font-size:.75rem">Sell (${fmtCurrency(Math.floor(houseCost/2))})</button>
       `;
       el.appendChild(row);
     });
@@ -5419,6 +5725,7 @@ function buildHouse(propId) {
   const cost = sp.house;
   if (p.money < cost) { toast('Not enough money!', 'danger'); return; }
   p.money -= cost;
+  playSfx('build');
   if (prop.houses === 4) { prop.hotel = true; prop.houses = 0; addLog(`${p.name} built a hotel on ${sp.name} for ${fmtCurrency(cost)}.`, 'success'); }
   else { prop.houses++; addLog(`${p.name} built house #${prop.houses} on ${sp.name} for ${fmtCurrency(cost)}.`, 'success'); }
   renderAll();
@@ -5435,8 +5742,9 @@ function sellHouse(propId) {
   const prop = G.properties[propId];
   const refund = Math.floor(sp.house / 2);
   p.money += refund;
-  if (prop.hotel) { prop.hotel = false; prop.houses = 4; addLog(`${p.name} sold hotel on ${sp.name} for ৳${fmt(refund)}.`); }
-  else { prop.houses--; addLog(`${p.name} sold house on ${sp.name} for ৳${fmt(refund)}.`); }
+  playSfx('sell');
+  if (prop.hotel) { prop.hotel = false; prop.houses = 4; addLog(`${p.name} sold hotel on ${sp.name} for ${fmtCurrency(refund)}.`); }
+  else { prop.houses--; addLog(`${p.name} sold house on ${sp.name} for ${fmtCurrency(refund)}.`); }
   renderAll();
   if (actorIsAi) {
     closeOverlay('build-overlay');
@@ -5502,8 +5810,8 @@ function openMortgageModal() {
     row.innerHTML = `
       <div style="width:10px;height:10px;border-radius:2px;background:${color};flex-shrink:0"></div>
       <div style="flex:1;color:${prop.mortgaged?'rgba(255,255,255,.4)':'#fff'};font-size:.85rem;font-weight:600">${sp.name}${prop.mortgaged?' (mortgaged)':''}</div>
-      ${!prop.mortgaged ? `<button onclick="mortgageProp(${id})" ${canMortgage?'':'disabled'} style="background:${canMortgage?'#d97706':'rgba(255,255,255,.1)'};border:none;color:#fff;border-radius:5px;padding:.3rem .5rem;cursor:pointer;font-size:.75rem">Mortgage ৳${fmt(mortgageValue)}</button>` : 
-      `<button onclick="unmortgageProp(${id})" ${canUnmortgage?'':'disabled'} style="background:${canUnmortgage?'#2ecc71':'rgba(255,255,255,.1)'};border:none;color:#fff;border-radius:5px;padding:.3rem .5rem;cursor:pointer;font-size:.75rem">Unmortgage ৳${fmt(unmortgageCost)}</button>`}
+      ${!prop.mortgaged ? `<button onclick="mortgageProp(${id})" ${canMortgage?'':'disabled'} style="background:${canMortgage?'#d97706':'rgba(255,255,255,.1)'};border:none;color:#fff;border-radius:5px;padding:.3rem .5rem;cursor:pointer;font-size:.75rem">Mortgage ${fmtCurrency(mortgageValue)}</button>` : 
+      `<button onclick="unmortgageProp(${id})" ${canUnmortgage?'':'disabled'} style="background:${canUnmortgage?'#2ecc71':'rgba(255,255,255,.1)'};border:none;color:#fff;border-radius:5px;padding:.3rem .5rem;cursor:pointer;font-size:.75rem">Unmortgage ${fmtCurrency(unmortgageCost)}</button>`}
     `;
     el.appendChild(row);
   });
@@ -5523,7 +5831,8 @@ function mortgageProp(id) {
   const mortgageValue = mortgageValueForSpace(sp);
   prop.mortgaged = true;
   p.money += mortgageValue;
-  addLog(`${p.name} mortgaged ${sp.name} for ৳${fmt(mortgageValue)}.`);
+  playSfx('mortgage');
+  addLog(`${p.name} mortgaged ${sp.name} for ${fmtCurrency(mortgageValue)}.`);
   renderAll();
   if (actorIsAi) closeOverlay('mortgage-overlay');
   else openMortgageModal();
@@ -5543,7 +5852,8 @@ function unmortgageProp(id) {
   if (p.money < cost) { toast('Not enough money!', 'danger'); return; }
   prop.mortgaged = false;
   p.money -= cost;
-  addLog(`${p.name} unmortgaged ${sp.name} for ৳${fmt(cost)}.`);
+  playSfx('unmortgage');
+  addLog(`${p.name} unmortgaged ${sp.name} for ${fmtCurrency(cost)}.`);
   renderAll();
   if (actorIsAi) closeOverlay('mortgage-overlay');
   else openMortgageModal();
@@ -5943,6 +6253,7 @@ function showJailPrompt(p, mode = 'turn') {
   const descEl = document.getElementById('jail-desc');
   const actionsEl = document.getElementById('jail-actions');
   if (!iconEl || !titleEl || !descEl || !actionsEl || !p) return;
+  const bailAmount = getThemeJailBail(G.boardThemeId || selectedThemeId);
 
   if (shouldAutoActForAi(p)) {
     closeOverlay('jail-overlay');
@@ -5954,17 +6265,17 @@ function showJailPrompt(p, mode = 'turn') {
     titleEl.textContent = 'Go to Jail!';
     descEl.textContent = p.jailFreeCards > 0
       ? `You have ${p.jailFreeCards} Get Out of Jail Free card(s). On your turn, choose to roll dice or use a card to get out.`
-      : 'On your turn, choose to roll dice for doubles or pay ৳500 bail.';
+      : `On your turn, choose to roll dice for doubles or pay ${fmtCurrency(bailAmount)} bail.`;
     actionsEl.innerHTML = '<button class="btn btn-primary btn-full" onclick="closeOverlay(\'jail-overlay\')">OK</button>';
     openOverlay('jail-overlay');
     return;
   }
 
   const myTurn = canLocalControlTurn();
-  const canPay = p.jailFreeCards > 0 || p.money >= 500;
+  const canPay = p.jailFreeCards > 0 || p.money >= bailAmount;
   const bailLabel = p.jailFreeCards > 0
     ? `🎟 Use Card${p.jailFreeCards > 1 ? ` (${p.jailFreeCards})` : ''}`
-    : '💳 Pay ৳500 Bail';
+    : `💳 Pay ${fmtCurrency(bailAmount)} Bail`;
 
   iconEl.textContent = '⛓️';
   titleEl.textContent = `${p.name} is in Jail`;
@@ -5976,7 +6287,7 @@ function showJailPrompt(p, mode = 'turn') {
     return;
   }
 
-  descEl.textContent = `Choose now: roll for doubles or ${p.jailFreeCards > 0 ? 'use a card to leave jail' : 'pay ৳500 bail'}.`;
+  descEl.textContent = `Choose now: roll for doubles or ${p.jailFreeCards > 0 ? 'use a card to leave jail' : `pay ${fmtCurrency(bailAmount)} bail`}.`;
   actionsEl.innerHTML = `
     <button class="btn btn-primary" onclick="closeOverlay('jail-overlay'); rollDice();">🎲 Roll Dice</button>
     <button class="btn ${canPay ? 'btn-gold' : ''}" ${canPay ? '' : 'disabled'} style="${canPay ? '' : 'background:rgba(255,255,255,.12);color:rgba(255,255,255,.45)'}" onclick="closeOverlay('jail-overlay'); payBailout();">${bailLabel}</button>
@@ -5990,6 +6301,7 @@ function sendToJail(p) {
   p.pos = 10;
   p.doublesCount = 0;
   addLog(`${p.name} goes to jail! ⛓️`, 'danger');
+  playSfx('jail');
   showJailPrompt(p, 'sent');
 }
 
@@ -5997,16 +6309,19 @@ function payBailout() {
   if (!requireTurnControl()) return;
   const p = curPlayer();
   if (!p.inJail) return;
+  const bailAmount = getThemeJailBail(G.boardThemeId || selectedThemeId);
   if (p.jailFreeCards > 0) {
     p.jailFreeCards--;
     p.inJail = false;
     p.jailTurns = 0;
     addLog(`${p.name} used a Get Out of Jail Free card!`, 'success');
-  } else if (p.money >= 500) {
-    chargeMoney(p, 500, null, true);
+    playSfx('bail');
+  } else if (p.money >= bailAmount) {
+    chargeMoney(p, bailAmount, null, true);
     p.inJail = false;
     p.jailTurns = 0;
-    addLog(`${p.name} paid ৳500 bail and is free!`, 'success');
+    addLog(`${p.name} paid ${fmtCurrency(bailAmount)} bail and is free!`, 'success');
+    playSfx('bail');
   } else {
     toast('Not enough money!', 'danger'); return;
   }
@@ -6030,7 +6345,7 @@ function sellBuildingsForEmergencyCash(player) {
       prop.houses = 0;
       player.money += refund;
       raised += refund;
-      addLog(`${player.name} sold hotel on ${sp.name} for ৳${fmt(refund)}.`, 'danger');
+      addLog(`${player.name} sold hotel on ${sp.name} for ${fmtCurrency(refund)}.`, 'danger');
     }
     if (prop.houses > 0) {
       const count = prop.houses;
@@ -6038,7 +6353,7 @@ function sellBuildingsForEmergencyCash(player) {
       prop.houses = 0;
       player.money += refund;
       raised += refund;
-      addLog(`${player.name} sold ${count} house${count > 1 ? 's' : ''} on ${sp.name} for ৳${fmt(refund)}.`, 'danger');
+      addLog(`${player.name} sold ${count} house${count > 1 ? 's' : ''} on ${sp.name} for ${fmtCurrency(refund)}.`, 'danger');
     }
   });
   return raised;
@@ -6173,9 +6488,9 @@ function showDebtPrompt(p, amount, recipient = null, toParking = false) {
   const continueBtn = document.getElementById('bankrupt-continue-btn');
   const mortgageBtn = document.getElementById('bankrupt-mortgage-btn');
   const sellBtn = document.getElementById('bankrupt-sell-btn');
-  if (titleEl) titleEl.textContent = `${p.name} must pay ৳${fmt(DEBT_PROMPT.amount)}`;
+  if (titleEl) titleEl.textContent = `${p.name} must pay ${fmtCurrency(DEBT_PROMPT.amount)}`;
   if (descEl) {
-    descEl.textContent = `${p.name} owes ${creditorName} and is short by ৳${fmt(shortBy)}. Sell buildings or mortgage properties to raise funds, or declare bankruptcy.`;
+    descEl.textContent = `${p.name} owes ${creditorName} and is short by ${fmtCurrency(shortBy)}. Sell buildings or mortgage properties to raise funds, or declare bankruptcy.`;
   }
   if (continueBtn) continueBtn.textContent = 'Declare Bankruptcy';
   if (mortgageBtn) mortgageBtn.style.display = '';
@@ -6222,7 +6537,7 @@ function tryResolveDebtPrompt() {
   if (recipient && !recipient.bankrupt) recipient.money += due;
 
   const creditorName = recipient && !recipient.bankrupt ? recipient.name : 'the bank';
-  addLog(`${payer.name} settled debt of ৳${fmt(due)} to ${creditorName}.`, 'success');
+  addLog(`${payer.name} settled debt of ${fmtCurrency(due)} to ${creditorName}.`, 'success');
   resetDebtPrompt();
   closeOverlay('bankrupt-overlay');
   closeOverlay('mortgage-overlay');
@@ -6240,7 +6555,7 @@ function chargeMoney(p, amount, recipient=null, toParking=false) {
   if (p.money < amount && actorIsAi) {
     const raised = sellBuildingsForEmergencyCash(p);
     if (raised > 0) {
-      addLog(`${p.name} raised ৳${fmt(raised)} by liquidating buildings.`, 'important');
+      addLog(`${p.name} raised ${fmtCurrency(raised)} by liquidating buildings.`, 'important');
     }
   }
 
@@ -6283,7 +6598,7 @@ function showRentModal(payer, owner, propName, rent) {
     return;
   }
   document.getElementById('rent-title').textContent = `Rent for ${propName}`;
-  document.getElementById('rent-desc').textContent = `${payer.name} pays ৳${fmt(rent)} to ${owner.name}.`;
+  document.getElementById('rent-desc').textContent = `${payer.name} pays ${fmtCurrency(rent)} to ${owner.name}.`;
   openOverlay('rent-overlay');
 }
 
@@ -6297,6 +6612,7 @@ function checkBankruptcy() {
 
 function declareBankruptcy(p, creditor = null, debtAmount = 0, toBank = false) {
   if (!p || p.bankrupt) return;
+  playSfx('bankrupt');
   if (DEBT_PROMPT.active && DEBT_PROMPT.payerId === p.id) {
     resetDebtPrompt();
   }
@@ -6339,7 +6655,7 @@ function declareBankruptcy(p, creditor = null, debtAmount = 0, toBank = false) {
 
     if (interestDue > 0) {
       creditor.money -= interestDue;
-      addLog(`${creditor.name} paid ৳${fmt(interestDue)} mortgage interest to the bank.`, 'danger');
+      addLog(`${creditor.name} paid ${fmtCurrency(interestDue)} mortgage interest to the bank.`, 'danger');
       if (creditor.money < 0 && !creditor.bankrupt) {
         addLog(`${creditor.name} cannot cover mortgage interest and goes bankrupt to the bank.`, 'danger');
         declareBankruptcy(creditor, null, Math.abs(creditor.money), true);
@@ -6349,7 +6665,7 @@ function declareBankruptcy(p, creditor = null, debtAmount = 0, toBank = false) {
     document.getElementById('bankrupt-name').textContent = `${p.name} is Bankrupt!`;
     document.getElementById('bankrupt-desc').textContent = `${p.name} could not pay ${creditor.name} and turned over all assets.`;
   } else {
-    const debtTxt = debtAmount > 0 ? ` (৳${fmt(debtAmount)})` : '';
+    const debtTxt = debtAmount > 0 ? ` (${fmtCurrency(debtAmount)})` : '';
     addLog(
       auctionsEnabled
         ? `${p.name} is BANKRUPT to the Bank${debtTxt}. Bank auctions all properties.`
@@ -6437,6 +6753,12 @@ function confirmBankruptcy() {
 // ═══════════════════════════════════════════════
 function endTurn() {
   if (!requireTurnControl()) return;
+  if (MOVE_FX.active || (Number(ONLINE.pendingCardResolutions) || 0) > 0) {
+    if (!isAiPlayer(curPlayer())) {
+      toast('Wait for movement/card effects to finish.', 'danger');
+    }
+    return;
+  }
   if (hasPendingDebtPromptForCurrentPlayer()) {
     showDebtPrompt(curPlayer(), DEBT_PROMPT.amount, DEBT_PROMPT.recipientId !== null ? G.players[DEBT_PROMPT.recipientId] : null, DEBT_PROMPT.toParking);
     toast('Settle debt by mortgaging or declare bankruptcy.', 'danger');
@@ -6457,6 +6779,7 @@ function endTurn() {
   AI_CTRL.lastTradeAttemptKey = '';
   G.phase = 'roll';
   G.lastDoubles = false;
+  playSfx('turn');
 
   const p = curPlayer();
   addLog(`─────── ${p.name}'s turn ───────`, 'important');
@@ -6524,6 +6847,7 @@ function showSpaceInfo(id) {
 // ═══════════════════════════════════════════════
 function showWinner(p) {
   if (!p) return;
+  playSfx('win');
   G.gameOver = true;
   G.auctionState = null;
   G.bankAuctionQueue = [];
@@ -6815,6 +7139,9 @@ function openDrawer(type) {
     dc.innerHTML = document.getElementById('chat-log').innerHTML;
   } else if (type === 'settings') {
     const dur = TIMER.duration;
+    const sfxVolumePct = Math.round(clampSfxVolume(SFX.volume) * 100);
+    const sfxEnabled = !!SFX.enabled;
+    const bgmEnabled = !!SFX.bgmEnabled;
     const canLeave = isOnlineGame() && ONLINE.status === 'playing';
     const leaveBlock = canLeave
       ? `<hr style="border:none;border-top:1px solid rgba(255,255,255,.12);margin:1rem 0">
@@ -6822,7 +7149,28 @@ function openDrawer(type) {
          <button onclick="closeDrawer();openLeaveGameModal()" style="width:100%;padding:.6rem .9rem;border:none;border-radius:8px;background:linear-gradient(135deg,#7f1d1d,#c0392b);color:#fff;font-weight:700;cursor:pointer">🚪 Leave Game</button>`
       : '';
     content.innerHTML = `
-      <h3 style="color:#fff;margin-bottom:1rem;font-family:var(--font-display)">⚙️ Timer Settings</h3>
+      <h3 style="color:#fff;margin-bottom:1rem;font-family:var(--font-display)">⚙️ Timer & Sound Settings</h3>
+      <div style="margin-bottom:1rem;padding:.75rem;border:1px solid rgba(255,255,255,.14);border-radius:10px;background:rgba(255,255,255,.05)">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:.6rem;margin-bottom:.65rem">
+          <div>
+            <div style="color:#fff;font-size:.88rem;font-weight:700">Sound Effects</div>
+            <div style="color:rgba(255,255,255,.52);font-size:.76rem">Dice, rent, jail, auction, and win sounds</div>
+          </div>
+          <button onclick="toggleSfxEnabled()" style="padding:.42rem .75rem;border:1px solid ${sfxEnabled ? 'rgba(45,160,90,.5)' : 'rgba(255,255,255,.25)'};background:${sfxEnabled ? 'rgba(45,160,90,.22)' : 'rgba(255,255,255,.07)'};color:${sfxEnabled ? '#86efac' : 'rgba(255,255,255,.76)'};border-radius:7px;cursor:pointer;font-family:var(--font-body);font-size:.8rem;font-weight:700">${sfxEnabled ? 'On' : 'Off'}</button>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:.6rem;margin-bottom:.65rem">
+          <div>
+            <div style="color:#fff;font-size:.88rem;font-weight:700">Background Music</div>
+            <div style="color:rgba(255,255,255,.52);font-size:.76rem">Plays during active match</div>
+          </div>
+          <button onclick="toggleBgmEnabled()" style="padding:.42rem .75rem;border:1px solid ${bgmEnabled ? 'rgba(240,192,64,.5)' : 'rgba(255,255,255,.25)'};background:${bgmEnabled ? 'rgba(240,192,64,.18)' : 'rgba(255,255,255,.07)'};color:${bgmEnabled ? 'var(--gold-light)' : 'rgba(255,255,255,.76)'};border-radius:7px;cursor:pointer;font-family:var(--font-body);font-size:.8rem;font-weight:700">${bgmEnabled ? 'On' : 'Off'}</button>
+        </div>
+        <label style="color:rgba(255,255,255,.72);font-size:.82rem;display:flex;justify-content:space-between;align-items:center;margin-bottom:.35rem">
+          <span>Volume</span>
+          <span id="sfx-volume-label">${sfxVolumePct}%</span>
+        </label>
+        <input type="range" min="0" max="100" value="${sfxVolumePct}" oninput="document.getElementById('sfx-volume-label').textContent=this.value+'%';setSfxVolume(Number(this.value)/100,false)" onchange="setSfxVolume(Number(this.value)/100,true)" style="width:100%;accent-color:var(--gold-light)">
+      </div>
       <p style="color:rgba(255,255,255,.6);font-size:.85rem;margin-bottom:1rem">
         After a player finishes their move, a countdown begins. When it hits zero, the turn automatically advances — even if they haven't clicked End Turn.
       </p>
@@ -6866,11 +7214,386 @@ function closeAllOverlays() {
   document.querySelectorAll('.overlay.show').forEach(el => el.classList.remove('show'));
 }
 
+const SFX_EVENT_FILES = Object.freeze({
+  dice: ['sounds/dice_roll_sfx.mp3'],
+  buy: ['sounds/clicktap_sfx.mp3'],
+  rent: ['sounds/decline_sfx.mp3'],
+  tax: ['sounds/decline_sfx.mp3'],
+  card: ['sounds/clicktap_sfx.mp3'],
+  jail: ['sounds/decline_sfx.mp3'],
+  bail: ['sounds/clicktap_sfx.mp3'],
+  build: ['sounds/clicktap_sfx.mp3'],
+  sell: ['sounds/clicktap_sfx.mp3'],
+  mortgage: ['sounds/decline_sfx.mp3'],
+  unmortgage: ['sounds/clicktap_sfx.mp3'],
+  'auction-open': ['sounds/clicktap_sfx.mp3'],
+  bid: ['sounds/clicktap_sfx.mp3'],
+  'auction-win': ['sounds/clicktap_sfx.mp3'],
+  bankrupt: ['sounds/game_over_sfx.mp3'],
+  turn: ['sounds/clicktap_sfx.mp3'],
+  win: ['sounds/win_sfx.mp3'],
+  inability: ['sounds/inability_sfx.mp3'],
+});
+
+const SFX_BGM_FILE = 'sounds/background_01.mp3';
+const SFX_BGM_VOLUME_FACTOR = 0.34;
+
+const SFX = {
+  enabled: true,
+  bgmEnabled: true,
+  volume: SFX_DEFAULT_VOLUME,
+  ctx: null,
+  master: null,
+  noiseBuffer: null,
+  lastPlayedAt: {},
+  assetPool: {},
+  activeClips: new Set(),
+  bgmAudio: null,
+};
+
+function clampSfxVolume(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return SFX_DEFAULT_VOLUME;
+  return Math.max(0, Math.min(1, n));
+}
+
+function getVisibleScreenId() {
+  return document.querySelector('.screen:not(.hidden)')?.id || '';
+}
+
+function getSfxFilesForEvent(name) {
+  const raw = SFX_EVENT_FILES[String(name || '')];
+  if (!raw) return [];
+  return Array.isArray(raw) ? raw.filter(Boolean) : [String(raw)];
+}
+
+function ensureSfxAssetTemplate(src) {
+  if (!src) return null;
+  if (SFX.assetPool[src]) return SFX.assetPool[src];
+  try {
+    const audio = new Audio(src);
+    audio.preload = 'auto';
+    audio.load();
+    SFX.assetPool[src] = audio;
+    return audio;
+  } catch (_err) {
+    return null;
+  }
+}
+
+function preloadSfxAssets() {
+  const files = new Set();
+  Object.values(SFX_EVENT_FILES).forEach(list => {
+    (Array.isArray(list) ? list : [list]).forEach(src => {
+      if (src) files.add(String(src));
+    });
+  });
+  files.add(SFX_BGM_FILE);
+  files.forEach(src => {
+    ensureSfxAssetTemplate(src);
+  });
+}
+
+function ensureBgmAudio() {
+  if (SFX.bgmAudio) return SFX.bgmAudio;
+  try {
+    const bgm = new Audio(SFX_BGM_FILE);
+    bgm.preload = 'auto';
+    bgm.loop = true;
+    bgm.volume = clampSfxVolume(SFX.volume * SFX_BGM_VOLUME_FACTOR);
+    SFX.bgmAudio = bgm;
+    return bgm;
+  } catch (_err) {
+    return null;
+  }
+}
+
+function loadSfxPreferences() {
+  try {
+    const enabledRaw = localStorage.getItem(SFX_PREF_ENABLED_KEY);
+    if (enabledRaw === '0' || enabledRaw === '1') {
+      SFX.enabled = enabledRaw === '1';
+    }
+    const bgmRaw = localStorage.getItem(SFX_PREF_BGM_ENABLED_KEY);
+    if (bgmRaw === '0' || bgmRaw === '1') {
+      SFX.bgmEnabled = bgmRaw === '1';
+    }
+    const volumeRaw = localStorage.getItem(SFX_PREF_VOLUME_KEY);
+    if (volumeRaw !== null) {
+      SFX.volume = clampSfxVolume(volumeRaw);
+    }
+  } catch (_err) {}
+}
+
+function persistSfxPreferences() {
+  try {
+    localStorage.setItem(SFX_PREF_ENABLED_KEY, SFX.enabled ? '1' : '0');
+    localStorage.setItem(SFX_PREF_BGM_ENABLED_KEY, SFX.bgmEnabled ? '1' : '0');
+    localStorage.setItem(SFX_PREF_VOLUME_KEY, String(SFX.volume));
+  } catch (_err) {}
+}
+
+function ensureSfxEngine() {
+  if (SFX.ctx && SFX.master) return SFX.ctx;
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  if (!AudioCtx) return null;
+  try {
+    const ctx = new AudioCtx();
+    const master = ctx.createGain();
+    master.gain.value = SFX.enabled ? SFX.volume : 0;
+    master.connect(ctx.destination);
+    SFX.ctx = ctx;
+    SFX.master = master;
+    return ctx;
+  } catch (_err) {
+    return null;
+  }
+}
+
+function syncBgmForScreen(screenId = getVisibleScreenId()) {
+  const bgm = ensureBgmAudio();
+  if (!bgm) return;
+
+  bgm.volume = clampSfxVolume(SFX.volume * SFX_BGM_VOLUME_FACTOR);
+  const shouldPlay = !!(SFX.enabled && SFX.bgmEnabled && screenId === 'game-screen' && !(G?.gameOver));
+  if (!shouldPlay) {
+    bgm.pause();
+    if (screenId !== 'game-screen') {
+      try { bgm.currentTime = 0; } catch (_err) {}
+    }
+    return;
+  }
+
+  const p = bgm.play();
+  if (p && typeof p.catch === 'function') {
+    p.catch(() => {});
+  }
+}
+
+function updateSfxMasterGain() {
+  if (SFX.ctx && SFX.master) {
+    const target = SFX.enabled ? SFX.volume : 0;
+    SFX.master.gain.setTargetAtTime(target, SFX.ctx.currentTime, 0.015);
+  }
+  syncBgmForScreen();
+}
+
+function unlockSfxEngine() {
+  const ctx = ensureSfxEngine();
+  if (ctx && ctx.state === 'suspended') {
+    ctx.resume().catch(() => {});
+  }
+  syncBgmForScreen();
+}
+
+function installSfxUnlockListeners() {
+  const unlock = () => {
+    unlockSfxEngine();
+  };
+  window.addEventListener('pointerdown', unlock, { passive: true });
+  window.addEventListener('touchstart', unlock, { passive: true });
+  window.addEventListener('keydown', unlock);
+}
+
+function setSfxEnabled(enabled, notify = true) {
+  SFX.enabled = !!enabled;
+  persistSfxPreferences();
+  ensureSfxEngine();
+  updateSfxMasterGain();
+  if (notify) toast(SFX.enabled ? '🔊 Sound enabled' : '🔇 Sound muted', 'gold');
+}
+
+function toggleSfxEnabled() {
+  setSfxEnabled(!SFX.enabled, true);
+  openDrawer('settings');
+}
+
+function setBgmEnabled(enabled, notify = true) {
+  SFX.bgmEnabled = !!enabled;
+  persistSfxPreferences();
+  syncBgmForScreen();
+  if (notify) toast(SFX.bgmEnabled ? '🎵 Music enabled' : '🎵 Music muted', 'gold');
+}
+
+function toggleBgmEnabled() {
+  setBgmEnabled(!SFX.bgmEnabled, true);
+  openDrawer('settings');
+}
+
+function setSfxVolume(volume, notify = false) {
+  SFX.volume = clampSfxVolume(volume);
+  persistSfxPreferences();
+  ensureSfxEngine();
+  updateSfxMasterGain();
+  if (notify) toast(`🔉 SFX volume ${Math.round(SFX.volume * 100)}%`, 'gold');
+}
+
+function ensureSfxNoiseBuffer(ctx) {
+  if (SFX.noiseBuffer && SFX.noiseBuffer.sampleRate === ctx.sampleRate) return SFX.noiseBuffer;
+  const length = Math.max(1, Math.floor(ctx.sampleRate * 0.9));
+  const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < data.length; i++) {
+    data[i] = Math.random() * 2 - 1;
+  }
+  SFX.noiseBuffer = buffer;
+  return buffer;
+}
+
+function playSfxTone(freq, duration, opts = {}) {
+  const ctx = SFX.ctx;
+  if (!ctx || !SFX.master || !Number.isFinite(freq) || freq <= 0) return;
+  const type = String(opts.type || 'sine');
+  const gainValue = Math.max(0.0001, Number(opts.gain) || 0.12);
+  const attack = Math.max(0.001, Number(opts.attack) || 0.003);
+  const release = Math.max(0.01, Number(opts.release) || 0.08);
+  const start = ctx.currentTime + Math.max(0, Number(opts.start) || 0) + 0.004;
+
+  const osc = ctx.createOscillator();
+  const amp = ctx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, start);
+  if (Number.isFinite(Number(opts.detune))) {
+    osc.detune.setValueAtTime(Number(opts.detune), start);
+  }
+
+  amp.gain.setValueAtTime(0.0001, start);
+  amp.gain.exponentialRampToValueAtTime(gainValue, start + attack);
+  amp.gain.exponentialRampToValueAtTime(0.0001, start + Math.max(0.02, duration) + release);
+
+  osc.connect(amp);
+  amp.connect(SFX.master);
+  osc.start(start);
+  osc.stop(start + Math.max(0.02, duration) + release + 0.02);
+}
+
+function playSfxNoise(duration, opts = {}) {
+  const ctx = SFX.ctx;
+  if (!ctx || !SFX.master) return;
+  const start = ctx.currentTime + Math.max(0, Number(opts.start) || 0) + 0.004;
+  const gainValue = Math.max(0.0001, Number(opts.gain) || 0.05);
+  const release = Math.max(0.01, Number(opts.release) || 0.06);
+  const freq = Math.max(120, Number(opts.frequency) || 1100);
+
+  const src = ctx.createBufferSource();
+  src.buffer = ensureSfxNoiseBuffer(ctx);
+
+  const filter = ctx.createBiquadFilter();
+  filter.type = 'bandpass';
+  filter.frequency.setValueAtTime(freq, start);
+  filter.Q.value = 0.9;
+
+  const amp = ctx.createGain();
+  amp.gain.setValueAtTime(gainValue, start);
+  amp.gain.exponentialRampToValueAtTime(0.0001, start + Math.max(0.02, duration) + release);
+
+  src.connect(filter);
+  filter.connect(amp);
+  amp.connect(SFX.master);
+  src.start(start);
+  src.stop(start + Math.max(0.02, duration) + release + 0.02);
+}
+
+function canPlaySfx(name, cooldownMs = 80) {
+  const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+  const key = String(name || 'generic');
+  const last = Number(SFX.lastPlayedAt[key]) || 0;
+  if (now - last < Math.max(0, cooldownMs)) return false;
+  SFX.lastPlayedAt[key] = now;
+  return true;
+}
+
+function playSfxAsset(name, options = {}) {
+  const files = getSfxFilesForEvent(name);
+  if (!files.length) return false;
+  const src = files.length === 1 ? files[0] : files[rand(0, files.length - 1)];
+  const template = ensureSfxAssetTemplate(src);
+  if (!template) return false;
+
+  try {
+    const clip = template.cloneNode(true);
+    clip.preload = 'auto';
+    clip.volume = clampSfxVolume(SFX.volume * Math.max(0, Number(options.volumeFactor) || 1));
+    SFX.activeClips.add(clip);
+    const clear = () => SFX.activeClips.delete(clip);
+    clip.addEventListener('ended', clear, { once: true });
+    clip.addEventListener('error', clear, { once: true });
+    const p = clip.play();
+    if (p && typeof p.catch === 'function') {
+      p.catch(() => {
+        clear();
+      });
+    }
+    return true;
+  } catch (_err) {
+    return false;
+  }
+}
+
+function playSfxSynthFallback(name) {
+  switch (name) {
+    case 'dice':
+      playSfxNoise(0.09, { gain: 0.04, frequency: 1200 });
+      playSfxTone(210 + rand(0, 50), 0.05, { type: 'triangle', gain: 0.07 });
+      playSfxTone(280 + rand(0, 70), 0.06, { type: 'triangle', gain: 0.06, start: 0.055 });
+      break;
+    case 'win':
+      playSfxTone(392, 0.09, { type: 'triangle', gain: 0.08 });
+      playSfxTone(523.25, 0.1, { type: 'triangle', gain: 0.08, start: 0.1 });
+      playSfxTone(659.25, 0.12, { type: 'triangle', gain: 0.08, start: 0.22 });
+      playSfxTone(783.99, 0.16, { type: 'triangle', gain: 0.08, start: 0.34 });
+      break;
+    case 'bankrupt':
+      playSfxNoise(0.14, { gain: 0.04, frequency: 420 });
+      playSfxTone(165, 0.24, { type: 'square', gain: 0.07, start: 0.02 });
+      break;
+    default:
+      playSfxTone(500, 0.05, { type: 'sine', gain: 0.04 });
+      break;
+  }
+}
+
+function playSfx(name, options = {}) {
+  if (!SFX.enabled) return;
+  const ctx = ensureSfxEngine();
+  if (ctx && ctx.state === 'suspended') {
+    ctx.resume().catch(() => {});
+  }
+
+  const cooldownByName = {
+    dice: 130,
+    bid: 90,
+    build: 90,
+    sell: 90,
+    mortgage: 110,
+    unmortgage: 110,
+    turn: 150,
+    rent: 130,
+    jail: 220,
+    card: 120,
+    bankrupt: 260,
+    win: 550,
+    inability: 240,
+  };
+
+  if (!canPlaySfx(name, Number(options.cooldownMs) || cooldownByName[name] || 90)) return;
+  if (playSfxAsset(name, options)) return;
+  playSfxSynthFallback(name);
+}
+
 // ═══════════════════════════════════════════════
 //  TOAST
 // ═══════════════════════════════════════════════
 let toastTimer;
 function toast(msg, type='') {
+  if (type === 'danger') {
+    const lower = String(msg || '').toLowerCase();
+    if (lower.includes('not enough') || lower.includes('must') || lower.includes('cannot') || lower.includes('wait')) {
+      playSfx('inability', { cooldownMs: 260 });
+    } else {
+      playSfx('rent', { cooldownMs: 240 });
+    }
+  }
   const el = document.getElementById('toast');
   el.textContent = msg;
   el.className = type ? `toast-${type}` : '';
@@ -7210,6 +7933,7 @@ function handleLobbyBack() {
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
   document.getElementById(id).classList.remove('hidden');
+  syncBgmForScreen(id);
 }
 
 // ═══════════════════════════════════════════════
@@ -7406,6 +8130,10 @@ window.addEventListener('orientationchange', updateViewportHeightVar);
 if (window.visualViewport) {
   window.visualViewport.addEventListener('resize', updateViewportHeightVar);
 }
+
+loadSfxPreferences();
+preloadSfxAssets();
+installSfxUnlockListeners();
 
 installOnlineMutationHooks();
 installLobbyEvents();
