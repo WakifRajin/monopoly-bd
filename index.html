@@ -3532,6 +3532,9 @@ function buildBoard() {
   const board = document.getElementById('game-board');
   board.innerHTML = '';
 
+  const die1Value = Number.isInteger(Number(G?.dice?.[0])) ? Math.max(1, Math.min(6, Number(G.dice[0]))) : 1;
+  const die2Value = Number.isInteger(Number(G?.dice?.[1])) ? Math.max(1, Math.min(6, Number(G.dice[1]))) : 1;
+
   SPACES.forEach(s => {
     const el = document.createElement('div');
     el.className = 'space';
@@ -3575,13 +3578,22 @@ function buildBoard() {
     <div class="center-title">MONOPOLY</div>
     <div class="center-sub">${t.flag} ${t.name.toUpperCase()} EDITION</div>
     <div class="dice-row">
-      <div class="die" id="die1" data-v="1">${'<span class="dot"></span>'.repeat(7)}</div>
-      <div class="die" id="die2" data-v="1">${'<span class="dot"></span>'.repeat(7)}</div>
+      <div class="die" id="die1" data-v="${die1Value}">${'<span class="dot"></span>'.repeat(7)}</div>
+      <div class="die" id="die2" data-v="${die2Value}">${'<span class="dot"></span>'.repeat(7)}</div>
     </div>
     <button id="roll-btn" onclick="rollDice()">🎲 Roll Dice</button>
     <div id="center-msg" style="font-size:clamp(.6rem,1.2vmin,.8rem);color:#1a5c1a;margin-top:.3rem;font-weight:700;font-family:'Times New Roman',Georgia,serif"></div>
   `;
   board.appendChild(center);
+}
+
+function renderDiceFromState() {
+  const d1 = Number.isInteger(Number(G?.dice?.[0])) ? Math.max(1, Math.min(6, Number(G.dice[0]))) : 1;
+  const d2 = Number.isInteger(Number(G?.dice?.[1])) ? Math.max(1, Math.min(6, Number(G.dice[1]))) : 1;
+  const die1 = document.getElementById('die1');
+  const die2 = document.getElementById('die2');
+  if (die1) die1.dataset.v = String(d1);
+  if (die2) die2.dataset.v = String(d2);
 }
 
 // ═══════════════════════════════════════════════
@@ -3591,6 +3603,7 @@ function renderAll() {
   renderPlayerCards();
   renderMarkers();
   renderBoardOwnership();
+  renderDiceFromState();
   renderGameLog();
   renderChatLog();
   syncAuctionOverlay();
