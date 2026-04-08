@@ -4048,6 +4048,7 @@ async function animatePlayerStepMovement(player, steps) {
   } finally {
     MOVE_FX.active = false;
     MOVE_FX.playerId = null;
+    updateActionButtons();
   }
 
   return true;
@@ -5030,6 +5031,7 @@ async function movePlayer(player, steps, rolledDoubles) {
   } finally {
     MOVE_FX.active = false;
     MOVE_FX.playerId = null;
+    updateActionButtons();
   }
 }
 
@@ -5071,6 +5073,7 @@ async function movePlayerTo(player, target, collectGo=true) {
   } finally {
     MOVE_FX.active = false;
     MOVE_FX.playerId = null;
+    updateActionButtons();
   }
 }
 
