@@ -2543,8 +2543,9 @@ function captureBoardVisualState(state) {
       };
     }),
     owners: rawProps.map(prop => {
-      const ownerN = Number(prop?.owner);
-      return Number.isInteger(ownerN) ? ownerN : null;
+      if (!prop || prop.owner === null || prop.owner === undefined) return null;
+      const ownerN = Number(prop.owner);
+      return Number.isInteger(ownerN) && ownerN >= 0 ? ownerN : null;
     }),
   };
 }
@@ -2599,7 +2600,7 @@ function hydrateRemoteGameState(raw) {
       continue;
     }
     const src = props[i] && typeof props[i] === 'object' ? props[i] : {};
-    const ownerN = Number(src.owner);
+    const ownerN = (src.owner === null || src.owner === undefined) ? NaN : Number(src.owner);
     const owner = Number.isInteger(ownerN) && ownerN >= 0 && ownerN < next.players.length ? ownerN : null;
     const hotel = !!src.hotel;
     const houses = hotel ? 0 : Math.max(0, Math.min(4, Number(src.houses) || 0));
@@ -3050,8 +3051,7 @@ async function joinOnlineRoom() {
   ONLINE.localName = myName;
   const roomRef = FIREBASE.api.ref(FIREBASE.db, `rooms/${roomId}`);
   const preSnap = await FIREBASE.api.get(roomRef);
-  const baseRoom = preSnap.exists() ? preSnap.val() : null;
-  if (!baseRoom) {
+  if (!preSnap.exists()) {
     toast('Room not found', 'danger');
     return;
   }
@@ -3069,9 +3069,10 @@ async function joinOnlineRoom() {
   try {
     let txError = '';
     const result = await FIREBASE.api.runTransaction(roomRef, data => {
-      const roomData = (data && typeof data === 'object') ? data : baseRoom;
+      const roomData = (data && typeof data === 'object') ? data : null;
       if (!roomData) {
-        throw new Error('Room not found');
+        txError = 'Room not found';
+        return;
       }
       if (Number(roomData.schemaVersion || 0) !== ROOM_SCHEMA_VERSION) {
         txError = 'Room is from an older version. Ask host to recreate the room.';
@@ -5681,7 +5682,8 @@ function buildableGroups(p) {
   Object.keys(groups).forEach(g => {
     const groupIds = SPACES.filter(s => s.type === 'property' && s.group === parseInt(g)).map(s => s.id);
     const monopoly = groupIds.every(id => G.properties[id]?.owner === p.id);
-    if (monopoly) buildable.push(groupIds);
+    const hasMortgaged = groupIds.some(id => !!G.properties[id]?.mortgaged);
+    if (monopoly && !hasMortgaged) buildable.push(groupIds);
   });
   return buildable;
 }
@@ -5722,11 +5724,26 @@ function buildHouse(propId) {
   const actorIsAi = shouldAutoActForAi(p);
   const sp = SPACES[propId];
   const prop = G.properties[propId];
+  if (!sp || !prop || sp.type !== 'property') return;
+  if (prop.owner !== p.id) { toast('You do not own this property.', 'danger'); return; }
+  if (prop.mortgaged) { toast('Cannot build on a mortgaged property.', 'danger'); return; }
+  if (prop.hotel) { toast('This property already has a hotel.', 'danger'); return; }
+
+  const groupIds = SPACES
+    .filter(s => s.type === 'property' && s.group === sp.group)
+    .map(s => s.id);
+  const monopoly = groupIds.every(id => G.properties[id]?.owner === p.id);
+  if (!monopoly) { toast('Own the full color group to build.', 'danger'); return; }
+  if (groupIds.some(id => G.properties[id]?.mortgaged)) {
+    toast('Unmortgage this color group before building.', 'danger');
+    return;
+  }
+
   const cost = sp.house;
   if (p.money < cost) { toast('Not enough money!', 'danger'); return; }
   p.money -= cost;
   playSfx('build');
-  if (prop.houses === 4) { prop.hotel = true; prop.houses = 0; addLog(`${p.name} built a hotel on ${sp.name} for ${fmtCurrency(cost)}.`, 'success'); }
+  if (prop.houses >= 4) { prop.hotel = true; prop.houses = 0; addLog(`${p.name} built a hotel on ${sp.name} for ${fmtCurrency(cost)}.`, 'success'); }
   else { prop.houses++; addLog(`${p.name} built house #${prop.houses} on ${sp.name} for ${fmtCurrency(cost)}.`, 'success'); }
   renderAll();
   if (actorIsAi) closeOverlay('build-overlay');
