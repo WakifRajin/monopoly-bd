@@ -1,0 +1,2494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Monopoly Board Editor</title>
+<link rel="icon" type="image/svg+xml" href="logo.svg">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-0: #081613;
+  --bg-1: #0f2a24;
+  --bg-2: #13382f;
+  --surface: rgba(12, 27, 23, 0.78);
+  --surface-2: rgba(255, 255, 255, 0.06);
+  --border: rgba(195, 241, 219, 0.22);
+  --text: #f4fbf8;
+  --text-soft: rgba(238, 248, 243, 0.72);
+  --muted: rgba(219, 240, 229, 0.52);
+  --accent: #f2bf5e;
+  --accent-2: #21b67a;
+  --danger: #c64949;
+  --radius: 14px;
+  --radius-sm: 10px;
+  --shadow: 0 24px 52px rgba(0, 0, 0, 0.34);
+  --font-display: 'Space Grotesk', 'Segoe UI', sans-serif;
+  --font-code: 'IBM Plex Mono', Consolas, monospace;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body { min-height: 100%; margin: 0; }
+body {
+  font-family: var(--font-display);
+  color: var(--text);
+  background:
+    radial-gradient(circle at 12% 15%, rgba(37, 140, 104, 0.28), transparent 38%),
+    radial-gradient(circle at 84% 18%, rgba(212, 161, 69, 0.2), transparent 34%),
+    radial-gradient(circle at 74% 82%, rgba(42, 113, 166, 0.2), transparent 40%),
+    linear-gradient(145deg, var(--bg-0), var(--bg-1) 48%, var(--bg-2));
+}
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.2;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 34px 34px;
+}
+
+.page {
+  position: relative;
+  z-index: 1;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 1rem 1rem 1.6rem;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.9rem;
+}
+
+.topbar .muted {
+  text-align: right;
+  max-width: min(60%, 440px);
+  overflow-wrap: anywhere;
+}
+
+.hero {
+  border: 1px solid var(--border);
+  background: linear-gradient(140deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.04));
+  border-radius: 18px;
+  padding: 1.05rem 1.15rem;
+  margin-bottom: 0.9rem;
+  box-shadow: var(--shadow);
+}
+
+h1 {
+  margin: 0;
+  line-height: 1.05;
+  letter-spacing: 0.01em;
+  font-size: clamp(1.7rem, 4.2vw, 2.7rem);
+}
+
+.subtitle {
+  margin-top: 0.55rem;
+  color: var(--text-soft);
+  font-size: 0.95rem;
+  line-height: 1.52;
+  max-width: 980px;
+}
+
+.chips {
+  margin-top: 0.72rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.chip {
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  padding: 0.3rem 0.66rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.09);
+  color: #e9f7f1;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(340px, 390px) minmax(0, 1fr);
+  gap: 0.85rem;
+}
+
+.card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: linear-gradient(160deg, var(--surface), rgba(9, 22, 18, 0.74));
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.28);
+  padding: 0.92rem;
+}
+
+.card h2 {
+  margin: 0 0 0.2rem;
+  font-size: 1.15rem;
+}
+
+.note {
+  margin: 0;
+  color: rgba(242, 251, 246, 0.9);
+  font-size: 0.86rem;
+  line-height: 1.56;
+}
+
+.input-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.52rem;
+  margin-top: 0.62rem;
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.input-group label {
+  color: #ecfaf3;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.input-group input,
+.input-group textarea,
+.input-group select {
+  width: 100%;
+  border: 1px solid rgba(214, 241, 226, 0.36);
+  border-radius: var(--radius-sm);
+  background: #173226;
+  color: #f7fff9;
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  padding: 0.58rem 0.64rem;
+  outline: none;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.input-group input::placeholder,
+.input-group textarea::placeholder {
+  color: rgba(229, 248, 238, 0.55);
+}
+
+.input-group textarea {
+  min-height: 92px;
+  resize: vertical;
+  font-family: var(--font-code);
+  font-size: 0.79rem;
+  line-height: 1.45;
+}
+
+.input-group input:focus,
+.input-group textarea:focus,
+.input-group select:focus {
+  border-color: #95f2c9;
+  box-shadow: 0 0 0 3px rgba(47, 150, 108, 0.26);
+}
+
+.input-group select option,
+.group-row select option,
+td select option,
+.modal select option {
+  background: #173226;
+  color: #f7fff9;
+}
+
+.actions,
+.actions-tight {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.46rem;
+  margin-top: 0.68rem;
+}
+
+.actions-tight {
+  margin-top: 0.48rem;
+}
+
+.btn {
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-display);
+  font-size: 0.86rem;
+  font-weight: 700;
+  min-height: 38px;
+  border-radius: 10px;
+  padding: 0.5rem 0.82rem;
+  color: #fff;
+  transition: transform 0.15s ease, filter 0.15s ease;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn:hover { transform: translateY(-1px); filter: brightness(1.03); }
+.btn:active { transform: translateY(0); }
+.btn:disabled { opacity: 0.48; cursor: not-allowed; transform: none; }
+
+.btn.primary { background: linear-gradient(135deg, #148c60, var(--accent-2)); }
+.btn.secondary { background: linear-gradient(135deg, #1d5d98, #2a8ad6); }
+.btn.warning { background: linear-gradient(135deg, #896011, var(--accent)); color: #1a1504; }
+.btn.ghost { background: rgba(255, 255, 255, 0.12); border: 1px solid rgba(255, 255, 255, 0.16); }
+
+.seed-status {
+  margin-top: 0.52rem;
+  border-radius: 9px;
+  border: 1px solid rgba(214, 241, 226, 0.18);
+  background: rgba(0, 0, 0, 0.22);
+  color: var(--text-soft);
+  font-size: 0.82rem;
+  line-height: 1.45;
+  padding: 0.5rem 0.6rem;
+}
+.seed-status.success { border-color: rgba(63, 199, 124, 0.45); color: #a4f3c7; }
+.seed-status.error { border-color: rgba(223, 94, 94, 0.45); color: #ffc7c7; }
+
+.stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin-top: 0.72rem;
+}
+
+.stat {
+  border: 1px solid rgba(214, 241, 226, 0.2);
+  background: var(--surface-2);
+  border-radius: 10px;
+  padding: 0.54rem 0.58rem;
+}
+
+.stat .label {
+  font-size: 0.69rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.stat .value {
+  margin-top: 0.15rem;
+  font-size: 1.01rem;
+  font-weight: 800;
+}
+
+.editor {
+  padding: 0.92rem;
+}
+
+.table-wrap {
+  margin-top: 0.62rem;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 12px;
+  border: 1px solid rgba(214, 241, 226, 0.24);
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 1120px;
+}
+
+thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: rgba(9, 20, 17, 0.96);
+  border-bottom: 1px solid rgba(214, 241, 226, 0.28);
+  color: #f3fff9;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-size: 0.69rem;
+  font-weight: 800;
+  padding: 0.48rem 0.42rem;
+  text-align: left;
+}
+
+tbody td {
+  border-bottom: 1px solid rgba(214, 241, 226, 0.13);
+  padding: 0.42rem;
+  font-size: 0.85rem;
+  color: #ecfaf3;
+  vertical-align: middle;
+}
+
+tbody tr {
+  background: linear-gradient(110deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.015));
+}
+
+tbody tr:hover {
+  background: linear-gradient(110deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
+}
+
+td input,
+td select {
+  width: 100%;
+  border: 1px solid rgba(214, 241, 226, 0.36);
+  border-radius: 8px;
+  background: #173226;
+  color: #f8fff9;
+  font-size: 0.82rem;
+  padding: 0.42rem 0.48rem;
+  font-family: var(--font-display);
+}
+
+td input.rent-input {
+  font-family: var(--font-code);
+  font-size: 0.75rem;
+}
+
+.type-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.24rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.type-property { background: rgba(60, 160, 114, 0.2); color: #b2f5d6; }
+.type-railroad { background: rgba(46, 96, 145, 0.24); color: #c9e7ff; }
+.type-utility { background: rgba(184, 133, 48, 0.22); color: #ffe0a9; }
+
+.swatch {
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  border-radius: 2px;
+  margin-right: 0.3rem;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  vertical-align: middle;
+}
+
+.mono {
+  font-family: var(--font-code);
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.footer-note {
+  margin-top: 0.7rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.group-list {
+  margin-top: 0.62rem;
+  display: grid;
+  gap: 0.46rem;
+}
+
+.group-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid rgba(214, 241, 226, 0.2);
+  background: var(--surface-2);
+  border-radius: 10px;
+  padding: 0.45rem 0.52rem;
+}
+
+.group-row .group-title {
+  font-size: 0.79rem;
+  font-weight: 700;
+}
+
+.group-row .group-meta {
+  font-size: 0.73rem;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.group-row select {
+  width: 120px;
+  border: 1px solid rgba(214, 241, 226, 0.36);
+  border-radius: 8px;
+  background: #173226;
+  color: #f8fff9;
+  font-size: 0.8rem;
+  padding: 0.4rem 0.45rem;
+  font-family: var(--font-display);
+}
+
+.preview-wrap {
+  margin-top: 0.72rem;
+  border: 1px solid rgba(214, 241, 226, 0.3);
+  border-radius: 12px;
+  padding: 0.58rem;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.preview-title {
+  margin: 0 0 0.4rem;
+  font-size: 0.86rem;
+  color: #f3fff9;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.board-preview {
+  display: grid;
+  grid-template-columns: 1.65fr repeat(9, 1fr) 1.65fr;
+  grid-template-rows: 1.65fr repeat(9, 1fr) 1.65fr;
+  gap: 0.2rem;
+  aspect-ratio: 1 / 1;
+  background: linear-gradient(145deg, #d4ecd8 0%, #c7e3ce 52%, #b8d8bf 100%);
+  border: 3px solid #111;
+  box-shadow: 0 0 0 6px #1a3d25, 0 0 0 8px #111, 0 14px 34px rgba(0, 0, 0, 0.62);
+  padding: 0.16rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.pv-space,
+.pv-fixed {
+  position: relative;
+  border-radius: 2px;
+  border: 1px solid #111;
+  background: linear-gradient(160deg, #d9efdc 0%, #c9e5cf 100%);
+  padding: 0.18rem 0.2rem;
+  overflow: hidden;
+}
+
+.pv-space {
+  cursor: pointer;
+  text-align: left;
+}
+
+.pv-space:hover {
+  filter: brightness(1.06) contrast(1.04);
+}
+
+.pv-space.selected {
+  box-shadow: inset 0 0 0 2px rgba(240, 192, 64, 0.95);
+}
+
+.pv-fixed { opacity: 0.95; display: flex; align-items: center; justify-content: center; }
+
+.pv-id {
+  font-size: 0.58rem;
+  color: rgba(10, 16, 12, 0.7);
+  letter-spacing: 0.05em;
+  font-weight: 700;
+}
+
+.pv-name {
+  margin-top: 0.08rem;
+  font-size: 0.61rem;
+  line-height: 1.15;
+  max-height: 2.3em;
+  overflow: hidden;
+  color: #111;
+  font-family: 'Times New Roman', Georgia, serif;
+  font-weight: 700;
+}
+
+.pv-price {
+  margin-top: 0.12rem;
+  font-size: 0.58rem;
+  color: #2f2f2f;
+  font-weight: 700;
+}
+
+.pv-color,
+.pv-color-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 14%;
+  min-height: 4px;
+  border-bottom: 1px solid #111;
+}
+
+.pv-center {
+  grid-column: 2 / 11;
+  grid-row: 2 / 11;
+  border: 1px solid #111;
+  background: #a4d1a8;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 0.45rem;
+}
+
+.pv-center .name {
+  font-size: 1.15rem;
+  font-weight: 800;
+  line-height: 1.2;
+  color: #0a3d0a;
+  font-family: 'Times New Roman', Georgia, serif;
+}
+
+.pv-center .meta {
+  margin-top: 0.25rem;
+  font-size: 0.7rem;
+  color: #1a5c1a;
+  line-height: 1.45;
+  text-align: center;
+}
+
+tr.row-selected {
+  background: linear-gradient(110deg, rgba(242, 191, 94, 0.2), rgba(255, 255, 255, 0.06));
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(3px);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  padding: 0.8rem;
+}
+
+.overlay.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.modal {
+  width: min(700px, 100%);
+  max-height: 92vh;
+  overflow: auto;
+  border: 1px solid rgba(214, 241, 226, 0.35);
+  border-radius: 12px;
+  background: linear-gradient(165deg, #102820, #16362c);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+  padding: 0.9rem;
+}
+
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.65rem;
+}
+
+.modal-title {
+  margin: 0;
+  color: #f4fff9;
+  font-size: 1.08rem;
+}
+
+.modal-sub {
+  margin: 0.15rem 0 0;
+  color: rgba(236, 250, 243, 0.82);
+  font-size: 0.8rem;
+}
+
+.modal-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.55rem;
+}
+
+.modal-grid .input-group {
+  margin: 0;
+}
+
+.modal-grid .full {
+  grid-column: 1 / -1;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.48rem;
+  margin-top: 0.75rem;
+}
+
+.mono-readout {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-family: var(--font-code);
+  color: #daf7e9;
+  font-size: 0.76rem;
+  padding: 0.24rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid rgba(214, 241, 226, 0.3);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.deck-title {
+  margin: 0.92rem 0 0.34rem;
+  font-size: 0.92rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #f2fff8;
+}
+
+.deck-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.6rem;
+  margin-top: 0.55rem;
+}
+
+.deck-block {
+  border: 1px solid rgba(214, 241, 226, 0.24);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.18);
+  padding: 0.48rem;
+}
+
+.deck-block h4 {
+  margin: 0;
+  font-size: 0.88rem;
+  color: #f4fff9;
+}
+
+.deck-caption {
+  margin: 0.14rem 0 0.4rem;
+  color: rgba(236, 250, 243, 0.8);
+  font-size: 0.73rem;
+}
+
+.deck-table-wrap {
+  border: 1px solid rgba(214, 241, 226, 0.2);
+  border-radius: 8px;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  max-height: 320px;
+}
+
+.deck-table {
+  width: 100%;
+  min-width: 0;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.deck-table th:nth-child(1),
+.deck-table td:nth-child(1) {
+  width: 36px;
+}
+
+.deck-table th:nth-child(3),
+.deck-table td:nth-child(3) {
+  width: 118px;
+}
+
+.deck-table th:nth-child(4),
+.deck-table td:nth-child(4) {
+  width: 138px;
+}
+
+.deck-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: rgba(9, 20, 17, 0.97);
+  border-bottom: 1px solid rgba(214, 241, 226, 0.25);
+  color: #ebfff6;
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.4rem 0.36rem;
+  text-align: left;
+}
+
+.deck-table td {
+  border-bottom: 1px solid rgba(214, 241, 226, 0.12);
+  padding: 0.35rem;
+}
+
+.deck-table td.index {
+  color: rgba(236, 250, 243, 0.85);
+  font-family: var(--font-code);
+  font-size: 0.72rem;
+  width: 30px;
+}
+
+.deck-table input,
+.deck-table select {
+  width: 100%;
+  border: 1px solid rgba(214, 241, 226, 0.33);
+  border-radius: 7px;
+  background: #173226;
+  color: #f7fff9;
+  font-family: var(--font-display);
+  font-size: 0.78rem;
+  padding: 0.36rem 0.42rem;
+}
+
+.deck-table input.value-input {
+  font-family: var(--font-code);
+}
+
+@media (max-width: 1120px) {
+  .layout { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 900px) {
+  table {
+    min-width: 960px;
+  }
+
+  .card {
+    padding: 0.78rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .page { padding: 0.74rem 0.58rem 0.9rem; }
+  .hero { padding: 0.86rem 0.82rem; border-radius: 14px; }
+  .subtitle { font-size: 0.87rem; }
+  .card { padding: 0.7rem; border-radius: 12px; }
+  .input-grid { grid-template-columns: 1fr; }
+  .stats { grid-template-columns: 1fr; }
+  .topbar { flex-direction: column; align-items: stretch; }
+  .topbar .muted {
+    text-align: left;
+    max-width: none;
+    font-size: 0.72rem;
+  }
+
+  .actions .btn,
+  .actions-tight .btn {
+    flex: 1 1 140px;
+  }
+
+  .group-row {
+    grid-template-columns: 1fr;
+    gap: 0.36rem;
+  }
+
+  .group-row select {
+    width: 100%;
+  }
+
+  table {
+    min-width: 840px;
+  }
+
+  thead th,
+  tbody td {
+    padding: 0.34rem 0.26rem;
+  }
+
+  tbody td {
+    font-size: 0.78rem;
+  }
+
+  td input,
+  td select {
+    font-size: 0.76rem;
+    padding: 0.34rem 0.36rem;
+  }
+
+  .deck-table th:nth-child(3),
+  .deck-table td:nth-child(3) {
+    width: 96px;
+  }
+
+  .deck-table th:nth-child(4),
+  .deck-table td:nth-child(4) {
+    width: 114px;
+  }
+
+  .deck-table th,
+  .deck-table td {
+    padding: 0.26rem;
+  }
+
+  .deck-table input,
+  .deck-table select {
+    font-size: 0.73rem;
+    padding: 0.28rem 0.3rem;
+  }
+
+  .overlay {
+    padding: 0.5rem;
+  }
+
+  .modal {
+    padding: 0.68rem;
+    max-height: 94vh;
+  }
+
+  .modal-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .modal-grid { grid-template-columns: 1fr; }
+
+  .modal-actions {
+    flex-direction: column-reverse;
+  }
+
+  .modal-actions .btn {
+    width: 100%;
+  }
+}
+
+@media (max-width: 420px) {
+  h1 {
+    font-size: 1.48rem;
+  }
+
+  .chip {
+    font-size: 0.68rem;
+    padding: 0.24rem 0.5rem;
+  }
+
+  table {
+    min-width: 780px;
+  }
+}
+</style>
+</head>
+<body>
+<main class="page">
+  <div class="topbar">
+    <a class="btn ghost" href="index.html">Back to Home</a>
+    <div class="muted">Seed format: MBD1.&lt;checksum&gt;.&lt;payload&gt;</div>
+  </div>
+
+  <section class="hero">
+    <h1>Custom Board Editor</h1>
+    <p class="subtitle">
+      Build your own board profile with custom economy scale, property naming, color sets, and pricing/rent curves.
+      Generate a reusable seed code, share it, then load the same board again later.
+    </p>
+    <div class="chips">
+      <span class="chip">No build step</span>
+      <span class="chip">Vanilla HTML/CSS/JS</span>
+      <span class="chip">Reusable seed codes</span>
+    </div>
+  </section>
+
+  <div class="layout">
+    <aside>
+      <section class="card">
+        <h2>Board Meta</h2>
+        <p class="note">Economy scale auto-recalculates all money values and updates the live board preview.</p>
+
+        <div class="input-grid">
+          <div class="input-group" style="grid-column: 1 / -1;">
+            <label for="board-name">Board Name</label>
+            <input id="board-name" type="text" maxlength="48" value="Custom Board">
+          </div>
+          <div class="input-group">
+            <label for="currency-symbol">Currency Symbol</label>
+            <input id="currency-symbol" type="text" maxlength="4" value="$">
+          </div>
+          <div class="input-group">
+            <label for="economy-scale">Economy Scale</label>
+            <input id="economy-scale" type="number" min="0.1" max="100" step="0.1" value="1">
+          </div>
+          <div class="input-group">
+            <label for="go-salary">GO Salary</label>
+            <input id="go-salary" type="number" min="0" step="1" value="200">
+          </div>
+          <div class="input-group">
+            <label for="start-money">Start Money</label>
+            <input id="start-money" type="number" min="0" step="1" value="1500">
+          </div>
+          <div class="input-group">
+            <label for="jail-bail">Jail Bail</label>
+            <input id="jail-bail" type="number" min="0" step="1" value="50">
+          </div>
+          <div class="input-group">
+            <label for="utility-one">Utility x1</label>
+            <input id="utility-one" type="number" min="0" step="1" value="4">
+          </div>
+          <div class="input-group">
+            <label for="utility-both">Utility x2</label>
+            <input id="utility-both" type="number" min="0" step="1" value="10">
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="btn ghost" id="reset-board-btn">Reset to Classic</button>
+        </div>
+      </section>
+
+      <section class="card" style="margin-top: 0.82rem;">
+        <h2>Property Groups</h2>
+        <p class="note">Colors are controlled per group. Changing a group color updates all properties in that group.</p>
+        <div class="group-list" id="group-controls"></div>
+      </section>
+
+      <section class="card" style="margin-top: 0.82rem;">
+        <h2>Seed Code</h2>
+        <p class="note">Generate code from current board, then paste it later to restore the same setup.</p>
+
+        <div class="input-group" style="margin-top: 0.6rem;">
+          <label for="seed-code">Seed</label>
+          <textarea id="seed-code" class="mono" placeholder="Generate or paste a seed code"></textarea>
+        </div>
+
+        <div class="actions-tight">
+          <button class="btn warning" id="generate-seed-btn">Generate Seed</button>
+          <button class="btn secondary" id="load-seed-btn">Load Seed</button>
+          <button class="btn ghost" id="copy-seed-btn">Copy Seed</button>
+        </div>
+
+        <div class="seed-status" id="seed-status">Ready.</div>
+
+        <div class="stats">
+          <div class="stat">
+            <div class="label">Ownable Spaces</div>
+            <div class="value" id="stat-space-count">0</div>
+          </div>
+          <div class="stat">
+            <div class="label">Total Face Value</div>
+            <div class="value" id="stat-total-value">$0</div>
+          </div>
+          <div class="stat">
+            <div class="label">Property Average</div>
+            <div class="value" id="stat-prop-average">$0</div>
+          </div>
+          <div class="stat">
+            <div class="label">Rent Entries</div>
+            <div class="value" id="stat-rent-count">0</div>
+          </div>
+        </div>
+
+        <p class="footer-note">
+          Tip: you can open this page with a preloaded seed via URL query: boardeditor.html?seed=...
+        </p>
+      </section>
+    </aside>
+
+    <section class="card editor">
+      <h2>Ownable Spaces</h2>
+      <p class="note">
+        Edit names, group IDs, prices, rents, house costs, and mortgage values. For rent, use comma-separated numbers.
+        Property rent expects 6 values, railroad rent expects 4 values.
+      </p>
+
+      <div class="preview-wrap">
+        <h3 class="preview-title">Live Board View</h3>
+        <div id="board-preview" class="board-preview"></div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Type</th>
+              <th>Name</th>
+              <th>Color</th>
+              <th>Group</th>
+              <th>Price</th>
+              <th>House</th>
+              <th>Mortgage</th>
+              <th>Rent</th>
+            </tr>
+          </thead>
+          <tbody id="space-rows"></tbody>
+        </table>
+      </div>
+
+      <h3 class="deck-title">Card Decks</h3>
+      <p class="note">Chance and Community cards are editable. Value format examples: 200, -50, railroad, house:25,hotel:100.</p>
+
+      <div class="deck-grid">
+        <div class="deck-block">
+          <h4>Chance</h4>
+          <p class="deck-caption">Movement, money, jail, and repair effects.</p>
+          <div class="deck-table-wrap">
+            <table class="deck-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Text</th>
+                  <th>Action</th>
+                  <th>Value</th>
+                </tr>
+              </thead>
+              <tbody id="chance-card-rows"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="deck-block">
+          <h4>Community Chest</h4>
+          <p class="deck-caption">Money, jail, birthday, and GO effects.</p>
+          <div class="deck-table-wrap">
+            <table class="deck-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Text</th>
+                  <th>Action</th>
+                  <th>Value</th>
+                </tr>
+              </thead>
+              <tbody id="community-card-rows"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<div class="overlay" id="prop-editor-overlay" aria-hidden="true">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="pe-title">
+    <div class="modal-head">
+      <div>
+        <h3 class="modal-title" id="pe-title">Edit Space</h3>
+        <p class="modal-sub" id="pe-subtitle">Update all parameters for this space.</p>
+      </div>
+      <button class="btn ghost" id="pe-close-btn" type="button">Close</button>
+    </div>
+
+    <div class="modal-grid">
+      <div class="input-group">
+        <label>Space ID</label>
+        <div class="mono-readout" id="pe-id">#0</div>
+      </div>
+
+      <div class="input-group">
+        <label>Type</label>
+        <div class="mono-readout" id="pe-type">PROPERTY</div>
+      </div>
+
+      <div class="input-group full">
+        <label for="pe-name">Name</label>
+        <input id="pe-name" type="text" maxlength="48">
+      </div>
+
+      <div class="input-group" id="pe-group-wrap">
+        <label for="pe-group">Group</label>
+        <input id="pe-group" type="number" min="0" step="1">
+      </div>
+
+      <div class="input-group" id="pe-group-color-wrap">
+        <label for="pe-group-color">Group Color</label>
+        <select id="pe-group-color">
+          <option value="BROWN">BROWN</option>
+          <option value="LBLUE">LBLUE</option>
+          <option value="PINK">PINK</option>
+          <option value="ORANGE">ORANGE</option>
+          <option value="RED">RED</option>
+          <option value="YELLOW">YELLOW</option>
+          <option value="GREEN">GREEN</option>
+          <option value="DBLUE">DBLUE</option>
+        </select>
+      </div>
+
+      <div class="input-group">
+        <label for="pe-price">Price</label>
+        <input id="pe-price" type="number" min="0" step="1">
+      </div>
+
+      <div class="input-group" id="pe-house-wrap">
+        <label for="pe-house">House Cost</label>
+        <input id="pe-house" type="number" min="0" step="1">
+      </div>
+
+      <div class="input-group">
+        <label for="pe-mortgage">Mortgage</label>
+        <input id="pe-mortgage" type="number" min="0" step="1">
+      </div>
+
+      <div class="input-group full" id="pe-rent-wrap">
+        <label for="pe-rent">Rent CSV</label>
+        <input id="pe-rent" type="text" class="mono" placeholder="Comma-separated rent values">
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn ghost" id="pe-cancel-btn" type="button">Cancel</button>
+      <button class="btn primary" id="pe-save-btn" type="button">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const STORAGE_KEY = 'monopoly_board_editor_seed';
+  const COLOR_OPTIONS = ['BROWN', 'LBLUE', 'PINK', 'ORANGE', 'RED', 'YELLOW', 'GREEN', 'DBLUE'];
+  const COLOR_HEX = {
+    BROWN: '#8B4513',
+    LBLUE: '#87CEEB',
+    PINK: '#FF69B4',
+    ORANGE: '#FF8C00',
+    RED: '#DC143C',
+    YELLOW: '#FFD700',
+    GREEN: '#228B22',
+    DBLUE: '#00008B',
+  };
+
+  const CARD_ACTION_OPTIONS = ['goto', 'money', 'jail', 'jailcard', 'nearest', 'repairs', 'birthday'];
+  const DEFAULT_CHANCE_CARDS = [
+    { text: 'Advance to GO. Collect $200.', action: 'goto', value: 0 },
+    { text: 'Advance to Illinois Avenue.', action: 'goto', value: 24 },
+    { text: 'Advance to St. Charles Place.', action: 'goto', value: 11 },
+    { text: 'Take a trip to Reading Railroad.', action: 'goto', value: 5 },
+    { text: 'Take a walk on Boardwalk.', action: 'goto', value: 39 },
+    { text: 'Advance to nearest Railroad.', action: 'nearest', value: 'railroad' },
+    { text: 'Bank pays you a dividend of $50.', action: 'money', value: 50 },
+    { text: 'Building loan matures. Collect $150.', action: 'money', value: 150 },
+    { text: 'Pay poor tax of $15.', action: 'money', value: -15 },
+    { text: 'Go to Jail. Do not collect $200.', action: 'jail', value: 0 },
+    { text: 'Get Out of Jail Free.', action: 'jailcard', value: 0 },
+    { text: 'General repairs: pay $25 per house and $100 per hotel.', action: 'repairs', value: { house: 25, hotel: 100 } },
+  ];
+
+  const DEFAULT_COMMUNITY_CARDS = [
+    { text: 'Advance to GO. Collect $200.', action: 'goto', value: 0 },
+    { text: 'Bank error in your favor. Collect $200.', action: 'money', value: 200 },
+    { text: 'Doctor fee. Pay $50.', action: 'money', value: -50 },
+    { text: 'From sale of stock you get $50.', action: 'money', value: 50 },
+    { text: 'Receive consultancy fee of $25.', action: 'money', value: 25 },
+    { text: 'Get Out of Jail Free.', action: 'jailcard', value: 0 },
+    { text: 'Go to Jail. Do not collect $200.', action: 'jail', value: 0 },
+    { text: 'Life insurance matures. Collect $100.', action: 'money', value: 100 },
+    { text: 'Pay hospital fees of $100.', action: 'money', value: -100 },
+    { text: 'Pay school fees of $50.', action: 'money', value: -50 },
+    { text: 'Income tax refund. Collect $20.', action: 'money', value: 20 },
+    { text: 'It is your birthday. Collect $10 from each player.', action: 'birthday', value: 10 },
+  ];
+
+  const PREVIEW_FIXED_SPACES = {
+    0: { type: 'go', name: 'GO' },
+    2: { type: 'community', name: 'Community Chest' },
+    4: { type: 'tax', name: 'Income Tax' },
+    7: { type: 'chance', name: 'Chance' },
+    10: { type: 'jail', name: 'Jail / Visit' },
+    17: { type: 'community', name: 'Community Chest' },
+    20: { type: 'parking', name: 'Free Parking' },
+    22: { type: 'chance', name: 'Chance' },
+    30: { type: 'gotojail', name: 'Go To Jail' },
+    33: { type: 'community', name: 'Community Chest' },
+    36: { type: 'chance', name: 'Chance' },
+    38: { type: 'tax', name: 'Luxury Tax' },
+  };
+
+  const CLASSIC_SPACES = [
+    { id: 1, type: 'property', name: 'Mediterranean Avenue', color: 'BROWN', group: 0, price: 60, house: 50, mortgage: 30, rent: [2, 10, 30, 90, 160, 250] },
+    { id: 3, type: 'property', name: 'Baltic Avenue', color: 'BROWN', group: 0, price: 60, house: 50, mortgage: 30, rent: [4, 20, 60, 180, 320, 450] },
+    { id: 5, type: 'railroad', name: 'Reading Railroad', color: '', group: null, price: 200, house: 0, mortgage: 100, rent: [25, 50, 100, 200] },
+    { id: 6, type: 'property', name: 'Oriental Avenue', color: 'LBLUE', group: 1, price: 100, house: 50, mortgage: 50, rent: [6, 30, 90, 270, 400, 550] },
+    { id: 8, type: 'property', name: 'Vermont Avenue', color: 'LBLUE', group: 1, price: 100, house: 50, mortgage: 50, rent: [6, 30, 90, 270, 400, 550] },
+    { id: 9, type: 'property', name: 'Connecticut Avenue', color: 'LBLUE', group: 1, price: 120, house: 50, mortgage: 60, rent: [8, 40, 100, 300, 450, 600] },
+    { id: 11, type: 'property', name: 'St. Charles Place', color: 'PINK', group: 2, price: 140, house: 100, mortgage: 70, rent: [10, 50, 150, 450, 625, 750] },
+    { id: 12, type: 'utility', name: 'Electric Company', color: '', group: null, price: 150, house: 0, mortgage: 75, rent: [] },
+    { id: 13, type: 'property', name: 'States Avenue', color: 'PINK', group: 2, price: 140, house: 100, mortgage: 70, rent: [10, 50, 150, 450, 625, 750] },
+    { id: 14, type: 'property', name: 'Virginia Avenue', color: 'PINK', group: 2, price: 160, house: 100, mortgage: 80, rent: [12, 60, 180, 500, 700, 900] },
+    { id: 15, type: 'railroad', name: 'Pennsylvania Railroad', color: '', group: null, price: 200, house: 0, mortgage: 100, rent: [25, 50, 100, 200] },
+    { id: 16, type: 'property', name: 'St. James Place', color: 'ORANGE', group: 3, price: 180, house: 100, mortgage: 90, rent: [14, 70, 200, 550, 750, 950] },
+    { id: 18, type: 'property', name: 'Tennessee Avenue', color: 'ORANGE', group: 3, price: 180, house: 100, mortgage: 90, rent: [14, 70, 200, 550, 750, 950] },
+    { id: 19, type: 'property', name: 'New York Avenue', color: 'ORANGE', group: 3, price: 200, house: 100, mortgage: 100, rent: [16, 80, 220, 600, 800, 1000] },
+    { id: 21, type: 'property', name: 'Kentucky Avenue', color: 'RED', group: 4, price: 220, house: 150, mortgage: 110, rent: [18, 90, 250, 700, 875, 1050] },
+    { id: 23, type: 'property', name: 'Indiana Avenue', color: 'RED', group: 4, price: 220, house: 150, mortgage: 110, rent: [18, 90, 250, 700, 875, 1050] },
+    { id: 24, type: 'property', name: 'Illinois Avenue', color: 'RED', group: 4, price: 240, house: 150, mortgage: 120, rent: [20, 100, 300, 750, 925, 1100] },
+    { id: 25, type: 'railroad', name: 'B&O Railroad', color: '', group: null, price: 200, house: 0, mortgage: 100, rent: [25, 50, 100, 200] },
+    { id: 26, type: 'property', name: 'Atlantic Avenue', color: 'YELLOW', group: 5, price: 260, house: 150, mortgage: 130, rent: [22, 110, 330, 800, 975, 1150] },
+    { id: 27, type: 'property', name: 'Ventnor Avenue', color: 'YELLOW', group: 5, price: 260, house: 150, mortgage: 130, rent: [22, 110, 330, 800, 975, 1150] },
+    { id: 28, type: 'utility', name: 'Water Works', color: '', group: null, price: 150, house: 0, mortgage: 75, rent: [] },
+    { id: 29, type: 'property', name: 'Marvin Gardens', color: 'YELLOW', group: 5, price: 280, house: 150, mortgage: 140, rent: [24, 120, 360, 850, 1025, 1200] },
+    { id: 31, type: 'property', name: 'Pacific Avenue', color: 'GREEN', group: 6, price: 300, house: 200, mortgage: 150, rent: [26, 130, 390, 900, 1100, 1275] },
+    { id: 32, type: 'property', name: 'North Carolina Avenue', color: 'GREEN', group: 6, price: 300, house: 200, mortgage: 150, rent: [26, 130, 390, 900, 1100, 1275] },
+    { id: 34, type: 'property', name: 'Pennsylvania Avenue', color: 'GREEN', group: 6, price: 320, house: 200, mortgage: 160, rent: [28, 150, 450, 1000, 1200, 1400] },
+    { id: 35, type: 'railroad', name: 'Short Line', color: '', group: null, price: 200, house: 0, mortgage: 100, rent: [25, 50, 100, 200] },
+    { id: 37, type: 'property', name: 'Park Place', color: 'DBLUE', group: 7, price: 350, house: 200, mortgage: 175, rent: [35, 175, 500, 1100, 1300, 1500] },
+    { id: 39, type: 'property', name: 'Boardwalk', color: 'DBLUE', group: 7, price: 400, house: 200, mortgage: 200, rent: [50, 200, 600, 1400, 1700, 2000] },
+  ];
+
+  function makeDefaultBoard() {
+    return {
+      version: 1,
+      meta: {
+        boardName: 'Custom Board',
+        currencySymbol: '$',
+        economyScale: 1,
+        goSalary: 200,
+        startMoney: 1500,
+        jailBail: 50,
+        utilityOne: 4,
+        utilityBoth: 10,
+      },
+      spaces: CLASSIC_SPACES.map(space => ({ ...space, rent: Array.isArray(space.rent) ? [...space.rent] : [] })),
+      cards: {
+        chance: DEFAULT_CHANCE_CARDS.map(card => ({
+          text: card.text,
+          action: card.action,
+          value: (card.value && typeof card.value === 'object' && !Array.isArray(card.value))
+            ? { ...card.value }
+            : card.value,
+        })),
+        community: DEFAULT_COMMUNITY_CARDS.map(card => ({
+          text: card.text,
+          action: card.action,
+          value: (card.value && typeof card.value === 'object' && !Array.isArray(card.value))
+            ? { ...card.value }
+            : card.value,
+        })),
+      },
+    };
+  }
+
+  let BOARD = makeDefaultBoard();
+  let SELECTED_SPACE_ID = 1;
+  let EDITING_SPACE_ID = null;
+
+  const els = {
+    boardName: document.getElementById('board-name'),
+    currencySymbol: document.getElementById('currency-symbol'),
+    economyScale: document.getElementById('economy-scale'),
+    goSalary: document.getElementById('go-salary'),
+    startMoney: document.getElementById('start-money'),
+    jailBail: document.getElementById('jail-bail'),
+    utilityOne: document.getElementById('utility-one'),
+    utilityBoth: document.getElementById('utility-both'),
+    resetBtn: document.getElementById('reset-board-btn'),
+    groupControls: document.getElementById('group-controls'),
+    seedCode: document.getElementById('seed-code'),
+    generateSeedBtn: document.getElementById('generate-seed-btn'),
+    loadSeedBtn: document.getElementById('load-seed-btn'),
+    copySeedBtn: document.getElementById('copy-seed-btn'),
+    seedStatus: document.getElementById('seed-status'),
+    boardPreview: document.getElementById('board-preview'),
+    spaceRows: document.getElementById('space-rows'),
+    statSpaceCount: document.getElementById('stat-space-count'),
+    statTotalValue: document.getElementById('stat-total-value'),
+    statPropAverage: document.getElementById('stat-prop-average'),
+    statRentCount: document.getElementById('stat-rent-count'),
+    chanceCardRows: document.getElementById('chance-card-rows'),
+    communityCardRows: document.getElementById('community-card-rows'),
+    editorOverlay: document.getElementById('prop-editor-overlay'),
+    peTitle: document.getElementById('pe-title'),
+    peSubtitle: document.getElementById('pe-subtitle'),
+    peId: document.getElementById('pe-id'),
+    peType: document.getElementById('pe-type'),
+    peName: document.getElementById('pe-name'),
+    peGroupWrap: document.getElementById('pe-group-wrap'),
+    peGroup: document.getElementById('pe-group'),
+    peGroupColorWrap: document.getElementById('pe-group-color-wrap'),
+    peGroupColor: document.getElementById('pe-group-color'),
+    pePrice: document.getElementById('pe-price'),
+    peHouseWrap: document.getElementById('pe-house-wrap'),
+    peHouse: document.getElementById('pe-house'),
+    peMortgage: document.getElementById('pe-mortgage'),
+    peRentWrap: document.getElementById('pe-rent-wrap'),
+    peRent: document.getElementById('pe-rent'),
+    peCloseBtn: document.getElementById('pe-close-btn'),
+    peCancelBtn: document.getElementById('pe-cancel-btn'),
+    peSaveBtn: document.getElementById('pe-save-btn'),
+  };
+
+  function deepClone(value) {
+    return JSON.parse(JSON.stringify(value));
+  }
+
+  function clampInt(value, fallback, min) {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return fallback;
+    return Math.max(min, Math.round(n));
+  }
+
+  function stableStringify(value) {
+    if (value === null || typeof value !== 'object') return JSON.stringify(value);
+    if (Array.isArray(value)) return '[' + value.map(stableStringify).join(',') + ']';
+    const keys = Object.keys(value).sort();
+    return '{' + keys.map(k => JSON.stringify(k) + ':' + stableStringify(value[k])).join(',') + '}';
+  }
+
+  function checksumFNV1a(str) {
+    let hash = 0x811c9dc5;
+    for (let i = 0; i < str.length; i++) {
+      hash ^= str.charCodeAt(i);
+      hash = Math.imul(hash, 0x01000193);
+      hash >>>= 0;
+    }
+    return hash.toString(16).padStart(8, '0');
+  }
+
+  function toBase64Url(text) {
+    const bytes = new TextEncoder().encode(text);
+    let binary = '';
+    for (let i = 0; i < bytes.length; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+  }
+
+  function fromBase64Url(text) {
+    const normalized = String(text || '').replace(/-/g, '+').replace(/_/g, '/');
+    const padded = normalized + '='.repeat((4 - (normalized.length % 4)) % 4);
+    const binary = atob(padded);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return new TextDecoder().decode(bytes);
+  }
+
+  function currency(value) {
+    const symbol = String(BOARD.meta.currencySymbol || '$');
+    const n = clampInt(value, 0, 0);
+    return symbol + n.toLocaleString();
+  }
+
+  function spaceRentLength(type) {
+    if (type === 'property') return 6;
+    if (type === 'railroad') return 4;
+    return 0;
+  }
+
+  function parseRentCSV(text, expectedLength) {
+    const parts = String(text || '')
+      .split(',')
+      .map(p => p.trim())
+      .filter(Boolean)
+      .map(v => Number(v));
+
+    if (parts.length !== expectedLength) return null;
+    if (parts.some(v => !Number.isFinite(v))) return null;
+    return parts.map(v => clampInt(v, 0, 0));
+  }
+
+  function isPlainObject(value) {
+    return value && typeof value === 'object' && !Array.isArray(value);
+  }
+
+  function cloneCardValue(value) {
+    if (isPlainObject(value)) return { ...value };
+    return value;
+  }
+
+  function normalizeCardAction(action) {
+    const normalized = String(action || '').trim().toLowerCase();
+    return CARD_ACTION_OPTIONS.includes(normalized) ? normalized : 'money';
+  }
+
+  function defaultCardValueForAction(action) {
+    if (action === 'nearest') return 'railroad';
+    if (action === 'repairs') return { house: 25, hotel: 100 };
+    return 0;
+  }
+
+  function parseRepairsValue(rawText) {
+    const raw = String(rawText || '').trim();
+    if (!raw) return null;
+
+    if (raw[0] === '{') {
+      try {
+        const parsed = JSON.parse(raw);
+        if (isPlainObject(parsed)) {
+          return {
+            house: clampInt(parsed.house, 0, 0),
+            hotel: clampInt(parsed.hotel, 0, 0),
+          };
+        }
+      } catch (_err) {
+        // Fall through to textual parsing.
+      }
+    }
+
+    const byKey = /house\s*:\s*(-?\d+)\s*,\s*hotel\s*:\s*(-?\d+)/i.exec(raw)
+      || /hotel\s*:\s*(-?\d+)\s*,\s*house\s*:\s*(-?\d+)/i.exec(raw);
+    if (byKey) {
+      const houseFirst = /house\s*:/i.test(raw.split(',')[0] || '');
+      const houseVal = houseFirst ? byKey[1] : byKey[2];
+      const hotelVal = houseFirst ? byKey[2] : byKey[1];
+      return {
+        house: clampInt(houseVal, 0, 0),
+        hotel: clampInt(hotelVal, 0, 0),
+      };
+    }
+
+    const byCsv = /^(-?\d+)\s*,\s*(-?\d+)$/.exec(raw);
+    if (byCsv) {
+      return {
+        house: clampInt(byCsv[1], 0, 0),
+        hotel: clampInt(byCsv[2], 0, 0),
+      };
+    }
+
+    return null;
+  }
+
+  function normalizeCardValueForAction(action, value) {
+    if (action === 'nearest') {
+      const normalized = String(value || '').trim();
+      return normalized || 'railroad';
+    }
+
+    if (action === 'repairs') {
+      if (isPlainObject(value)) {
+        return {
+          house: clampInt(value.house, 0, 0),
+          hotel: clampInt(value.hotel, 0, 0),
+        };
+      }
+      if (typeof value === 'string') {
+        const parsed = parseRepairsValue(value);
+        if (parsed) return parsed;
+      }
+      return defaultCardValueForAction(action);
+    }
+
+    const n = Number(value);
+    if (!Number.isFinite(n)) return defaultCardValueForAction(action);
+    return Math.round(n);
+  }
+
+  function parseCardValueInput(action, rawText) {
+    if (action === 'nearest') {
+      const nearestTarget = String(rawText || '').trim();
+      return nearestTarget || 'railroad';
+    }
+
+    if (action === 'repairs') {
+      return parseRepairsValue(rawText);
+    }
+
+    const n = Number(rawText);
+    if (!Number.isFinite(n)) return null;
+    return Math.round(n);
+  }
+
+  function formatCardValueInput(action, value) {
+    if (action === 'nearest') {
+      const nearestTarget = String(value || '').trim();
+      return nearestTarget || 'railroad';
+    }
+    if (action === 'repairs') {
+      const normalized = normalizeCardValueForAction(action, value);
+      return 'house:' + normalized.house + ',hotel:' + normalized.hotel;
+    }
+    const n = Number(value);
+    return Number.isFinite(n) ? String(Math.round(n)) : '0';
+  }
+
+  function rescaleCardDeckValues(deck, factor) {
+    if (!Array.isArray(deck)) return;
+    deck.forEach(card => {
+      const action = normalizeCardAction(card && card.action);
+      card.action = action;
+      if (action === 'money' || action === 'birthday') {
+        const n = Number(card.value);
+        if (Number.isFinite(n)) {
+          card.value = Math.round(n * factor);
+        }
+        return;
+      }
+      if (action === 'repairs') {
+        const repairs = normalizeCardValueForAction('repairs', card.value);
+        card.value = {
+          house: Math.max(0, Math.round(repairs.house * factor)),
+          hotel: Math.max(0, Math.round(repairs.hotel * factor)),
+        };
+      }
+    });
+  }
+
+  function normalizeCardDeck(deck, fallbackDeck) {
+    const source = Array.isArray(deck) && deck.length ? deck : fallbackDeck;
+    return source.map((card, index) => {
+      const fallback = fallbackDeck[index] || { text: 'Card', action: 'money', value: 0 };
+      const action = normalizeCardAction(card && card.action !== undefined ? card.action : fallback.action);
+      const text = String(card && card.text !== undefined ? card.text : fallback.text)
+        .slice(0, 220)
+        .trim() || String(fallback.text || 'Card');
+      const rawValue = card && card.value !== undefined ? card.value : fallback.value;
+      return {
+        text,
+        action,
+        value: normalizeCardValueForAction(action, rawValue),
+      };
+    });
+  }
+
+  function normalizeBoardCards(board) {
+    const rawCards = board && board.cards ? board.cards : {};
+    return {
+      chance: normalizeCardDeck(rawCards.chance, DEFAULT_CHANCE_CARDS),
+      community: normalizeCardDeck(rawCards.community, DEFAULT_COMMUNITY_CARDS),
+    };
+  }
+
+  function ensureBoardCards() {
+    BOARD.cards = normalizeBoardCards(BOARD);
+    return BOARD.cards;
+  }
+
+  function compactCardDeck(deck, fallbackDeck) {
+    const normalized = normalizeCardDeck(deck, fallbackDeck);
+    return normalized.map(card => [
+      String(card.text || '').slice(0, 220),
+      normalizeCardAction(card.action),
+      cloneCardValue(card.value),
+    ]);
+  }
+
+  function decodeSeedCardDeck(rawDeck, fallbackDeck) {
+    if (!Array.isArray(rawDeck)) {
+      return normalizeCardDeck([], fallbackDeck);
+    }
+    const unpacked = rawDeck.map(entry => {
+      if (Array.isArray(entry)) {
+        return {
+          text: entry[0],
+          action: entry[1],
+          value: entry[2],
+        };
+      }
+      if (isPlainObject(entry)) {
+        return {
+          text: entry.text,
+          action: entry.action,
+          value: entry.value,
+        };
+      }
+      return null;
+    }).filter(Boolean);
+    return normalizeCardDeck(unpacked, fallbackDeck);
+  }
+
+  function setSeedStatus(message, type) {
+    els.seedStatus.textContent = message;
+    els.seedStatus.classList.remove('success', 'error');
+    if (type === 'success') els.seedStatus.classList.add('success');
+    if (type === 'error') els.seedStatus.classList.add('error');
+  }
+
+  function readMetaFromInputs(options = {}) {
+    const includeScale = options.includeScale !== false;
+    BOARD.meta.boardName = String(els.boardName.value || '').trim() || 'Custom Board';
+    BOARD.meta.currencySymbol = String(els.currencySymbol.value || '$').slice(0, 4) || '$';
+    if (includeScale) {
+      const scaleRaw = Number(els.economyScale.value);
+      BOARD.meta.economyScale = Number.isFinite(scaleRaw) && scaleRaw > 0 ? scaleRaw : (Number(BOARD.meta.economyScale) || 1);
+    }
+    BOARD.meta.goSalary = clampInt(els.goSalary.value, BOARD.meta.goSalary, 0);
+    BOARD.meta.startMoney = clampInt(els.startMoney.value, BOARD.meta.startMoney, 0);
+    BOARD.meta.jailBail = clampInt(els.jailBail.value, BOARD.meta.jailBail, 0);
+    BOARD.meta.utilityOne = clampInt(els.utilityOne.value, BOARD.meta.utilityOne, 0);
+    BOARD.meta.utilityBoth = clampInt(els.utilityBoth.value, BOARD.meta.utilityBoth, 0);
+  }
+
+  function writeMetaToInputs() {
+    els.boardName.value = BOARD.meta.boardName;
+    els.currencySymbol.value = BOARD.meta.currencySymbol;
+    els.economyScale.value = BOARD.meta.economyScale;
+    els.goSalary.value = BOARD.meta.goSalary;
+    els.startMoney.value = BOARD.meta.startMoney;
+    els.jailBail.value = BOARD.meta.jailBail;
+    els.utilityOne.value = BOARD.meta.utilityOne;
+    els.utilityBoth.value = BOARD.meta.utilityBoth;
+  }
+
+  function colorForGroup(group) {
+    const n = clampInt(group, 0, 0);
+    return COLOR_OPTIONS[n % COLOR_OPTIONS.length];
+  }
+
+  function buildGroupColorLookup() {
+    const lookup = {};
+    BOARD.spaces.forEach(space => {
+      if (space.type !== 'property') return;
+      const groupId = clampInt(space.group, 0, 0);
+      if (!lookup[groupId]) {
+        lookup[groupId] = COLOR_OPTIONS.includes(space.color) ? space.color : colorForGroup(groupId);
+      }
+    });
+    return lookup;
+  }
+
+  function normalizeGroupedPropertyColors() {
+    const lookup = buildGroupColorLookup();
+    BOARD.spaces.forEach(space => {
+      if (space.type !== 'property') return;
+      const groupId = clampInt(space.group, 0, 0);
+      if (!lookup[groupId]) lookup[groupId] = colorForGroup(groupId);
+      space.group = groupId;
+      space.color = lookup[groupId];
+    });
+    return lookup;
+  }
+
+  function setGroupColor(groupId, color) {
+    const normalizedColor = COLOR_OPTIONS.includes(color) ? color : colorForGroup(groupId);
+    BOARD.spaces.forEach(space => {
+      if (space.type === 'property' && clampInt(space.group, 0, 0) === groupId) {
+        space.color = normalizedColor;
+      }
+    });
+  }
+
+  function renderGroupControls() {
+    const groups = {};
+    BOARD.spaces.forEach(space => {
+      if (space.type !== 'property') return;
+      const groupId = clampInt(space.group, 0, 0);
+      if (!groups[groupId]) {
+        groups[groupId] = {
+          color: COLOR_OPTIONS.includes(space.color) ? space.color : colorForGroup(groupId),
+          names: [],
+          count: 0,
+        };
+      }
+      groups[groupId].count += 1;
+      if (groups[groupId].names.length < 3) groups[groupId].names.push(space.name);
+    });
+
+    const ids = Object.keys(groups).map(Number).sort((a, b) => a - b);
+    if (!ids.length) {
+      els.groupControls.innerHTML = '<div class="muted">No property groups to configure.</div>';
+      return;
+    }
+
+    els.groupControls.innerHTML = ids.map(groupId => {
+      const g = groups[groupId];
+      const colorSelect = '<select data-group-color="' + groupId + '">' + COLOR_OPTIONS.map(color => {
+        const selected = color === g.color ? ' selected' : '';
+        return '<option value="' + color + '"' + selected + '>' + color + '</option>';
+      }).join('') + '</select>';
+      const swatch = '<span class="swatch" style="background:' + COLOR_HEX[g.color] + '"></span>';
+      return (
+        '<div class="group-row">' +
+          '<div class="group-title">' + swatch + 'Group ' + groupId + '</div>' +
+          '<div class="group-meta">' + g.count + ' properties: ' + escapeHtml(g.names.join(', ')) + '</div>' +
+          colorSelect +
+        '</div>'
+      );
+    }).join('');
+  }
+
+  function boardGridPositionForId(id) {
+    if (id === 0) return { row: 10, col: 10 };
+    if (id >= 1 && id <= 9) return { row: 10, col: 10 - id };
+    if (id === 10) return { row: 10, col: 0 };
+    if (id >= 11 && id <= 19) return { row: 10 - (id - 10), col: 0 };
+    if (id === 20) return { row: 0, col: 0 };
+    if (id >= 21 && id <= 29) return { row: 0, col: id - 20 };
+    if (id === 30) return { row: 0, col: 10 };
+    if (id >= 31 && id <= 39) return { row: id - 30, col: 10 };
+    return { row: 0, col: 0 };
+  }
+
+  function renderBoardPreview() {
+    const ownableById = {};
+    BOARD.spaces.forEach(space => {
+      ownableById[space.id] = space;
+    });
+
+    const symbol = String(BOARD.meta.currencySymbol || '$');
+    const cells = [];
+    for (let id = 0; id < 40; id++) {
+      const pos = boardGridPositionForId(id);
+      const ownable = ownableById[id] || null;
+      const fixed = PREVIEW_FIXED_SPACES[id] || null;
+      const type = ownable ? ownable.type : (fixed ? fixed.type : 'space');
+      const name = ownable ? ownable.name : (fixed ? fixed.name : ('Space ' + id));
+      const selected = ownable && SELECTED_SPACE_ID === id;
+      const colorBar = (ownable && ownable.type === 'property')
+        ? '<div class="pv-color-bar" style="background:' + (COLOR_HEX[ownable.color] || '#666') + '"></div>'
+        : '';
+      const priceLine = ownable ? ('<div class="pv-price">' + symbol + clampInt(ownable.price, 0, 0).toLocaleString() + '</div>') : '';
+
+      if (ownable) {
+        cells.push(
+          '<button type="button" class="pv-space' + (selected ? ' selected' : '') + '" data-space-id="' + id + '" style="grid-row:' + (pos.row + 1) + ';grid-column:' + (pos.col + 1) + '">' +
+            colorBar +
+            '<div class="pv-id">' + id + '</div>' +
+            '<div class="pv-name">' + escapeHtml(name) + '</div>' +
+            priceLine +
+          '</button>'
+        );
+      } else {
+        cells.push(
+          '<div class="pv-fixed" style="grid-row:' + (pos.row + 1) + ';grid-column:' + (pos.col + 1) + '">' +
+            '<div class="pv-id">' + id + '</div>' +
+            '<div class="pv-name">' + escapeHtml(name) + '</div>' +
+          '</div>'
+        );
+      }
+    }
+
+    cells.push(
+      '<div class="pv-center">' +
+        '<div class="name">MONOPOLY</div>' +
+        '<div class="mono-readout" style="margin-top:0.32rem;">' + escapeHtml(BOARD.meta.boardName || 'Custom Board') + '</div>' +
+        '<div class="meta">GO: ' + symbol + clampInt(BOARD.meta.goSalary, 0, 0).toLocaleString() + ' • Start: ' + symbol + clampInt(BOARD.meta.startMoney, 0, 0).toLocaleString() + '<br>Jail Bail: ' + symbol + clampInt(BOARD.meta.jailBail, 0, 0).toLocaleString() + ' • Scale: ' + (Number(BOARD.meta.economyScale) || 1) + '</div>' +
+      '</div>'
+    );
+
+    els.boardPreview.innerHTML = cells.join('');
+  }
+
+  function focusSpaceRow(spaceId, options) {
+    const opts = options || {};
+    const shouldScroll = opts.scroll !== false;
+    const shouldFocus = opts.focus !== false;
+    const row = els.spaceRows.querySelector('tr[data-space-id="' + spaceId + '"]');
+    SELECTED_SPACE_ID = spaceId;
+    els.spaceRows.querySelectorAll('tr.row-selected').forEach(r => r.classList.remove('row-selected'));
+    if (!row) {
+      renderBoardPreview();
+      return;
+    }
+    row.classList.add('row-selected');
+    renderBoardPreview();
+    if (shouldScroll) {
+      row.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
+    if (shouldFocus) {
+      const focusEl = row.querySelector('input,select');
+      if (focusEl && typeof focusEl.focus === 'function') {
+        focusEl.focus({ preventScroll: true });
+      }
+    }
+  }
+
+  function getSpaceById(spaceId) {
+    return BOARD.spaces.find(space => Number(space.id) === Number(spaceId)) || null;
+  }
+
+  function updateEditorFieldVisibility(spaceType) {
+    const isProperty = spaceType === 'property';
+    const supportsRent = spaceType === 'property' || spaceType === 'railroad';
+    els.peGroupWrap.style.display = isProperty ? '' : 'none';
+    els.peGroupColorWrap.style.display = isProperty ? '' : 'none';
+    els.peHouseWrap.style.display = isProperty ? '' : 'none';
+    els.peRentWrap.style.display = supportsRent ? '' : 'none';
+    if (supportsRent) {
+      const expected = spaceRentLength(spaceType);
+      els.peRent.placeholder = expected + ' comma-separated values';
+    }
+  }
+
+  function closeSpaceEditor() {
+    EDITING_SPACE_ID = null;
+    els.editorOverlay.classList.remove('show');
+    els.editorOverlay.setAttribute('aria-hidden', 'true');
+  }
+
+  function suggestColorForGroup(groupId, excludeSpaceId) {
+    const peer = BOARD.spaces.find(space => {
+      if (space.type !== 'property') return false;
+      if (Number(space.id) === Number(excludeSpaceId)) return false;
+      return clampInt(space.group, 0, 0) === clampInt(groupId, 0, 0);
+    });
+    if (peer && COLOR_OPTIONS.includes(peer.color)) return peer.color;
+    return colorForGroup(groupId);
+  }
+
+  function openSpaceEditor(spaceId) {
+    const space = getSpaceById(spaceId);
+    if (!space) return;
+    EDITING_SPACE_ID = Number(space.id);
+    focusSpaceRow(space.id, { scroll: false, focus: false });
+
+    els.peTitle.textContent = 'Edit ' + (space.name || ('Space ' + space.id));
+    els.peSubtitle.textContent = 'Adjust values and save. For properties, group color updates all properties in that group.';
+    els.peId.textContent = '#' + space.id;
+    els.peType.textContent = String(space.type || '').toUpperCase();
+    els.peName.value = String(space.name || '').slice(0, 48);
+    els.pePrice.value = clampInt(space.price, 0, 0);
+    els.peMortgage.value = clampInt(space.mortgage, 0, 0);
+
+    if (space.type === 'property') {
+      const groupId = clampInt(space.group, 0, 0);
+      els.peGroup.value = groupId;
+      els.peGroupColor.value = COLOR_OPTIONS.includes(space.color) ? space.color : suggestColorForGroup(groupId, space.id);
+      els.peHouse.value = clampInt(space.house, 0, 0);
+    } else {
+      els.peGroup.value = 0;
+      els.peGroupColor.value = 'BROWN';
+      els.peHouse.value = 0;
+    }
+
+    if (space.type === 'property' || space.type === 'railroad') {
+      els.peRent.value = Array.isArray(space.rent) ? space.rent.join(', ') : '';
+    } else {
+      els.peRent.value = '';
+    }
+
+    updateEditorFieldVisibility(space.type);
+    els.editorOverlay.classList.add('show');
+    els.editorOverlay.setAttribute('aria-hidden', 'false');
+    els.peName.focus();
+  }
+
+  function saveSpaceEditor() {
+    if (!Number.isInteger(EDITING_SPACE_ID)) return;
+    const space = getSpaceById(EDITING_SPACE_ID);
+    if (!space) {
+      closeSpaceEditor();
+      return;
+    }
+
+    const nextName = String(els.peName.value || '').trim().slice(0, 48);
+    space.name = nextName || ('Space ' + space.id);
+    space.price = clampInt(els.pePrice.value, space.price, 0);
+    space.mortgage = clampInt(els.peMortgage.value, space.mortgage, 0);
+
+    if (space.type === 'property') {
+      const nextGroup = clampInt(els.peGroup.value, space.group, 0);
+      const nextColor = COLOR_OPTIONS.includes(els.peGroupColor.value)
+        ? els.peGroupColor.value
+        : suggestColorForGroup(nextGroup, space.id);
+      space.group = nextGroup;
+      space.house = clampInt(els.peHouse.value, space.house, 0);
+      setGroupColor(nextGroup, nextColor);
+    }
+
+    if (space.type === 'property' || space.type === 'railroad') {
+      const expected = spaceRentLength(space.type);
+      const parsed = parseRentCSV(els.peRent.value, expected);
+      if (!parsed) {
+        setSeedStatus('Invalid rent format for ' + space.name + '. Expected ' + expected + ' values.', 'error');
+        return;
+      }
+      space.rent = parsed;
+    }
+
+    renderAll();
+    persistSeedSilently();
+    closeSpaceEditor();
+    setSeedStatus('Space updated.', 'success');
+  }
+
+  function rescaleBoardEconomy(nextScaleValue) {
+    const nextScale = Number(nextScaleValue);
+    if (!Number.isFinite(nextScale) || nextScale <= 0) return false;
+
+    const prevScale = Number(BOARD.meta.economyScale) || 1;
+    const factor = nextScale / prevScale;
+    BOARD.meta.economyScale = nextScale;
+    if (!Number.isFinite(factor) || factor <= 0) return false;
+    if (Math.abs(factor - 1) < 0.000001) return true;
+
+    BOARD.meta.goSalary = clampInt(BOARD.meta.goSalary * factor, BOARD.meta.goSalary, 0);
+    BOARD.meta.startMoney = clampInt(BOARD.meta.startMoney * factor, BOARD.meta.startMoney, 0);
+    BOARD.meta.jailBail = clampInt(BOARD.meta.jailBail * factor, BOARD.meta.jailBail, 0);
+    BOARD.meta.utilityOne = clampInt(BOARD.meta.utilityOne * factor, BOARD.meta.utilityOne, 0);
+    BOARD.meta.utilityBoth = clampInt(BOARD.meta.utilityBoth * factor, BOARD.meta.utilityBoth, 0);
+
+    BOARD.spaces.forEach(space => {
+      space.price = clampInt(space.price * factor, space.price, 0);
+      space.mortgage = clampInt(space.mortgage * factor, space.mortgage, 0);
+      if (space.type === 'property') {
+        space.house = clampInt(space.house * factor, space.house, 0);
+      }
+      if (Array.isArray(space.rent) && space.rent.length) {
+        space.rent = space.rent.map(v => clampInt(v * factor, v, 0));
+      }
+    });
+
+    ensureBoardCards();
+    rescaleCardDeckValues(BOARD.cards.chance, factor);
+    rescaleCardDeckValues(BOARD.cards.community, factor);
+    return true;
+  }
+
+  function typePill(type) {
+    if (type === 'property') return '<span class="type-pill type-property">Property</span>';
+    if (type === 'railroad') return '<span class="type-pill type-railroad">Railroad</span>';
+    return '<span class="type-pill type-utility">Utility</span>';
+  }
+
+  function escapeHtml(text) {
+    return String(text || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  function renderRows() {
+    els.spaceRows.innerHTML = BOARD.spaces.map((space, index) => {
+      const rentText = Array.isArray(space.rent) ? space.rent.join(', ') : '';
+      const isProperty = space.type === 'property';
+      const isRailroad = space.type === 'railroad';
+      const rentHint = isProperty ? '6 values' : (isRailroad ? '4 values' : 'n/a');
+      const swatch = isProperty
+        ? '<span class="swatch" style="background:' + COLOR_HEX[space.color] + '"></span>'
+        : '';
+      const colorCell = isProperty
+        ? (swatch + '<span class="mono">' + space.color + '</span>')
+        : '<span class="muted">n/a</span>';
+      const groupCell = isProperty
+        ? '<input data-field="group" type="number" min="0" step="1" value="' + space.group + '">'
+        : '<span class="muted">n/a</span>';
+      const houseCell = isProperty
+        ? '<input data-field="house" type="number" min="0" step="1" value="' + space.house + '">'
+        : '<span class="muted">n/a</span>';
+      const rentCell = (isProperty || isRailroad)
+        ? '<input data-field="rent" class="rent-input" type="text" value="' + escapeHtml(rentText) + '" placeholder="' + rentHint + '">'
+        : '<span class="muted">utility uses multipliers</span>';
+
+      return (
+        '<tr data-index="' + index + '" data-space-id="' + space.id + '"' + (SELECTED_SPACE_ID === space.id ? ' class="row-selected"' : '') + '>' +
+          '<td class="mono">' + space.id + '</td>' +
+          '<td>' + typePill(space.type) + '</td>' +
+          '<td><input data-field="name" type="text" maxlength="48" value="' + escapeHtml(space.name) + '"></td>' +
+          '<td>' + colorCell + '</td>' +
+          '<td>' + groupCell + '</td>' +
+          '<td><input data-field="price" type="number" min="0" step="1" value="' + space.price + '"></td>' +
+          '<td>' + houseCell + '</td>' +
+          '<td><input data-field="mortgage" type="number" min="0" step="1" value="' + space.mortgage + '"></td>' +
+          '<td>' + rentCell + '</td>' +
+        '</tr>'
+      );
+    }).join('');
+  }
+
+  function renderCardDeckRows(deckType, targetEl) {
+    const deck = BOARD.cards && Array.isArray(BOARD.cards[deckType]) ? BOARD.cards[deckType] : [];
+    targetEl.innerHTML = deck.map((card, index) => {
+      const actionOptions = CARD_ACTION_OPTIONS.map(action => {
+        const selected = action === card.action ? ' selected' : '';
+        return '<option value="' + action + '"' + selected + '>' + action.toUpperCase() + '</option>';
+      }).join('');
+
+      return (
+        '<tr data-deck="' + deckType + '" data-card-index="' + index + '">' +
+          '<td class="index">' + (index + 1) + '</td>' +
+          '<td><input data-card-field="text" type="text" maxlength="220" value="' + escapeHtml(card.text) + '"></td>' +
+          '<td><select data-card-field="action">' + actionOptions + '</select></td>' +
+          '<td><input data-card-field="value" class="value-input" type="text" value="' + escapeHtml(formatCardValueInput(card.action, card.value)) + '"></td>' +
+        '</tr>'
+      );
+    }).join('');
+  }
+
+  function renderCardDecks() {
+    ensureBoardCards();
+    renderCardDeckRows('chance', els.chanceCardRows);
+    renderCardDeckRows('community', els.communityCardRows);
+  }
+
+  function getCardRefFromEventTarget(target) {
+    if (!target || !target.closest) return null;
+    const row = target.closest('tr[data-deck][data-card-index]');
+    if (!row) return null;
+    const deckType = String(row.dataset.deck || '');
+    const index = Number(row.dataset.cardIndex);
+    if ((deckType !== 'chance' && deckType !== 'community') || !Number.isInteger(index)) return null;
+    const deck = BOARD.cards && Array.isArray(BOARD.cards[deckType]) ? BOARD.cards[deckType] : null;
+    if (!deck || !deck[index]) return null;
+    return { row, deckType, index, card: deck[index] };
+  }
+
+  function onCardDeckInput(event) {
+    const target = event.target;
+    if (!target || !target.dataset) return;
+    const field = target.dataset.cardField;
+    if (!field) return;
+
+    const ref = getCardRefFromEventTarget(target);
+    if (!ref) return;
+
+    if (field === 'text') {
+      ref.card.text = String(target.value || '').slice(0, 220);
+      persistSeedSilently();
+    }
+  }
+
+  function onCardDeckChange(event) {
+    const target = event.target;
+    if (!target || !target.dataset) return;
+    const field = target.dataset.cardField;
+    if (!field) return;
+
+    const ref = getCardRefFromEventTarget(target);
+    if (!ref) return;
+
+    if (field === 'text') {
+      ref.card.text = String(target.value || '').slice(0, 220).trim() || ('Card ' + (ref.index + 1));
+      target.value = ref.card.text;
+      persistSeedSilently();
+      setSeedStatus(ref.deckType + ' card text updated.', 'success');
+      return;
+    }
+
+    if (field === 'action') {
+      ref.card.action = normalizeCardAction(target.value);
+      ref.card.value = normalizeCardValueForAction(ref.card.action, ref.card.value);
+      renderCardDecks();
+      persistSeedSilently();
+      setSeedStatus(ref.deckType + ' card action updated.', 'success');
+      return;
+    }
+
+    if (field === 'value') {
+      const parsed = parseCardValueInput(ref.card.action, target.value);
+      if (parsed === null) {
+        target.value = formatCardValueInput(ref.card.action, ref.card.value);
+        setSeedStatus('Invalid card value format. Use examples like 200, railroad, house:25,hotel:100.', 'error');
+        return;
+      }
+      ref.card.value = parsed;
+      target.value = formatCardValueInput(ref.card.action, ref.card.value);
+      persistSeedSilently();
+      setSeedStatus(ref.deckType + ' card value updated.', 'success');
+    }
+  }
+
+  function renderStats() {
+    let totalValue = 0;
+    let propertySum = 0;
+    let propertyCount = 0;
+    let rentEntries = 0;
+
+    BOARD.spaces.forEach(space => {
+      totalValue += clampInt(space.price, 0, 0);
+      totalValue += clampInt(space.mortgage, 0, 0);
+      if (space.type === 'property') {
+        propertySum += clampInt(space.price, 0, 0);
+        propertyCount += 1;
+      }
+      if (Array.isArray(space.rent)) {
+        rentEntries += space.rent.length;
+      }
+    });
+
+    els.statSpaceCount.textContent = String(BOARD.spaces.length);
+    els.statTotalValue.textContent = currency(totalValue);
+    els.statPropAverage.textContent = currency(propertyCount ? Math.round(propertySum / propertyCount) : 0);
+    els.statRentCount.textContent = String(rentEntries);
+  }
+
+  function renderAll() {
+    ensureBoardCards();
+    normalizeGroupedPropertyColors();
+    writeMetaToInputs();
+    renderGroupControls();
+    renderRows();
+    renderCardDecks();
+    renderBoardPreview();
+    renderStats();
+  }
+
+  function compactBoard(board) {
+    const normalizedCards = normalizeBoardCards(board);
+    return {
+      v: 1,
+      m: [
+        board.meta.boardName,
+        board.meta.currencySymbol,
+        Number(board.meta.economyScale) || 1,
+        board.meta.goSalary,
+        board.meta.startMoney,
+        board.meta.jailBail,
+        board.meta.utilityOne,
+        board.meta.utilityBoth,
+      ],
+      s: board.spaces
+        .slice()
+        .sort((a, b) => a.id - b.id)
+        .map(space => {
+          if (space.type === 'property') {
+            return [space.id, 'p', space.name, space.color, space.group, space.price, space.house, space.mortgage, ...space.rent];
+          }
+          if (space.type === 'railroad') {
+            return [space.id, 'r', space.name, space.price, space.mortgage, ...space.rent];
+          }
+          return [space.id, 'u', space.name, space.price, space.mortgage];
+        }),
+      c: {
+        ch: compactCardDeck(normalizedCards.chance, DEFAULT_CHANCE_CARDS),
+        cc: compactCardDeck(normalizedCards.community, DEFAULT_COMMUNITY_CARDS),
+      },
+    };
+  }
+
+  function expandBoard(payload) {
+    if (!payload || Number(payload.v) !== 1 || !Array.isArray(payload.m) || !Array.isArray(payload.s)) {
+      throw new Error('Seed payload format is invalid.');
+    }
+
+    const meta = {
+      boardName: String(payload.m[0] || 'Custom Board').slice(0, 48),
+      currencySymbol: String(payload.m[1] || '$').slice(0, 4),
+      economyScale: Number(payload.m[2]) || 1,
+      goSalary: clampInt(payload.m[3], 200, 0),
+      startMoney: clampInt(payload.m[4], 1500, 0),
+      jailBail: clampInt(payload.m[5], 50, 0),
+      utilityOne: clampInt(payload.m[6], 4, 0),
+      utilityBoth: clampInt(payload.m[7], 10, 0),
+    };
+
+    const spaces = payload.s.map(row => {
+      if (!Array.isArray(row) || row.length < 5) {
+        throw new Error('A space entry is invalid in this seed.');
+      }
+
+      const id = clampInt(row[0], 0, 0);
+      const typeCode = String(row[1] || 'p');
+      const name = String(row[2] || 'Space').slice(0, 48);
+
+      if (typeCode === 'p') {
+        const color = COLOR_OPTIONS.includes(row[3]) ? row[3] : 'BROWN';
+        const group = clampInt(row[4], 0, 0);
+        const price = clampInt(row[5], 0, 0);
+        const house = clampInt(row[6], 0, 0);
+        const mortgage = clampInt(row[7], 0, 0);
+        const rent = row.slice(8, 14).map(v => clampInt(v, 0, 0));
+        if (rent.length !== 6) throw new Error('Property rent length must be 6.');
+        return { id, type: 'property', name, color, group, price, house, mortgage, rent };
+      }
+
+      if (typeCode === 'r') {
+        const price = clampInt(row[3], 0, 0);
+        const mortgage = clampInt(row[4], 0, 0);
+        const rent = row.slice(5, 9).map(v => clampInt(v, 0, 0));
+        if (rent.length !== 4) throw new Error('Railroad rent length must be 4.');
+        return { id, type: 'railroad', name, color: '', group: null, price, house: 0, mortgage, rent };
+      }
+
+      if (typeCode === 'u') {
+        const price = clampInt(row[3], 0, 0);
+        const mortgage = clampInt(row[4], 0, 0);
+        return { id, type: 'utility', name, color: '', group: null, price, house: 0, mortgage, rent: [] };
+      }
+
+      throw new Error('Unknown space type in seed payload.');
+    });
+
+    const cardsPayload = payload.c;
+    let chanceRaw = null;
+    let communityRaw = null;
+    if (Array.isArray(cardsPayload)) {
+      chanceRaw = cardsPayload[0];
+      communityRaw = cardsPayload[1];
+    } else if (isPlainObject(cardsPayload)) {
+      chanceRaw = cardsPayload.ch || cardsPayload.chance;
+      communityRaw = cardsPayload.cc || cardsPayload.community;
+    }
+
+    const cards = {
+      chance: decodeSeedCardDeck(chanceRaw, DEFAULT_CHANCE_CARDS),
+      community: decodeSeedCardDeck(communityRaw, DEFAULT_COMMUNITY_CARDS),
+    };
+
+    return { version: 1, meta, spaces, cards };
+  }
+
+  function buildSeed(board) {
+    const payload = compactBoard(board);
+    const json = stableStringify(payload);
+    const checksum = checksumFNV1a(json);
+    const encoded = toBase64Url(json);
+    return 'MBD1.' + checksum + '.' + encoded;
+  }
+
+  function parseSeed(seed) {
+    const raw = String(seed || '').trim();
+    const parts = raw.split('.');
+    if (parts.length !== 3 || parts[0] !== 'MBD1') {
+      throw new Error('Invalid seed prefix.');
+    }
+    const checksum = String(parts[1] || '').toLowerCase();
+    const json = fromBase64Url(parts[2]);
+    const actualChecksum = checksumFNV1a(json).toLowerCase();
+    if (checksum !== actualChecksum) {
+      throw new Error('Seed checksum mismatch.');
+    }
+    const payload = JSON.parse(json);
+    return expandBoard(payload);
+  }
+
+  function persistSeedSilently() {
+    try {
+      const seed = buildSeed(BOARD);
+      localStorage.setItem(STORAGE_KEY, seed);
+    } catch (_err) {
+      // Ignore localStorage issues.
+    }
+  }
+
+  function onEconomyScaleChanged() {
+    const raw = String(els.economyScale.value || '').trim();
+    if (!raw) return;
+    readMetaFromInputs({ includeScale: false });
+    const ok = rescaleBoardEconomy(raw);
+    if (!ok) {
+      setSeedStatus('Economy scale must be a positive number.', 'error');
+      return;
+    }
+    renderAll();
+    persistSeedSilently();
+    setSeedStatus('Economy scale updated and preview recalculated.', 'success');
+  }
+
+  function resetBoard() {
+    BOARD = makeDefaultBoard();
+    SELECTED_SPACE_ID = 1;
+    renderAll();
+    persistSeedSilently();
+    setSeedStatus('Board reset to classic defaults.', 'success');
+  }
+
+  function generateSeed() {
+    readMetaFromInputs();
+    const seed = buildSeed(BOARD);
+    els.seedCode.value = seed;
+    persistSeedSilently();
+    setSeedStatus('Seed generated from current board.', 'success');
+  }
+
+  function loadSeedFromTextarea() {
+    const raw = els.seedCode.value;
+    if (!String(raw || '').trim()) {
+      setSeedStatus('Paste a seed first.', 'error');
+      return;
+    }
+
+    try {
+      BOARD = parseSeed(raw);
+      renderAll();
+      persistSeedSilently();
+      setSeedStatus('Seed loaded successfully.', 'success');
+    } catch (err) {
+      setSeedStatus(err.message || 'Failed to load seed.', 'error');
+    }
+  }
+
+  async function copySeed() {
+    const value = String(els.seedCode.value || '').trim();
+    if (!value) {
+      setSeedStatus('No seed to copy.', 'error');
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(value);
+      setSeedStatus('Seed copied to clipboard.', 'success');
+    } catch (_err) {
+      try {
+        els.seedCode.focus();
+        els.seedCode.select();
+        const ok = document.execCommand('copy');
+        if (!ok) throw new Error('copy failed');
+        setSeedStatus('Seed copied to clipboard.', 'success');
+      } catch (_copyErr) {
+        setSeedStatus('Clipboard permission blocked. Copy manually from the box.', 'error');
+      }
+    }
+  }
+
+  function onSpaceTableInput(event) {
+    const target = event.target;
+    if (!target || !target.closest) return;
+    const row = target.closest('tr[data-index]');
+    if (!row) return;
+
+    const selectedId = Number(row.dataset.spaceId);
+    if (Number.isInteger(selectedId)) SELECTED_SPACE_ID = selectedId;
+
+    const index = Number(row.dataset.index);
+    const field = target.dataset.field;
+    const space = BOARD.spaces[index];
+    if (!space || !field) return;
+
+    if (field === 'name') {
+      space.name = String(target.value || '').slice(0, 48);
+      renderBoardPreview();
+      persistSeedSilently();
+    }
+  }
+
+  function onSpaceTableChange(event) {
+    const target = event.target;
+    if (!target || !target.closest) return;
+    const row = target.closest('tr[data-index]');
+    if (!row) return;
+
+    const selectedId = Number(row.dataset.spaceId);
+    if (Number.isInteger(selectedId)) SELECTED_SPACE_ID = selectedId;
+
+    const index = Number(row.dataset.index);
+    const field = target.dataset.field;
+    const space = BOARD.spaces[index];
+    if (!space || !field) return;
+
+    if (field === 'name') {
+      space.name = String(target.value || '').slice(0, 48);
+    } else if (field === 'group' && space.type === 'property') {
+      const nextGroup = clampInt(target.value, space.group, 0);
+      const hasPeersInTargetGroup = BOARD.spaces.some((other, otherIdx) => {
+        if (otherIdx === index || other.type !== 'property') return false;
+        return clampInt(other.group, 0, 0) === nextGroup;
+      });
+      space.group = nextGroup;
+      if (hasPeersInTargetGroup) {
+        const peer = BOARD.spaces.find((other, otherIdx) => {
+          if (otherIdx === index || other.type !== 'property') return false;
+          return clampInt(other.group, 0, 0) === nextGroup;
+        });
+        space.color = peer && COLOR_OPTIONS.includes(peer.color) ? peer.color : colorForGroup(nextGroup);
+      } else {
+        space.color = colorForGroup(nextGroup);
+      }
+      target.value = space.group;
+    } else if (field === 'price') {
+      space.price = clampInt(target.value, space.price, 0);
+      target.value = space.price;
+    } else if (field === 'house' && space.type === 'property') {
+      space.house = clampInt(target.value, space.house, 0);
+      target.value = space.house;
+    } else if (field === 'mortgage') {
+      space.mortgage = clampInt(target.value, space.mortgage, 0);
+      target.value = space.mortgage;
+    } else if (field === 'rent') {
+      const expected = spaceRentLength(space.type);
+      const parsed = parseRentCSV(target.value, expected);
+      if (!parsed) {
+        setSeedStatus('Invalid rent format on ' + space.name + '. Expected ' + expected + ' values.', 'error');
+        target.value = Array.isArray(space.rent) ? space.rent.join(', ') : '';
+        return;
+      }
+      space.rent = parsed;
+      target.value = space.rent.join(', ');
+    }
+
+    renderAll();
+    persistSeedSilently();
+    setSeedStatus('Board updated.', 'success');
+  }
+
+  function onGroupControlChange(event) {
+    const target = event.target;
+    if (!target || !target.dataset) return;
+    const groupRaw = target.dataset.groupColor;
+    if (groupRaw === undefined) return;
+    const groupId = clampInt(groupRaw, 0, 0);
+    setGroupColor(groupId, target.value);
+    renderAll();
+    persistSeedSilently();
+    setSeedStatus('Updated color for group ' + groupId + '.', 'success');
+  }
+
+  function onBoardPreviewClick(event) {
+    const target = event.target && event.target.closest ? event.target.closest('[data-space-id]') : null;
+    if (!target) return;
+    const id = Number(target.getAttribute('data-space-id'));
+    if (!Number.isInteger(id)) return;
+    openSpaceEditor(id);
+  }
+
+  function attachMetaHandlers() {
+    [
+      els.boardName,
+      els.currencySymbol,
+      els.goSalary,
+      els.startMoney,
+      els.jailBail,
+      els.utilityOne,
+      els.utilityBoth,
+    ].forEach(input => {
+      input.addEventListener('change', () => {
+        readMetaFromInputs({ includeScale: false });
+        renderAll();
+        persistSeedSilently();
+        setSeedStatus('Board meta updated.', 'success');
+      });
+    });
+
+    els.economyScale.addEventListener('change', onEconomyScaleChanged);
+    els.economyScale.addEventListener('input', onEconomyScaleChanged);
+    els.resetBtn.addEventListener('click', resetBoard);
+    els.generateSeedBtn.addEventListener('click', generateSeed);
+    els.loadSeedBtn.addEventListener('click', loadSeedFromTextarea);
+    els.copySeedBtn.addEventListener('click', copySeed);
+    els.groupControls.addEventListener('change', onGroupControlChange);
+
+    els.spaceRows.addEventListener('input', onSpaceTableInput);
+    els.spaceRows.addEventListener('change', onSpaceTableChange);
+    els.spaceRows.addEventListener('click', onSpaceTableInput);
+    els.boardPreview.addEventListener('click', onBoardPreviewClick);
+    els.chanceCardRows.addEventListener('input', onCardDeckInput);
+    els.chanceCardRows.addEventListener('change', onCardDeckChange);
+    els.communityCardRows.addEventListener('input', onCardDeckInput);
+    els.communityCardRows.addEventListener('change', onCardDeckChange);
+
+    els.peSaveBtn.addEventListener('click', saveSpaceEditor);
+    els.peCloseBtn.addEventListener('click', closeSpaceEditor);
+    els.peCancelBtn.addEventListener('click', closeSpaceEditor);
+    els.peGroup.addEventListener('change', () => {
+      const groupId = clampInt(els.peGroup.value, 0, 0);
+      els.peGroup.value = groupId;
+      els.peGroupColor.value = suggestColorForGroup(groupId, EDITING_SPACE_ID);
+    });
+    els.editorOverlay.addEventListener('click', (event) => {
+      if (event.target === els.editorOverlay) {
+        closeSpaceEditor();
+      }
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && els.editorOverlay.classList.contains('show')) {
+        closeSpaceEditor();
+      }
+    });
+  }
+
+  function loadInitialFromURLorStorage() {
+    const params = new URLSearchParams(window.location.search);
+    const fromUrl = params.get('seed');
+
+    if (fromUrl) {
+      els.seedCode.value = fromUrl;
+      try {
+        BOARD = parseSeed(fromUrl);
+        setSeedStatus('Loaded seed from URL.', 'success');
+      } catch (err) {
+        setSeedStatus('URL seed could not be loaded: ' + (err.message || 'invalid seed'), 'error');
+      }
+      return;
+    }
+
+    try {
+      const fromStorage = localStorage.getItem(STORAGE_KEY);
+      if (fromStorage) {
+        BOARD = parseSeed(fromStorage);
+        els.seedCode.value = fromStorage;
+        setSeedStatus('Restored last editor session.', 'success');
+      }
+    } catch (_err) {
+      // Ignore parse/storage errors and use defaults.
+    }
+  }
+
+  attachMetaHandlers();
+  loadInitialFromURLorStorage();
+  renderAll();
+})();
+</script>
+</body>
+</html>

@@ -7,6 +7,7 @@
 <link rel="icon" type="image/svg+xml" href="logo.svg">
 <link rel="prefetch" href="whats-new.html">
 <link rel="prefetch" href="test-lab.html">
+<link rel="prefetch" href="boardeditor.html">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-QPMD9QD5H7"></script>
@@ -704,6 +705,10 @@ body[data-theme="classic"] .center-sub{
     <div class="card">
       <h2>Testing</h2>
       <button class="btn btn-secondary btn-full" onclick="openTestLabPage()">Run Scenario Test Lab</button>
+    </div>
+    <div class="card">
+      <h2>Board Tools</h2>
+      <button class="btn btn-secondary btn-full" onclick="openBoardEditorPage()">Open Custom Board Editor</button>
     </div>
   </div>
   <button class="btn btn-sm report-bug-fab" onclick="openBugReport()" title="Report bugs">🐞 Report Bug</button>
@@ -7908,6 +7913,15 @@ function openTestLabPage() {
   document.body.classList.add('route-leaving');
   window.setTimeout(() => {
     window.location.href = 'test-lab.html';
+  }, 170);
+}
+
+function openBoardEditorPage() {
+  if (openBoardEditorPage._busy) return;
+  openBoardEditorPage._busy = true;
+  document.body.classList.add('route-leaving');
+  window.setTimeout(() => {
+    window.location.href = 'boardeditor.html';
   }, 170);
 }
 
