@@ -7,6 +7,7 @@
 <link rel="icon" type="image/svg+xml" href="logo.svg">
 <link rel="prefetch" href="whats-new.html">
 <link rel="prefetch" href="test-lab.html">
+<link rel="prefetch" href="boardeditor.html">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-QPMD9QD5H7"></script>
@@ -51,21 +52,297 @@ body.route-leaving::after{opacity:1}
 .page-back-btn{background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.2)}
 .home-actions{display:grid;grid-template-columns:1fr;gap:.75rem}
 #home-screen .lobby-body{padding-bottom:5.2rem}
-.report-bug-fab{
-  position:fixed;
-  right:1rem;
-  bottom:max(1rem, env(safe-area-inset-bottom));
-  border-radius:999px;
-  padding:.42rem .72rem;
-  font-size:.76rem;
-  font-weight:700;
-  background:linear-gradient(135deg,#7f1d1d,#c0392b);
-  color:#fff;
-  border:1px solid rgba(255,255,255,.22);
-  box-shadow:0 8px 18px rgba(0,0,0,.34);
-  z-index:45;
+
+/* ═══════════════════════════════════════
+   HOME SCREEN — REFINED CLASSIC REDESIGN
+═══════════════════════════════════════ */
+
+#home-screen {
+  background: #0b1e10 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden;
+  background-image:
+    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(26,90,50,.55) 0%, transparent 65%),
+    radial-gradient(ellipse 50% 40% at 80% 90%, rgba(180,130,20,.12) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 50% at 10% 80%, rgba(10,50,25,.4) 0%, transparent 60%),
+    linear-gradient(#0b1e10, #0b1e10) !important;
+  background-attachment: fixed;
 }
-.report-bug-fab:hover{filter:brightness(1.07);transform:translateY(-1px)}
+#home-screen::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+  background-size: 48px 48px;
+  pointer-events: none;
+  z-index: 0;
+}
+#home-screen::after { display: none; }
+#home-screen > * { position: relative; z-index: 1; }
+
+/* ── HERO ── */
+.home-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(1.8rem,6vh,3.5rem) 1.5rem clamp(1.2rem,3vh,2rem);
+  text-align: center;
+  animation: heroFadeIn .9s cubic-bezier(.22,1,.36,1) both;
+}
+@keyframes heroFadeIn {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.home-ornament {
+  display: flex;
+  align-items: center;
+  gap: .8rem;
+  margin-bottom: 1.4rem;
+  color: var(--gold);
+  font-size: .7rem;
+  letter-spacing: .28em;
+  text-transform: uppercase;
+  opacity: .75;
+  font-family: var(--font-body);
+}
+.home-ornament::before,
+.home-ornament::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(201,151,28,.6), transparent);
+  min-width: 3rem;
+}
+.home-logo-mark {
+  width: clamp(2.8rem, 11vw, 4.5rem);
+  height: clamp(2.8rem, 11vw, 4.5rem);
+  margin: 0 auto .9rem;
+  animation: logoFloat 6s ease-in-out infinite;
+}
+.home-logo-mark img {
+  width: 100%; height: 100%; object-fit: contain;
+  filter: drop-shadow(0 0 20px rgba(201,151,28,.35)) drop-shadow(0 8px 24px rgba(0,0,0,.5));
+}
+@keyframes logoFloat {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-5px); }
+}
+.home-title {
+  font-family: var(--font-display);
+  font-size: clamp(2.2rem, 8vw, 3.8rem);
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: -.01em;
+  line-height: 1;
+  margin-bottom: .5rem;
+  text-shadow: 0 2px 30px rgba(0,0,0,.4);
+}
+.home-title .ht-accent {
+  color: var(--gold-light);
+  display: block;
+  font-size: .72em;
+  letter-spacing: .04em;
+  font-weight: 700;
+}
+.home-subtitle-row {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  margin-top: 1rem;
+  color: rgba(255,255,255,.45);
+  font-size: .78rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+.home-subtitle-row .dot-sep { width: 3px; height: 3px; background: currentColor; border-radius: 50%; opacity: .6; }
+.home-edition-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  margin-top: 1.4rem;
+  padding: .38rem 1rem;
+  background: rgba(201,151,28,.12);
+  border: 1px solid rgba(201,151,28,.3);
+  border-radius: 2px;
+  color: var(--gold-light);
+  font-size: .72rem;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+/* ── MENU ── */
+.home-menu-body {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 0 1.25rem clamp(5rem,12vh,7rem);
+  width: 100%;
+  animation: menuRise .8s .15s cubic-bezier(.22,1,.36,1) both;
+}
+@keyframes menuRise {
+  from { opacity: 0; transform: translateY(22px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.home-section-label {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  margin-bottom: .85rem;
+  color: rgba(255,255,255,.3);
+  font-size: .68rem;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.home-section-label::after { content: ''; flex: 1; height: 1px; background: rgba(255,255,255,.1); }
+
+.home-play-card {
+  background: linear-gradient(135deg, rgba(26,80,48,.6) 0%, rgba(15,48,28,.7) 100%);
+  border: 1px solid rgba(255,255,255,.12);
+  border-top: 1px solid rgba(255,255,255,.18);
+  border-radius: 14px;
+  padding: 1.6rem 1.4rem;
+  margin-bottom: .85rem;
+  backdrop-filter: blur(16px);
+  box-shadow: 0 8px 32px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.06);
+  position: relative;
+  overflow: hidden;
+}
+.home-play-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(201,151,28,.5), transparent);
+}
+.home-play-title {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: rgba(255,255,255,.9);
+  margin-bottom: 1rem;
+  letter-spacing: .02em;
+}
+.home-btn-primary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: .95rem 1.3rem;
+  margin-bottom: .6rem;
+  background: linear-gradient(135deg, #1a7a3c, #2da05a);
+  border: none;
+  border-radius: 10px;
+  color: #fff;
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .22s cubic-bezier(.22,1,.36,1);
+  box-shadow: 0 4px 18px rgba(26,122,60,.4);
+}
+.home-btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(26,122,60,.55); }
+.home-btn-primary:active { transform: scale(.98); }
+.home-btn-secondary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: .95rem 1.3rem;
+  background: rgba(37,99,235,.18);
+  border: 1px solid rgba(37,99,235,.35);
+  border-radius: 10px;
+  color: #93c5fd;
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .22s cubic-bezier(.22,1,.36,1);
+}
+.home-btn-secondary:hover { transform: translateY(-2px); background: rgba(37,99,235,.28); border-color: rgba(37,99,235,.55); color: #bfdbfe; box-shadow: 0 6px 22px rgba(37,99,235,.25); }
+.home-btn-secondary:active { transform: scale(.98); }
+.hbtn-left { display: flex; align-items: center; gap: .65rem; }
+.hbtn-icon { font-size: 1.2rem; }
+.hbtn-text { display: flex; flex-direction: column; text-align: left; }
+.hbtn-label { font-size: .95rem; font-weight: 700; line-height: 1; }
+.hbtn-sub { font-size: .72rem; opacity: .65; margin-top: .18rem; font-weight: 400; }
+.hbtn-arrow { opacity: .5; font-size: .9rem; transition: transform .2s; }
+.home-btn-primary:hover .hbtn-arrow,
+.home-btn-secondary:hover .hbtn-arrow { transform: translateX(3px); opacity: .9; }
+
+.home-menu-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .6rem;
+  margin-bottom: .85rem;
+}
+.home-menu-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 1rem 1.1rem;
+  background: rgba(255,255,255,.05);
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all .22s cubic-bezier(.22,1,.36,1);
+  font-family: var(--font-body);
+  color: rgba(255,255,255,.75);
+  text-align: left;
+  backdrop-filter: blur(8px);
+}
+.home-menu-item:hover { background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.18); color: #fff; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,.3); }
+.home-menu-item:active { transform: scale(.98); }
+.hmi-icon { font-size: 1.4rem; margin-bottom: .5rem; }
+.hmi-label { font-size: .85rem; font-weight: 700; line-height: 1.2; margin-bottom: .12rem; }
+.hmi-sub { font-size: .7rem; opacity: .45; font-weight: 400; }
+.home-menu-item.hmi-gold { border-color: rgba(201,151,28,.22); background: rgba(201,151,28,.07); }
+.home-menu-item.hmi-gold:hover { border-color: rgba(201,151,28,.4); background: rgba(201,151,28,.14); box-shadow: 0 6px 20px rgba(201,151,28,.15); }
+
+.home-dev-card { display: flex; gap: .5rem; }
+.home-dev-btn {
+  flex: 1;
+  padding: .7rem .8rem;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 8px;
+  color: rgba(255,255,255,.4);
+  font-family: var(--font-body);
+  font-size: .75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .2s;
+  text-align: center;
+}
+.home-dev-btn:hover { background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.13); color: rgba(255,255,255,.6); }
+.home-footer { text-align: center; padding-bottom: .5rem; color: rgba(255,255,255,.18); font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; }
+.report-bug-fab{
+  position:fixed !important;
+  right:1rem;
+  left:auto;
+  bottom:1rem;
+  border-radius:999px;
+  padding:.2rem .44rem;
+  font-size:.62rem;
+  font-weight:600;
+  background:rgba(112,26,26,.82);
+  color:#fee2e2;
+  border:1px solid rgba(255,255,255,.28);
+  box-shadow:0 4px 12px rgba(0,0,0,.28);
+  z-index:45;
+  line-height:1;
+  backdrop-filter:blur(4px);
+  width:fit-content;
+  min-width:0;
+  display:inline-flex;
+  max-width:calc(100vw - 1.5rem);
+  white-space:nowrap;
+}
+.report-bug-fab:hover{background:rgba(140,25,25,.75);color:rgba(255,255,255,.8);transform:none;filter:none}
 .credits-body{max-width:700px;margin:0 auto;width:100%;padding:1rem 1rem 2rem}
 .credits-link{color:#93c5fd;text-decoration:none;font-weight:700}
 .credits-link:hover{text-decoration:underline}
@@ -677,36 +954,80 @@ body[data-theme="classic"] .center-sub{
 
 <!-- ═══════════════ HOME SCREEN ═══════════════ -->
 <div class="screen" id="home-screen">
-  <div class="lobby-header">
-    <div class="lobby-logo-wrap">
-      <img src="logo.svg" alt="Monopoly logo" class="lobby-logo-mark">
-      <div class="lobby-logo"><span>Bangladeshi</span> Monopoly</div>
+
+  <div class="home-hero">
+    <div class="home-ornament">Bangladesh Edition</div>
+    <div class="home-logo-mark">
+      <img src="logo.svg" alt="Bangladeshi Monopoly Logo">
     </div>
-    <div class="lobby-subtitle">Multiplayer Board Game • Pass & Play</div>
-    <div class="lobby-tagline">✦ Choose Game Mode ✦</div>
+    <h1 class="home-title">
+      <span class="ht-accent">Bangladeshi</span>
+      Monopoly
+    </h1>
+    <div class="home-subtitle-row">
+      <span>Multiplayer</span>
+      <span class="dot-sep"></span>
+      <span>Pass &amp; Play</span>
+      <span class="dot-sep"></span>
+      <span>Online</span>
+    </div>
+    <div class="home-edition-badge">✦ Classic Board Game ✦</div>
   </div>
-  <div class="lobby-body">
-    <div class="card">
-      <h2>Play</h2>
-      <div class="home-actions">
-        <button class="btn btn-primary btn-lg btn-full" onclick="openOfflineSetupPage()">🎮 Offline</button>
-        <button class="btn btn-secondary btn-lg btn-full" onclick="openOnlineSetupPage('host')">🌐 Online</button>
-      </div>
+
+  <div class="home-menu-body">
+
+    <div class="home-section-label">Play</div>
+
+    <div class="home-play-card">
+      <div class="home-play-title">Choose your game mode</div>
+      <button class="home-btn-primary" onclick="openOfflineSetupPage()">
+        <div class="hbtn-left">
+          <span class="hbtn-icon">🎮</span>
+          <div class="hbtn-text">
+            <span class="hbtn-label">Play Offline</span>
+            <span class="hbtn-sub">Local &amp; Pass &amp; Play</span>
+          </div>
+        </div>
+        <span class="hbtn-arrow">›</span>
+      </button>
+      <button class="home-btn-secondary" onclick="openOnlineSetupPage('host')">
+        <div class="hbtn-left">
+          <span class="hbtn-icon">🌐</span>
+          <div class="hbtn-text">
+            <span class="hbtn-label">Play Online</span>
+            <span class="hbtn-sub">Host or join a room</span>
+          </div>
+        </div>
+        <span class="hbtn-arrow">›</span>
+      </button>
     </div>
-    <div class="card">
-      <h2>Credits & Patch Logs</h2>
-      <button class="btn btn-gold btn-full" id="credits-logs-btn" onclick="openWhatsNewPage()">🏅 Open Credits & Logs</button>
+
+    <div class="home-section-label">Explore</div>
+
+    <div class="home-menu-grid">
+      <button class="home-menu-item hmi-gold" id="credits-logs-btn" onclick="openWhatsNewPage()">
+        <span class="hmi-icon">🏅</span>
+        <span class="hmi-label">Credits &amp; Logs</span>
+        <span class="hmi-sub">Patch notes</span>
+      </button>
+      <button class="home-menu-item" onclick="showScreen('how-to-screen')">
+        <span class="hmi-icon">📘</span>
+        <span class="hmi-label">How to Play</span>
+        <span class="hmi-sub">Rules &amp; guide</span>
+      </button>
     </div>
-    <div class="card">
-      <h2>How to Play</h2>
-      <button class="btn btn-secondary btn-full" onclick="showScreen('how-to-screen')">📘 Open Guide</button>
+
+    <div class="home-section-label">Dev Tools</div>
+
+    <div class="home-dev-card">
+      <button class="home-dev-btn" onclick="openTestLabPage()">⚗️ Test Lab</button>
+      <button class="home-dev-btn" onclick="openBoardEditorPage()">🗺️ Board Editor</button>
     </div>
-    <div class="card">
-      <h2>Testing</h2>
-      <button class="btn btn-secondary btn-full" onclick="openTestLabPage()">Run Scenario Test Lab</button>
-    </div>
+
+    <div class="home-footer" style="margin-top:1.5rem">Bangladeshi Monopoly</div>
   </div>
-  <button class="btn btn-sm report-bug-fab" onclick="openBugReport()" title="Report bugs">🐞 Report Bug</button>
+
+  <button class="report-bug-fab" onclick="openBugReport()" title="Report bugs">🐞 Report</button>
 </div>
 
 <!-- ═══════════════ ONLINE SETUP SCREEN ═══════════════ -->
@@ -1330,6 +1651,8 @@ const ONLINE = {
   lastRoomCleanupAt: 0,
   heartbeatInFlight: false,
   lastHeartbeatAt: 0,
+  snapshotApplyInFlight: false,
+  queuedSnapshot: null,
 };
 
 const ONLINE_MUTATION_FUNCS = [
@@ -2379,6 +2702,7 @@ const MOVE_FX = {
 };
 const REMOTE_FX = {
   running: false,
+  epoch: 0,
 };
 let LOG_ARCHIVE_GAME_STARTED_AT = 0;
 const LOG_ARCHIVE = [];
@@ -2543,8 +2867,9 @@ function captureBoardVisualState(state) {
       };
     }),
     owners: rawProps.map(prop => {
-      const ownerN = Number(prop?.owner);
-      return Number.isInteger(ownerN) ? ownerN : null;
+      if (!prop || prop.owner === null || prop.owner === undefined) return null;
+      const ownerN = Number(prop.owner);
+      return Number.isInteger(ownerN) && ownerN >= 0 ? ownerN : null;
     }),
   };
 }
@@ -2599,7 +2924,7 @@ function hydrateRemoteGameState(raw) {
       continue;
     }
     const src = props[i] && typeof props[i] === 'object' ? props[i] : {};
-    const ownerN = Number(src.owner);
+    const ownerN = (src.owner === null || src.owner === undefined) ? NaN : Number(src.owner);
     const owner = Number.isInteger(ownerN) && ownerN >= 0 && ownerN < next.players.length ? ownerN : null;
     const hotel = !!src.hotel;
     const houses = hotel ? 0 : Math.max(0, Math.min(4, Number(src.houses) || 0));
@@ -2847,7 +3172,12 @@ async function applyRoomSnapshot(data) {
       buildBoard();
       renderAll();
       showScreen('game-screen');
-      await playRemoteSnapshotAnimations(prevVisualState);
+      const animationRevision = Number(ONLINE.revision) || 0;
+      const animationEpoch = ++REMOTE_FX.epoch;
+      await playRemoteSnapshotAnimations(prevVisualState, {
+        expectedRevision: animationRevision,
+        expectedEpoch: animationEpoch,
+      });
       updateActionButtons();
       if (departureMessage) {
         toast(departureMessage, departureEndsMatch ? 'danger' : 'gold');
@@ -2865,7 +3195,14 @@ async function applyRoomSnapshot(data) {
       }
     } finally {
       ONLINE.isApplyingRemote = false;
-      maybeScheduleOfflineAiTurn();
+      // If the current player is an AI (e.g. after AI takeover), eagerly try to claim
+      // the runner lease before the polling interval fires, so the turn isn't stuck.
+      const currentAfterHydrate = G && Array.isArray(G.players) ? G.players[G.currentPlayerIdx] : null;
+      if (currentAfterHydrate && isAiPlayer(currentAfterHydrate) && !currentAfterHydrate.bankrupt) {
+        ensureAiRunnerLease().then(() => maybeScheduleOfflineAiTurn());
+      } else {
+        maybeScheduleOfflineAiTurn();
+      }
     }
   } else if (ONLINE.status === 'lobby') {
     openOnlineRoomPage();
@@ -2875,6 +3212,28 @@ async function applyRoomSnapshot(data) {
   }
 
   updateOnlineLobbyUI();
+}
+
+async function processQueuedRoomSnapshots() {
+  if (ONLINE.snapshotApplyInFlight) return;
+  ONLINE.snapshotApplyInFlight = true;
+  try {
+    while (ONLINE.queuedSnapshot) {
+      const nextSnapshot = ONLINE.queuedSnapshot;
+      ONLINE.queuedSnapshot = null;
+      try {
+        await applyRoomSnapshot(nextSnapshot);
+      } catch (err) {
+        console.error(err);
+        const detail = err?.message || err?.name || 'Unknown error';
+        const msg = `Failed to apply room updates: ${detail}`;
+        updateOnlineStatus(msg, true);
+        toast(msg, 'danger');
+      }
+    }
+  } finally {
+    ONLINE.snapshotApplyInFlight = false;
+  }
 }
 
 function attachRoomListener(roomId) {
@@ -2888,6 +3247,8 @@ function attachRoomListener(roomId) {
   ONLINE.aiRunner = null;
   ONLINE.aiRunnerRequestAt = 0;
   ONLINE.pendingCardResolutions = 0;
+  ONLINE.snapshotApplyInFlight = false;
+  ONLINE.queuedSnapshot = null;
   const ref = FIREBASE.api.ref(FIREBASE.db, `rooms/${roomId}`);
   ONLINE.unsubRoom = FIREBASE.api.onValue(ref, snap => {
     if (!snap.exists()) {
@@ -2895,13 +3256,8 @@ function attachRoomListener(roomId) {
       leaveOnlineRoom(false, false);
       return;
     }
-    applyRoomSnapshot(snap.val()).catch(err => {
-      console.error(err);
-      const detail = err?.message || err?.name || 'Unknown error';
-      const msg = `Failed to apply room updates: ${detail}`;
-      updateOnlineStatus(msg, true);
-      toast(msg, 'danger');
-    });
+    ONLINE.queuedSnapshot = snap.val();
+    processQueuedRoomSnapshots();
   }, err => {
     console.error(err);
     const msg = firebaseErrorMessage(err, 'Failed to subscribe to room updates.');
@@ -3451,6 +3807,8 @@ async function leaveOnlineRoom(showToast = true, mutateRoom = true, leaveMode = 
     ONLINE.aiRunner = null;
     ONLINE.aiRunnerRequestAt = 0;
     ONLINE.pendingCardResolutions = 0;
+    ONLINE.snapshotApplyInFlight = false;
+    ONLINE.queuedSnapshot = null;
     updateOnlineLobbyUI();
     showScreen('online-screen');
     return;
@@ -3485,6 +3843,8 @@ async function leaveOnlineRoom(showToast = true, mutateRoom = true, leaveMode = 
   ONLINE.aiRunner = null;
   ONLINE.aiRunnerRequestAt = 0;
   ONLINE.pendingCardResolutions = 0;
+  ONLINE.snapshotApplyInFlight = false;
+  ONLINE.queuedSnapshot = null;
   LOBBY_CONTEXT = 'online';
   updateOnlineLobbyUI();
   renderLobby();
@@ -3915,12 +4275,24 @@ function animatePropertyPurchase(spaceId) {
   pulseBoardSpace(spaceId, 'buy-celebrate', 930);
 }
 
-async function playRemoteSnapshotAnimations(prevVisualState) {
+async function playRemoteSnapshotAnimations(prevVisualState, options = {}) {
   if (!isOnlineGame() || !prevVisualState || REMOTE_FX.running) return;
   if (!Array.isArray(G.players) || !G.players.length) return;
 
+  const expectedRevision = Number(options.expectedRevision) || Number(ONLINE.revision) || 0;
+  const expectedEpoch = Number(options.expectedEpoch) || Number(REMOTE_FX.epoch) || 0;
+  const shouldAbort = () => {
+    if (!isOnlineGame()) return true;
+    if (Number(REMOTE_FX.epoch) !== expectedEpoch) return true;
+    if (ONLINE.queuedSnapshot) return true;
+    return (Number(ONLINE.revision) || 0) !== expectedRevision;
+  };
+
+  if (shouldAbort()) return;
+
   REMOTE_FX.running = true;
   try {
+    if (shouldAbort()) return;
     const beforePlayers = Array.isArray(prevVisualState.players) ? prevVisualState.players : [];
     const localIdx = resolveLocalPlayerIndex();
     let mover = null;
@@ -3947,28 +4319,39 @@ async function playRemoteSnapshotAnimations(prevVisualState) {
       break;
     }
 
+    if (shouldAbort()) return;
+
     if (mover) {
-      const pl = G.players[mover.id];
-      if (pl) {
-        const finalPos = pl.pos;
-        const finalInJail = pl.inJail;
-        pl.inJail = false;
-        pl.pos = mover.from;
+      const liveStart = getLivePlayer(mover.id);
+      if (liveStart) {
+        const finalPos = liveStart.pos;
+        const finalInJail = liveStart.inJail;
+        liveStart.inJail = false;
+        liveStart.pos = mover.from;
         renderMarkers();
 
         if (mover.stepAnim) {
           await waitMs(70);
-          await animatePlayerStepMovement(pl, mover.stepsForward);
+          if (shouldAbort()) return;
+          await animatePlayerStepMovement(mover.id, mover.stepsForward, {
+            canContinue: () => !shouldAbort(),
+          });
         } else {
           pulseBoardSpace(mover.to, 'step-arrive', 360);
           await waitMs(220);
         }
 
-        pl.pos = finalPos;
-        pl.inJail = finalInJail;
-        renderMarkers();
+        if (shouldAbort()) return;
+        const liveEnd = getLivePlayer(mover.id);
+        if (liveEnd) {
+          liveEnd.pos = finalPos;
+          liveEnd.inJail = finalInJail;
+          renderMarkers();
+        }
       }
     }
+
+    if (shouldAbort()) return;
 
     const prevOwners = Array.isArray(prevVisualState.owners) ? prevVisualState.owners : [];
     const bought = [];
@@ -3989,6 +4372,7 @@ async function playRemoteSnapshotAnimations(prevVisualState) {
     }
 
     for (let i = 0; i < bought.length; i++) {
+      if (shouldAbort()) return;
       animatePropertyPurchase(bought[i]);
       if (i < bought.length - 1) await waitMs(120);
     }
@@ -4031,10 +4415,15 @@ function renderMarkers(hopPlayerId = null) {
   });
 }
 
-async function animatePlayerStepMovement(player, steps) {
+async function animatePlayerStepMovement(player, steps, options = {}) {
   const startPlayer = getLivePlayer(player);
   if (!startPlayer || !Number.isInteger(steps) || steps <= 0) return false;
   const playerId = startPlayer.id;
+  const canContinue = typeof options.canContinue === 'function'
+    ? options.canContinue
+    : () => true;
+
+  if (!canContinue()) return false;
 
   MOVE_FX.active = true;
   MOVE_FX.playerId = playerId;
@@ -4042,12 +4431,14 @@ async function animatePlayerStepMovement(player, steps) {
 
   try {
     for (let i = 0; i < steps; i++) {
+      if (!canContinue()) return false;
       const livePlayer = getLivePlayer(playerId);
       if (!livePlayer || livePlayer.bankrupt) return false;
       livePlayer.pos = ((Number(livePlayer.pos) || 0) + 1) % 40;
       renderMarkers(playerId);
       pulseBoardSpace(livePlayer.pos, i === steps - 1 ? 'step-arrive' : 'step-trail', i === steps - 1 ? 340 : 240);
       await waitMs(180);
+      if (!canContinue()) return false;
     }
   } finally {
     MOVE_FX.active = false;
@@ -4118,11 +4509,13 @@ function activeOnlineRunnerUid(now = Date.now()) {
   const leaseUntil = Number(lease?.until) || 0;
   if (leaseUid && leaseTurnKey === getAiTurnKey() && leaseUntil > now) return leaseUid;
 
+  // Prefer the host only if they're still connected (present in lobbyPlayers)
+  const connectedUids = uniqueConnectedRoomUids();
   const host = String(ONLINE.hostUid || '');
-  if (host) return host;
+  if (host && connectedUids.includes(host)) return host;
 
-  const uids = uniqueConnectedRoomUids();
-  return uids[0] || String(ONLINE.localUid || '');
+  // Fall back to any connected player, then local uid
+  return connectedUids[0] || String(ONLINE.localUid || '');
 }
 
 function hasValidAiRunnerLease(now = Date.now()) {
@@ -4137,7 +4530,9 @@ async function ensureAiRunnerLease(force = false) {
   if (!isOnlineGame() || !FIREBASE.api || !ONLINE.connected || !ONLINE.localUid) return false;
 
   const now = Date.now();
-  if (!force && ONLINE.aiRunnerRequestAt && (now - ONLINE.aiRunnerRequestAt) < 450) return false;
+  // Use a longer debounce (half of lease duration) to prevent rapid steal attempts
+  const debounceMs = force ? 150 : Math.floor(AI_RUNNER_LEASE_MS / 2);
+  if (!force && ONLINE.aiRunnerRequestAt && (now - ONLINE.aiRunnerRequestAt) < debounceMs) return false;
   ONLINE.aiRunnerRequestAt = now;
 
   const turnKey = getAiTurnKey();
@@ -4152,10 +4547,14 @@ async function ensureAiRunnerLease(force = false) {
       const rawUid = String(raw?.uid || '');
       const rawTurnKey = String(raw?.turnKey || '');
       const rawUntil = Number(raw?.until) || 0;
-      const stale = rawUntil <= now;
+      // Use a small clock-skew buffer (200ms) when checking staleness
+      const stale = rawUntil <= (now + 200);
       const turnChanged = rawTurnKey !== turnKey;
+      // Only take lease if: no owner, turn changed, lease is stale, we already own it, or forced
+      // Never steal a valid lease that belongs to a different uid
+      const canTake = !rawUid || turnChanged || stale || rawUid === ONLINE.localUid || force;
 
-      if (!rawUid || stale || turnChanged || rawUid === ONLINE.localUid || force) {
+      if (canTake) {
         current.aiRunner = {
           uid: ONLINE.localUid,
           turnKey,
@@ -4169,25 +4568,37 @@ async function ensureAiRunnerLease(force = false) {
       return current;
     });
 
-    const nextData = txResult?.snapshot?.val ? txResult.snapshot.val() : null;
+    // Try to read the committed state from the transaction result
+    let nextData = null;
+    try {
+      nextData = txResult?.snapshot?.val ? txResult.snapshot.val() : null;
+    } catch (_) {}
     const nextRaw = nextData?.aiRunner && typeof nextData.aiRunner === 'object' ? nextData.aiRunner : null;
-    ONLINE.aiRunner = nextRaw
-      ? {
-          uid: String(nextRaw.uid || ''),
-          turnKey: String(nextRaw.turnKey || ''),
-          until: Number(nextRaw.until) || 0,
-        }
-      : null;
+    if (nextRaw) {
+      ONLINE.aiRunner = {
+        uid: String(nextRaw.uid || ''),
+        turnKey: String(nextRaw.turnKey || ''),
+        until: Number(nextRaw.until) || 0,
+      };
+    }
+    // If we didn't get a snapshot back but know we won the transaction, set locally
+    if (!ONLINE.aiRunner && mine) {
+      ONLINE.aiRunner = {
+        uid: ONLINE.localUid,
+        turnKey,
+        until: now + AI_RUNNER_LEASE_MS,
+      };
+    }
   } catch (err) {
     console.error(err);
-  }
-
-  if (!ONLINE.aiRunner && mine) {
-    ONLINE.aiRunner = {
-      uid: ONLINE.localUid,
-      turnKey,
-      until: now + AI_RUNNER_LEASE_MS,
-    };
+    // Fallback: if transaction failed but we intended to take it, set optimistically
+    if (mine) {
+      ONLINE.aiRunner = {
+        uid: ONLINE.localUid,
+        turnKey,
+        until: now + AI_RUNNER_LEASE_MS,
+      };
+    }
   }
 
   const lease = ONLINE.aiRunner;
@@ -4546,6 +4957,17 @@ function maybeScheduleOfflineAiTurn() {
   if (isOnlineGame()) {
     if (!canRunAiController(now)) {
       const runnerUid = activeOnlineRunnerUid(now) || 'none';
+      // If the designated runner is not us and IS a connected player, wait for them
+      const connectedUids = uniqueConnectedRoomUids();
+      const runnerIsConnected = runnerUid !== 'none' && connectedUids.includes(runnerUid);
+      const runnerIsUs = runnerUid === String(ONLINE.localUid || '');
+      // If runner is absent or is us (stale lease), try to claim lease immediately
+      if (!runnerIsConnected || runnerIsUs) {
+        clearOfflineAiTimer(false);
+        AI_CTRL.lastKey = '';
+        ensureAiRunnerLease(true).then(() => maybeScheduleOfflineAiTurn());
+        return;
+      }
       const waitKey = `${stateKey}:lease:${runnerUid}`;
       if (AI_CTRL.timerId && AI_CTRL.lastKey === waitKey) return;
       clearOfflineAiTimer(false);
@@ -5681,7 +6103,8 @@ function buildableGroups(p) {
   Object.keys(groups).forEach(g => {
     const groupIds = SPACES.filter(s => s.type === 'property' && s.group === parseInt(g)).map(s => s.id);
     const monopoly = groupIds.every(id => G.properties[id]?.owner === p.id);
-    if (monopoly) buildable.push(groupIds);
+    const hasMortgaged = groupIds.some(id => !!G.properties[id]?.mortgaged);
+    if (monopoly && !hasMortgaged) buildable.push(groupIds);
   });
   return buildable;
 }
@@ -5722,11 +6145,26 @@ function buildHouse(propId) {
   const actorIsAi = shouldAutoActForAi(p);
   const sp = SPACES[propId];
   const prop = G.properties[propId];
+  if (!sp || !prop || sp.type !== 'property') return;
+  if (prop.owner !== p.id) { toast('You do not own this property.', 'danger'); return; }
+  if (prop.mortgaged) { toast('Cannot build on a mortgaged property.', 'danger'); return; }
+  if (prop.hotel) { toast('This property already has a hotel.', 'danger'); return; }
+
+  const groupIds = SPACES
+    .filter(s => s.type === 'property' && s.group === sp.group)
+    .map(s => s.id);
+  const monopoly = groupIds.every(id => G.properties[id]?.owner === p.id);
+  if (!monopoly) { toast('Own the full color group to build.', 'danger'); return; }
+  if (groupIds.some(id => G.properties[id]?.mortgaged)) {
+    toast('Unmortgage this color group before building.', 'danger');
+    return;
+  }
+
   const cost = sp.house;
   if (p.money < cost) { toast('Not enough money!', 'danger'); return; }
   p.money -= cost;
   playSfx('build');
-  if (prop.houses === 4) { prop.hotel = true; prop.houses = 0; addLog(`${p.name} built a hotel on ${sp.name} for ${fmtCurrency(cost)}.`, 'success'); }
+  if (prop.houses >= 4) { prop.hotel = true; prop.houses = 0; addLog(`${p.name} built a hotel on ${sp.name} for ${fmtCurrency(cost)}.`, 'success'); }
   else { prop.houses++; addLog(`${p.name} built house #${prop.houses} on ${sp.name} for ${fmtCurrency(cost)}.`, 'success'); }
   renderAll();
   if (actorIsAi) closeOverlay('build-overlay');
@@ -7891,6 +8329,15 @@ function openTestLabPage() {
   document.body.classList.add('route-leaving');
   window.setTimeout(() => {
     window.location.href = 'test-lab.html';
+  }, 170);
+}
+
+function openBoardEditorPage() {
+  if (openBoardEditorPage._busy) return;
+  openBoardEditorPage._busy = true;
+  document.body.classList.add('route-leaving');
+  window.setTimeout(() => {
+    window.location.href = 'boardeditor.html';
   }, 170);
 }
 
