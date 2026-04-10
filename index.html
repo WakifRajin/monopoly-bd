@@ -320,6 +320,588 @@ body.route-leaving::after{opacity:1}
 }
 .home-dev-btn:hover { background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.13); color: rgba(255,255,255,.6); }
 .home-footer { text-align: center; padding-bottom: .5rem; color: rgba(255,255,255,.18); font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; }
+
+/* ── ONLINE ROOMS (Homepage-style) ── */
+#online-screen{
+  background:#0b1e10 !important;
+  overflow-y:scroll !important;
+  overflow-x:hidden;
+  scrollbar-gutter:stable both-edges;
+  background-image:
+    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(26,90,50,.55) 0%, transparent 65%),
+    radial-gradient(ellipse 50% 40% at 80% 90%, rgba(180,130,20,.12) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 50% at 10% 80%, rgba(10,50,25,.4) 0%, transparent 60%),
+    linear-gradient(#0b1e10,#0b1e10) !important;
+  background-attachment:fixed;
+}
+#online-screen::before{
+  content:'';
+  position:fixed;
+  inset:0;
+  background-image:
+    linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+  background-size:48px 48px;
+  pointer-events:none;
+  z-index:0;
+}
+#online-screen::after{display:none}
+#online-screen > *{position:relative;z-index:1}
+
+.online-top-actions{max-width:860px}
+
+.online-hero{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  width:100%;
+  min-width:0;
+  text-align:center;
+  padding:clamp(1.35rem,4.2vh,2.3rem) 1rem clamp(.8rem,2.2vh,1.2rem);
+  animation:heroFadeIn .85s cubic-bezier(.22,1,.36,1) both;
+}
+.online-ornament{
+  display:flex;
+  align-items:center;
+  gap:.8rem;
+  margin-bottom:1.02rem;
+  color:var(--gold);
+  font-size:.68rem;
+  letter-spacing:.24em;
+  text-transform:uppercase;
+  opacity:.75;
+}
+.online-ornament::before,
+.online-ornament::after{
+  content:'';
+  flex:1;
+  height:1px;
+  min-width:2.6rem;
+  background:linear-gradient(90deg,transparent,rgba(201,151,28,.6),transparent);
+}
+.online-logo-mark{
+  width:clamp(2.4rem,9vw,3.8rem);
+  height:clamp(2.4rem,9vw,3.8rem);
+  margin:0 auto .68rem;
+  animation:logoFloat 6s ease-in-out infinite;
+}
+.online-logo-mark img{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  filter:drop-shadow(0 0 18px rgba(201,151,28,.3)) drop-shadow(0 8px 20px rgba(0,0,0,.46));
+}
+.online-title{
+  font-family:var(--font-display);
+  font-size:clamp(2rem,7vw,3.3rem);
+  font-weight:900;
+  color:#fff;
+  line-height:1;
+  letter-spacing:-.01em;
+  text-shadow:0 2px 30px rgba(0,0,0,.4);
+}
+.online-title .accent{color:var(--gold-light);display:block;font-size:.72em;letter-spacing:.04em}
+.online-subtitle-row{
+  display:flex;
+  align-items:center;
+  gap:.52rem;
+  margin-top:.8rem;
+  color:rgba(255,255,255,.45);
+  font-size:.74rem;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  font-weight:500;
+}
+.online-sub-dot{width:3px;height:3px;border-radius:50%;background:currentColor;opacity:.6}
+.online-badge{
+  display:inline-flex;
+  align-items:center;
+  gap:.4rem;
+  margin-top:.95rem;
+  padding:.33rem .88rem;
+  background:rgba(201,151,28,.12);
+  border:1px solid rgba(201,151,28,.3);
+  border-radius:2px;
+  color:var(--gold-light);
+  font-size:.68rem;
+  letter-spacing:.17em;
+  text-transform:uppercase;
+  font-weight:600;
+}
+
+.online-body{max-width:860px;width:100%;min-width:0;margin:0 auto;padding:0 1rem 2rem}
+.online-section-label{
+  display:flex;
+  align-items:center;
+  gap:.6rem;
+  margin:.2rem 0 .7rem;
+  color:rgba(255,255,255,.3);
+  font-size:.68rem;
+  letter-spacing:.22em;
+  text-transform:uppercase;
+  font-weight:600;
+}
+.online-section-label::after{content:'';flex:1;height:1px;background:rgba(255,255,255,.1)}
+
+.online-room-card{
+  background:linear-gradient(135deg, rgba(26,80,48,.6) 0%, rgba(15,48,28,.72) 100%);
+  border:1px solid rgba(255,255,255,.13);
+  border-top:1px solid rgba(255,255,255,.2);
+  border-radius:14px;
+  width:100%;
+  padding:1.05rem;
+  margin-bottom:.82rem;
+  backdrop-filter:blur(14px);
+  box-shadow:0 8px 28px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.06);
+  position:relative;
+  overflow:hidden;
+}
+.online-room-card::before{
+  content:'';
+  position:absolute;
+  top:0;left:0;right:0;
+  height:1px;
+  background:linear-gradient(90deg,transparent,rgba(201,151,28,.5),transparent);
+}
+#online-screen .online-room-card h2{font-size:1.16rem;margin-bottom:.58rem;line-height:1.25}
+
+#online-screen #online-mode-row{gap:.6rem;margin:.18rem 0 .12rem;width:100%}
+#online-screen #mode-host-btn,
+#online-screen #mode-join-btn{
+  border:1px solid rgba(255,255,255,.22);
+  box-shadow:none;
+  padding:.62rem 1rem;
+  border-radius:10px;
+}
+
+#online-screen #host-options,
+#online-screen #join-options{margin-top:.8rem;width:100%;min-width:0}
+
+.online-pane{
+  display:block;
+  width:100%;
+  min-width:0;
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:11px;
+  background:rgba(255,255,255,.04);
+  padding:.85rem;
+}
+.online-pane-title{
+  color:rgba(255,255,255,.74);
+  font-size:.72rem;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  font-weight:700;
+  margin-bottom:.58rem;
+}
+.online-pane .input-group{margin-bottom:.62rem}
+
+.online-list-head{margin-top:.74rem;display:flex;align-items:center;justify-content:space-between;gap:.5rem}
+.online-list-head label{color:rgba(255,255,255,.7);font-size:.82rem;letter-spacing:.05em}
+.online-refresh-btn{
+  padding:.34rem .62rem;
+  background:rgba(255,255,255,.12) !important;
+  color:#fff;
+  border:1px solid rgba(255,255,255,.2);
+}
+.online-refresh-btn:hover{background:rgba(255,255,255,.2) !important}
+
+#online-screen #open-rooms-list{margin-top:.56rem;max-height:170px;overflow-y:auto;padding-right:.2rem}
+.online-room-empty{color:rgba(255,255,255,.5);font-size:.8rem;padding:.35rem .25rem}
+.online-room-error{color:#ff9ca1;font-size:.8rem;padding:.35rem .25rem}
+.online-open-room{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:.6rem;
+  padding:.5rem .58rem;
+  border:1px solid rgba(255,255,255,.13);
+  border-radius:8px;
+  margin-bottom:.38rem;
+  background:rgba(255,255,255,.05);
+}
+.online-open-room-meta{min-width:0}
+.online-open-room-code{color:#fff;font-size:.82rem;font-weight:700;letter-spacing:.02em}
+.online-open-room-host{color:rgba(255,255,255,.5);font-size:.72rem}
+.online-open-room-btn{
+  padding:.35rem .62rem;
+  background:linear-gradient(135deg,rgba(26,122,60,.92),rgba(45,160,90,.82));
+  color:#fff;
+  border:1px solid rgba(255,255,255,.2);
+}
+
+.online-connected-player{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:.5rem;
+  padding:.35rem .45rem;
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:7px;
+  background:rgba(255,255,255,.05);
+  margin-bottom:.3rem;
+}
+.online-connected-name{font-size:.82rem;color:#fff;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.online-connected-ready{font-size:.72rem}
+.online-connected-ready.is-ready{color:#86efac}
+.online-connected-ready.is-not-ready{color:#fca5a5}
+
+@media(max-width:640px){
+  #online-screen #host-options .two-col{grid-template-columns:1fr}
+  .online-subtitle-row{letter-spacing:.08em;font-size:.72rem}
+}
+
+/* ── LOBBY SETUP (Homepage-style) ── */
+#lobby-screen{
+  background:#0b1e10 !important;
+  overflow-y:auto !important;
+  overflow-x:hidden;
+  background-image:
+    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(26,90,50,.55) 0%, transparent 65%),
+    radial-gradient(ellipse 50% 40% at 80% 90%, rgba(180,130,20,.12) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 50% at 10% 80%, rgba(10,50,25,.4) 0%, transparent 60%),
+    linear-gradient(#0b1e10,#0b1e10) !important;
+  background-attachment:fixed;
+}
+#lobby-screen::before{
+  content:'';
+  position:fixed;
+  inset:0;
+  background-image:
+    linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+  background-size:48px 48px;
+  pointer-events:none;
+  z-index:0;
+}
+#lobby-screen::after{display:none}
+#lobby-screen > *{position:relative;z-index:1}
+
+.lobby-top-actions{max-width:860px}
+
+.setup-hero{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  width:100%;
+  min-width:0;
+  padding:clamp(1.35rem,4.2vh,2.3rem) 1rem clamp(.8rem,2.2vh,1.2rem);
+  animation:heroFadeIn .85s cubic-bezier(.22,1,.36,1) both;
+}
+.setup-ornament{
+  display:flex;
+  align-items:center;
+  gap:.8rem;
+  margin-bottom:1.02rem;
+  color:var(--gold);
+  font-size:.68rem;
+  letter-spacing:.24em;
+  text-transform:uppercase;
+  opacity:.75;
+}
+.setup-ornament::before,
+.setup-ornament::after{
+  content:'';
+  flex:1;
+  height:1px;
+  min-width:2.6rem;
+  background:linear-gradient(90deg,transparent,rgba(201,151,28,.6),transparent);
+}
+.setup-logo-mark{
+  width:clamp(2.4rem,9vw,3.8rem);
+  height:clamp(2.4rem,9vw,3.8rem);
+  margin:0 auto .68rem;
+  animation:logoFloat 6s ease-in-out infinite;
+}
+.setup-logo-mark img{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  filter:drop-shadow(0 0 18px rgba(201,151,28,.3)) drop-shadow(0 8px 20px rgba(0,0,0,.46));
+}
+.setup-title{
+  font-family:var(--font-display);
+  font-size:clamp(2rem,7vw,3.3rem);
+  font-weight:900;
+  color:#fff;
+  line-height:1;
+  letter-spacing:-.01em;
+  text-shadow:0 2px 30px rgba(0,0,0,.4);
+}
+.setup-title .accent{color:var(--gold-light);display:block;font-size:.72em;letter-spacing:.04em}
+.setup-subtitle-row{
+  display:flex;
+  align-items:center;
+  gap:.52rem;
+  margin-top:.8rem;
+  color:rgba(255,255,255,.45);
+  font-size:.74rem;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  font-weight:500;
+}
+.setup-sub-dot{width:3px;height:3px;border-radius:50%;background:currentColor;opacity:.6}
+.setup-badge{
+  display:inline-flex;
+  align-items:center;
+  gap:.4rem;
+  margin-top:.95rem;
+  padding:.33rem .88rem;
+  background:rgba(201,151,28,.12);
+  border:1px solid rgba(201,151,28,.3);
+  border-radius:2px;
+  color:var(--gold-light);
+  font-size:.68rem;
+  letter-spacing:.17em;
+  text-transform:uppercase;
+  font-weight:600;
+}
+
+.setup-body{max-width:860px;width:100%;min-width:0;margin:0 auto;padding:0 1rem 2rem}
+.setup-section-label{
+  display:flex;
+  align-items:center;
+  gap:.6rem;
+  margin:.2rem 0 .7rem;
+  color:rgba(255,255,255,.3);
+  font-size:.68rem;
+  letter-spacing:.22em;
+  text-transform:uppercase;
+  font-weight:600;
+}
+.setup-section-label::after{content:'';flex:1;height:1px;background:rgba(255,255,255,.1)}
+
+#lobby-screen .card{
+  background:linear-gradient(135deg, rgba(26,80,48,.6) 0%, rgba(15,48,28,.72) 100%);
+  border:1px solid rgba(255,255,255,.13);
+  border-top:1px solid rgba(255,255,255,.2);
+  border-radius:14px;
+  padding:1.05rem;
+  margin-bottom:.82rem;
+  backdrop-filter:blur(14px);
+  box-shadow:0 8px 28px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.06);
+  position:relative;
+  overflow:hidden;
+}
+#lobby-screen .card::before{
+  content:'';
+  position:absolute;
+  top:0;left:0;right:0;
+  height:1px;
+  background:linear-gradient(90deg,transparent,rgba(201,151,28,.5),transparent);
+}
+#lobby-screen .card h2{font-size:1.16rem;margin-bottom:.58rem;line-height:1.25}
+#lobby-screen .card h3{font-size:1.02rem;margin-bottom:.62rem;line-height:1.25;color:#fff}
+
+#lobby-screen .input-group label{color:rgba(255,255,255,.72)}
+#lobby-screen .input-group input,
+#lobby-screen .input-group select{
+  background:rgba(255,255,255,.1);
+  border:1px solid rgba(255,255,255,.2);
+}
+
+#lobby-screen .player-slot{
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:10px;
+}
+#lobby-screen .player-slot.active{
+  border-color:rgba(69,204,120,.62);
+  background:rgba(45,160,90,.14);
+  box-shadow:0 4px 16px rgba(15,40,24,.36);
+}
+
+.setup-player-actions{display:flex;gap:.5rem;flex-wrap:wrap}
+.setup-online-actions{margin-top:.75rem}
+
+#lobby-screen #online-room-players{margin-top:.75rem;max-height:160px;overflow-y:auto;padding-right:.2rem}
+#lobby-screen #online-room-status{margin-top:.75rem;color:rgba(255,255,255,.65);font-size:.82rem;line-height:1.5}
+
+#lobby-screen #board-theme-grid{display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:.5rem}
+
+.setup-note{margin-top:.35rem;font-size:.76rem;color:rgba(255,255,255,.55)}
+
+.setup-start-btn{
+  margin-top:.64rem !important;
+  border-radius:10px;
+  font-size:1rem;
+  letter-spacing:.01em;
+}
+
+#lobby-screen .how-to{list-style:none;color:rgba(255,255,255,.84);font-size:.9rem;line-height:1.6}
+#lobby-screen .how-to li{position:relative;padding-left:1rem;margin-bottom:.35rem}
+#lobby-screen .how-to li::before{
+  content:'';
+  width:7px;
+  height:7px;
+  border-radius:50%;
+  background:var(--green-light);
+  position:absolute;
+  left:0;
+  top:.52rem;
+}
+
+@media(max-width:640px){
+  #lobby-screen .two-col{grid-template-columns:1fr}
+  .setup-subtitle-row{letter-spacing:.08em;font-size:.72rem}
+}
+
+/* ── HOW TO PLAY (Homepage-style) ── */
+#how-to-screen{
+  background:#0b1e10 !important;
+  overflow-y:auto !important;
+  overflow-x:hidden;
+  background-image:
+    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(26,90,50,.55) 0%, transparent 65%),
+    radial-gradient(ellipse 50% 40% at 80% 90%, rgba(180,130,20,.12) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 50% at 10% 80%, rgba(10,50,25,.4) 0%, transparent 60%),
+    linear-gradient(#0b1e10,#0b1e10) !important;
+  background-attachment:fixed;
+}
+#how-to-screen::before{
+  content:'';
+  position:fixed;
+  inset:0;
+  background-image:
+    linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+  background-size:48px 48px;
+  pointer-events:none;
+  z-index:0;
+}
+#how-to-screen::after{display:none}
+#how-to-screen > *{position:relative;z-index:1}
+
+.howto-top-actions{max-width:860px}
+
+.howto-hero{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  padding:clamp(1.3rem,4vh,2.2rem) 1rem clamp(.7rem,2vh,1.1rem);
+  animation:heroFadeIn .85s cubic-bezier(.22,1,.36,1) both;
+}
+.howto-ornament{
+  display:flex;
+  align-items:center;
+  gap:.8rem;
+  margin-bottom:1rem;
+  color:var(--gold);
+  font-size:.68rem;
+  letter-spacing:.24em;
+  text-transform:uppercase;
+  opacity:.75;
+}
+.howto-ornament::before,
+.howto-ornament::after{
+  content:'';
+  flex:1;
+  height:1px;
+  min-width:2.6rem;
+  background:linear-gradient(90deg,transparent,rgba(201,151,28,.6),transparent);
+}
+.howto-logo-mark{
+  width:clamp(2.4rem,9vw,3.8rem);
+  height:clamp(2.4rem,9vw,3.8rem);
+  margin:0 auto .65rem;
+  animation:logoFloat 6s ease-in-out infinite;
+}
+.howto-logo-mark img{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  filter:drop-shadow(0 0 18px rgba(201,151,28,.3)) drop-shadow(0 8px 20px rgba(0,0,0,.46));
+}
+.howto-title{
+  font-family:var(--font-display);
+  font-size:clamp(2rem,7vw,3.3rem);
+  font-weight:900;
+  color:#fff;
+  line-height:1;
+  letter-spacing:-.01em;
+  text-shadow:0 2px 30px rgba(0,0,0,.4);
+}
+.howto-title .accent{color:var(--gold-light);display:block;font-size:.72em;letter-spacing:.04em}
+.howto-subtitle-row{
+  display:flex;
+  align-items:center;
+  gap:.52rem;
+  margin-top:.8rem;
+  color:rgba(255,255,255,.45);
+  font-size:.74rem;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  font-weight:500;
+}
+.howto-sub-dot{width:3px;height:3px;border-radius:50%;background:currentColor;opacity:.6}
+.howto-badge{
+  display:inline-flex;
+  align-items:center;
+  gap:.4rem;
+  margin-top:.95rem;
+  padding:.33rem .88rem;
+  background:rgba(201,151,28,.12);
+  border:1px solid rgba(201,151,28,.3);
+  border-radius:2px;
+  color:var(--gold-light);
+  font-size:.68rem;
+  letter-spacing:.17em;
+  text-transform:uppercase;
+  font-weight:600;
+}
+
+.howto-body{max-width:860px;margin:0 auto;padding:0 1rem 2rem}
+.howto-section-label{
+  display:flex;
+  align-items:center;
+  gap:.6rem;
+  margin:.2rem 0 .7rem;
+  color:rgba(255,255,255,.3);
+  font-size:.68rem;
+  letter-spacing:.22em;
+  text-transform:uppercase;
+  font-weight:600;
+}
+.howto-section-label::after{content:'';flex:1;height:1px;background:rgba(255,255,255,.1)}
+
+#how-to-screen .card{
+  background:linear-gradient(135deg, rgba(26,80,48,.6) 0%, rgba(15,48,28,.72) 100%);
+  border:1px solid rgba(255,255,255,.13);
+  border-top:1px solid rgba(255,255,255,.2);
+  border-radius:14px;
+  padding:1.05rem;
+  margin-bottom:.82rem;
+  backdrop-filter:blur(14px);
+  box-shadow:0 8px 28px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.06);
+  position:relative;
+  overflow:hidden;
+}
+#how-to-screen .card::before{
+  content:'';
+  position:absolute;
+  top:0;left:0;right:0;
+  height:1px;
+  background:linear-gradient(90deg,transparent,rgba(201,151,28,.5),transparent);
+}
+#how-to-screen .card h2{font-size:1.16rem;margin-bottom:.48rem;line-height:1.25}
+#how-to-screen .how-to{list-style:none;color:rgba(255,255,255,.84);font-size:.9rem;line-height:1.6}
+#how-to-screen .how-to li{position:relative;padding-left:1rem;margin-bottom:.35rem}
+#how-to-screen .how-to li::before{
+  content:'';
+  width:7px;
+  height:7px;
+  border-radius:50%;
+  background:var(--green-light);
+  position:absolute;
+  left:0;
+  top:.52rem;
+}
+
 .report-bug-fab{
   position:fixed !important;
   right:1rem;
@@ -1032,40 +1614,54 @@ body[data-theme="classic"] .center-sub{
 
 <!-- ═══════════════ ONLINE SETUP SCREEN ═══════════════ -->
 <div class="screen hidden" id="online-screen">
-  <div class="page-top-actions">
+  <div class="page-top-actions online-top-actions">
     <button class="btn btn-sm page-back-btn" onclick="openHomePage()">← Back</button>
   </div>
-  <div class="lobby-header" style="padding-top:1rem">
-    <div class="lobby-logo-wrap">
-      <img src="logo.svg" alt="Monopoly logo" class="lobby-logo-mark">
-      <div class="lobby-logo"><span>Online</span> Room Setup</div>
+
+  <div class="online-hero">
+    <div class="online-ornament">Online Multiplayer</div>
+    <div class="online-logo-mark">
+      <img src="logo.svg" alt="Monopoly logo">
     </div>
-    <div class="lobby-subtitle">Create or join an online room</div>
-    <div class="lobby-tagline">✦ Room Entry Page ✦</div>
+    <h1 class="online-title">
+      <span class="accent">Room</span>
+      Setup
+    </h1>
+    <div class="online-subtitle-row">
+      <span>Host</span>
+      <span class="online-sub-dot"></span>
+      <span>Join</span>
+      <span class="online-sub-dot"></span>
+      <span>Sync</span>
+    </div>
+    <div class="online-badge">Live Rooms</div>
   </div>
-  <div class="lobby-body">
-    <div class="card">
+
+  <div class="online-body">
+    <div class="online-section-label">Room Entry</div>
+    <div class="card online-room-card">
       <h2>Online Rooms</h2>
       <div class="input-group">
         <label>Your Online Name</label>
         <input type="text" id="online-player-name" maxlength="24" placeholder="Enter your name">
       </div>
 
-      <div class="two-col" id="online-mode-row">
+      <div class="two-col online-mode-switch" id="online-mode-row">
         <button class="btn btn-secondary btn-sm" id="mode-host-btn" onclick="setOnlineMode('host')">Host</button>
         <button class="btn btn-secondary btn-sm" id="mode-join-btn" onclick="setOnlineMode('join')">Join</button>
       </div>
 
-      <div id="host-options" style="margin-top:.75rem">
+      <div id="host-options" class="online-pane">
+        <div class="online-pane-title">Host a Room</div>
         <div class="two-col">
-          <div class="input-group" style="margin-bottom:.5rem">
+          <div class="input-group">
             <label>Room Visibility</label>
             <select id="room-visibility">
               <option value="open" selected>Open</option>
               <option value="closed">Closed</option>
             </select>
           </div>
-          <div class="input-group" style="margin-bottom:.5rem">
+          <div class="input-group">
             <label>Room Password (closed only)</label>
             <input type="password" id="host-room-password" maxlength="20" placeholder="Set password">
           </div>
@@ -1073,21 +1669,22 @@ body[data-theme="classic"] .center-sub{
         <button class="btn btn-primary btn-sm btn-full" id="create-room-btn" onclick="createOnlineRoom()">Create Room</button>
       </div>
 
-      <div id="join-options" style="margin-top:.75rem;display:none">
-        <div class="input-group" style="margin-bottom:.5rem">
+      <div id="join-options" class="online-pane" style="display:none">
+        <div class="online-pane-title">Join a Room</div>
+        <div class="input-group">
           <label>Room Code</label>
           <input type="text" id="join-room-code" maxlength="6" placeholder="ABC123" style="text-transform:uppercase">
         </div>
-        <div class="input-group" style="margin-bottom:.5rem">
+        <div class="input-group">
           <label>Password (for closed room)</label>
           <input type="password" id="join-room-password" maxlength="20" placeholder="Password if needed">
         </div>
         <button class="btn btn-primary btn-sm btn-full" id="join-room-btn" onclick="joinOnlineRoom()">Join by Code</button>
-        <div style="margin-top:.75rem;display:flex;align-items:center;justify-content:space-between">
-          <label style="color:rgba(255,255,255,.7);font-size:.85rem">Open Rooms</label>
-          <button class="btn btn-sm" style="padding:.3rem .55rem;background:rgba(255,255,255,.12);color:#fff" onclick="refreshOpenRoomsList(true)">Refresh</button>
+        <div class="online-list-head">
+          <label>Open Rooms</label>
+          <button class="btn btn-sm online-refresh-btn" onclick="refreshOpenRoomsList(true)">Refresh</button>
         </div>
-        <div id="open-rooms-list" style="margin-top:.5rem;max-height:170px;overflow-y:auto"></div>
+        <div id="open-rooms-list"></div>
       </div>
     </div>
   </div>
@@ -1095,42 +1692,55 @@ body[data-theme="classic"] .center-sub{
 
 <!-- ═══════════════ LOBBY SCREEN ═══════════════ -->
 <div class="screen hidden" id="lobby-screen">
-  <div class="page-top-actions">
+  <div class="page-top-actions lobby-top-actions">
     <button class="btn btn-sm page-back-btn" onclick="handleLobbyBack()">← Back</button>
   </div>
-  <div class="lobby-header" style="padding-top:1rem">
-    <div class="lobby-logo-wrap">
-      <img src="logo.svg" alt="Monopoly logo" class="lobby-logo-mark">
-      <div class="lobby-logo"><span>Bangladeshi</span> Monopoly</div>
+
+  <div class="setup-hero">
+    <div class="setup-ornament">Match Configuration</div>
+    <div class="setup-logo-mark">
+      <img src="logo.svg" alt="Monopoly logo">
     </div>
-    <div class="lobby-subtitle">Multiplayer Board Game • Pass & Play</div>
-    <div class="lobby-tagline" id="lobby-context-tagline">✦ Local Multiplayer ✦</div>
+    <h1 class="setup-title">
+      <span class="accent">Game</span>
+      Lobby
+    </h1>
+    <div class="setup-subtitle-row">
+      <span>Players</span>
+      <span class="setup-sub-dot"></span>
+      <span>Board</span>
+      <span class="setup-sub-dot"></span>
+      <span>Rules</span>
+    </div>
+    <div class="setup-badge" id="lobby-context-tagline">✦ Local Multiplayer ✦</div>
   </div>
-  <div class="lobby-body">
+
+  <div class="setup-body">
+    <div class="setup-section-label">Lobby Settings</div>
     <div class="card">
       <h2>Setup Players</h2>
       <div id="player-slots"></div>
-      <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+      <div class="setup-player-actions">
         <button class="btn btn-secondary btn-sm" id="add-player-btn" onclick="addPlayerSlot('human')">+ Add Human</button>
         <button class="btn btn-secondary btn-sm" id="add-ai-btn" onclick="addPlayerSlot('ai')">+ Add AI</button>
       </div>
     </div>
 
     <div class="card" id="online-room-panel" style="display:none">
-      <h2>🌐 Online Room</h2>
-      <div class="two-col" style="margin-top:.75rem">
+      <h2>Online Room</h2>
+      <div class="two-col setup-online-actions">
         <button class="btn btn-gold btn-sm" id="ready-btn" onclick="toggleReadyState()" disabled>✅ Ready</button>
         <button class="btn btn-danger btn-sm" id="leave-room-btn" onclick="leaveOnlineRoom()" disabled>Leave Room</button>
       </div>
-      <div id="online-room-players" style="margin-top:.75rem;max-height:150px;overflow-y:auto"></div>
-      <div id="online-room-status" style="margin-top:.75rem;color:rgba(255,255,255,.65);font-size:.82rem;line-height:1.5">
+      <div id="online-room-players"></div>
+      <div id="online-room-status">
         Offline mode. Choose Host or Join.
       </div>
     </div>
 
     <div class="card">
-      <h2>🗺️ Choose Board Theme</h2>
-      <div id="board-theme-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:.5rem"></div>
+      <h2>Choose Board Theme</h2>
+      <div id="board-theme-grid"></div>
     </div>
     <div class="card">
       <h3>Game Settings</h3>
@@ -1164,7 +1774,7 @@ body[data-theme="classic"] .center-sub{
           <option value="on" selected>On</option>
           <option value="off">Off</option>
         </select>
-        <div style="margin-top:.35rem;font-size:.76rem;color:rgba(255,255,255,.55)">
+        <div class="setup-note">
           When enabled, property auctions open around 60%-80% of base price.
         </div>
       </div>
@@ -1179,7 +1789,7 @@ body[data-theme="classic"] .center-sub{
         <li>Last player standing wins — avoid bankruptcy!</li>
       </ul>
     </div>
-    <button class="btn btn-primary btn-lg btn-full" onclick="startGame()" id="start-btn" style="margin-top:.5rem">🎮 Start Game</button>
+    <button class="btn btn-primary btn-lg btn-full setup-start-btn" onclick="startGame()" id="start-btn">🎮 Start Game</button>
   </div>
 </div>
 
@@ -1210,17 +1820,31 @@ body[data-theme="classic"] .center-sub{
 
 <!-- ═══════════════ HOW TO PLAY SCREEN ═══════════════ -->
 <div class="screen hidden" id="how-to-screen">
-  <div class="page-top-actions">
+  <div class="page-top-actions howto-top-actions">
     <button class="btn btn-sm page-back-btn" onclick="openHomePage()">← Back</button>
   </div>
-  <div class="lobby-header" style="padding-top:1rem">
-    <div class="lobby-logo-wrap">
-      <img src="logo.svg" alt="Monopoly logo" class="lobby-logo-mark">
-      <div class="lobby-logo"><span>How</span> to Play</div>
+
+  <div class="howto-hero">
+    <div class="howto-ornament">Bangladesh Edition</div>
+    <div class="howto-logo-mark">
+      <img src="logo.svg" alt="Monopoly logo">
     </div>
-    <div class="lobby-subtitle">Full rulebook for this version of the game</div>
+    <h1 class="howto-title">
+      <span class="accent">How</span>
+      to Play
+    </h1>
+    <div class="howto-subtitle-row">
+      <span>Rules</span>
+      <span class="howto-sub-dot"></span>
+      <span>Turns</span>
+      <span class="howto-sub-dot"></span>
+      <span>Strategy</span>
+    </div>
+    <div class="howto-badge">Full Rulebook</div>
   </div>
-  <div class="credits-body">
+
+  <div class="howto-body">
+    <div class="howto-section-label">Gameplay Rules</div>
     <div class="card">
       <h2>1. Setup, Turn Order, and Win Condition</h2>
       <ul class="how-to">
@@ -1895,7 +2519,7 @@ async function refreshOpenRoomsList(force = false) {
   if (!listEl) return;
   ONLINE.roomsListLoading = true;
   ONLINE.lastRoomsFetchAt = Date.now();
-  listEl.innerHTML = '<div style="color:rgba(255,255,255,.45);font-size:.8rem;padding:.3rem">Loading open rooms...</div>';
+  listEl.innerHTML = '<div class="online-room-empty">Loading open rooms...</div>';
 
   try {
     const snap = await FIREBASE.api.get(FIREBASE.api.ref(FIREBASE.db, 'rooms'));
@@ -1930,24 +2554,24 @@ async function refreshOpenRoomsList(force = false) {
     const visibleRooms = rooms.slice(0, 25);
 
     if (!visibleRooms.length) {
-      listEl.innerHTML = '<div style="color:rgba(255,255,255,.45);font-size:.8rem;padding:.3rem">No open rooms available.</div>';
+      listEl.innerHTML = '<div class="online-room-empty">No open rooms available.</div>';
       return;
     }
 
     listEl.innerHTML = visibleRooms.map(r => {
       const host = r.players.find(p => p.uid === r.hostUid)?.name || 'Host';
-      return `<div style="display:flex;align-items:center;justify-content:space-between;gap:.5rem;padding:.45rem .5rem;border:1px solid rgba(255,255,255,.13);border-radius:7px;margin-bottom:.35rem;background:rgba(255,255,255,.05)">
-        <div style="min-width:0">
-          <div style="color:#fff;font-size:.82rem;font-weight:700">${escHtml(r.id)} • ${r.players.length}/8</div>
-          <div style="color:rgba(255,255,255,.5);font-size:.72rem">Host: ${escHtml(host)}</div>
+      return `<div class="online-open-room">
+        <div class="online-open-room-meta">
+          <div class="online-open-room-code">${escHtml(r.id)} • ${r.players.length}/8</div>
+          <div class="online-open-room-host">Host: ${escHtml(host)}</div>
         </div>
-        <button class="btn btn-sm" style="padding:.3rem .55rem;background:rgba(45,160,90,.35);color:#fff" onclick="joinOpenRoom('${r.id}')">Join</button>
+        <button class="btn btn-sm online-open-room-btn" onclick="joinOpenRoom('${r.id}')">Join</button>
       </div>`;
     }).join('');
   } catch (err) {
     console.error(err);
     const msg = firebaseErrorMessage(err, 'Failed to load room list.');
-    listEl.innerHTML = `<div style="color:#ff9ca1;font-size:.8rem;padding:.3rem">${escHtml(msg)}</div>`;
+    listEl.innerHTML = `<div class="online-room-error">${escHtml(msg)}</div>`;
     updateOnlineStatus(msg, true);
   } finally {
     ONLINE.roomsListLoading = false;
@@ -3932,9 +4556,9 @@ function renderLobby() {
       roomPlayersEl.innerHTML = lobbyPlayers.filter(p => p.uid).map((p, i) => {
         const mine = p.uid === ONLINE.localUid;
         const host = p.uid === ONLINE.hostUid;
-        return `<div style="display:flex;align-items:center;justify-content:space-between;gap:.5rem;padding:.35rem .45rem;border:1px solid rgba(255,255,255,.12);border-radius:7px;background:rgba(255,255,255,.05);margin-bottom:.3rem">
-          <div style="font-size:.82rem;color:#fff;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(p.token || '🎲')} ${escHtml(p.name)}${host?' (Host)':''}${mine?' (You)':''}</div>
-          <div style="font-size:.72rem;color:${p.ready?'#86efac':'#fca5a5'}">${p.ready?'READY':'NOT READY'}</div>
+        return `<div class="online-connected-player">
+          <div class="online-connected-name">${escHtml(p.token || '🎲')} ${escHtml(p.name)}${host?' (Host)':''}${mine?' (You)':''}</div>
+          <div class="online-connected-ready ${p.ready?'is-ready':'is-not-ready'}">${p.ready?'READY':'NOT READY'}</div>
         </div>`;
       }).join('');
     }

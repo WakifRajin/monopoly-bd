@@ -21,83 +21,239 @@
 html,body{min-height:100%}
 body{
   font-family:var(--font-body);
-  background:linear-gradient(145deg,#0a1f10 0%,#1a3d25 50%,#0d2b1a 100%);
   color:#fff;
+  background:#0b1e10;
+  background-image:
+    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(26,90,50,.55) 0%, transparent 65%),
+    radial-gradient(ellipse 50% 40% at 80% 90%, rgba(180,130,20,.12) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 50% at 10% 80%, rgba(10,50,25,.4) 0%, transparent 60%),
+    linear-gradient(#0b1e10, #0b1e10);
+  background-attachment: fixed;
+}
+
+body::before{
+  content:'';
+  position:fixed;
+  inset:0;
+  background-image:
+    linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+  background-size:48px 48px;
+  pointer-events:none;
+  z-index:0;
 }
 
 .page{
-  max-width:760px;
+  position:relative;
+  z-index:1;
+  max-width:860px;
   margin:0 auto;
-  padding:1.2rem 1rem 2rem;
+  padding:1rem 1rem 2rem;
 }
 
-.top-actions{
-  margin-bottom:1rem;
-}
+.top-actions{margin-bottom:.6rem}
 
-.btn{
+.btn-back{
   display:inline-flex;
   align-items:center;
   justify-content:center;
   gap:.5rem;
   font-family:var(--font-body);
   font-weight:600;
-  border:none;
-  border-radius:8px;
-  cursor:pointer;
-  transition:all .2s;
-  font-size:.95rem;
-  padding:.65rem 1.15rem;
-  line-height:1;
+  border-radius:10px;
+  border:1px solid rgba(255,255,255,.2);
+  background:rgba(255,255,255,.11);
+  color:#fff;
   text-decoration:none;
+  font-size:.9rem;
+  padding:.58rem .98rem;
+  transition:all .2s;
 }
 
-.btn:hover{transform:translateY(-1px)}
-.btn-back{background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.2)}
+.btn-back:hover{transform:translateY(-1px);background:rgba(255,255,255,.16)}
 
-.header{text-align:center;padding:.5rem 0 1rem}
-.logo-wrap{display:flex;align-items:center;justify-content:center;gap:.65rem;margin-bottom:.35rem}
-.logo-mark{width:2.45rem;height:2.45rem;display:block;filter:drop-shadow(0 5px 12px rgba(0,0,0,.45))}
-.logo{font-family:var(--font-display);font-size:clamp(1.8rem,5.8vw,2.8rem);font-weight:900;line-height:1}
-.logo span{color:var(--gold-light)}
-.subtitle{color:rgba(255,255,255,.68);font-size:.95rem}
+.news-hero{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  padding:clamp(1.5rem,5vh,2.6rem) 1rem clamp(.9rem,2vh,1.4rem);
+  animation:heroFadeIn .9s cubic-bezier(.22,1,.36,1) both;
+}
 
-.tag{
-  margin-top:.7rem;
-  display:inline-block;
-  background:rgba(201,151,28,.2);
-  border:1px solid rgba(201,151,28,.4);
+@keyframes heroFadeIn{
+  from{opacity:0;transform:translateY(18px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
+.news-ornament{
+  display:flex;
+  align-items:center;
+  gap:.8rem;
+  margin-bottom:1.2rem;
+  color:var(--gold);
+  font-size:.7rem;
+  letter-spacing:.28em;
+  text-transform:uppercase;
+  opacity:.75;
+}
+
+.news-ornament::before,
+.news-ornament::after{
+  content:'';
+  flex:1;
+  height:1px;
+  background:linear-gradient(90deg, transparent, rgba(201,151,28,.6), transparent);
+  min-width:3rem;
+}
+
+.news-logo-mark{
+  width:clamp(2.6rem, 10vw, 4.2rem);
+  height:clamp(2.6rem, 10vw, 4.2rem);
+  margin:0 auto .8rem;
+  animation:logoFloat 6s ease-in-out infinite;
+}
+
+.news-logo-mark img{
+  width:100%;height:100%;object-fit:contain;
+  filter:drop-shadow(0 0 20px rgba(201,151,28,.35)) drop-shadow(0 8px 24px rgba(0,0,0,.5));
+}
+
+@keyframes logoFloat{
+  0%,100%{transform:translateY(0)}
+  50%{transform:translateY(-5px)}
+}
+
+.news-title{
+  font-family:var(--font-display);
+  font-size:clamp(2rem, 7vw, 3.3rem);
+  font-weight:900;
+  color:#fff;
+  line-height:1;
+  letter-spacing:-.01em;
+  text-shadow:0 2px 30px rgba(0,0,0,.4);
+}
+
+.news-title .accent{
   color:var(--gold-light);
-  font-size:.78rem;
-  padding:.28rem .82rem;
-  border-radius:20px;
+  display:block;
+  font-size:.72em;
+  letter-spacing:.04em;
+  font-weight:700;
+}
+
+.news-subtitle-row{
+  display:flex;
+  align-items:center;
+  gap:.6rem;
+  margin-top:.95rem;
+  color:rgba(255,255,255,.45);
+  font-size:.76rem;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  font-weight:500;
+}
+
+.dot-sep{width:3px;height:3px;background:currentColor;border-radius:50%;opacity:.6}
+
+.news-badge{
+  display:inline-flex;
+  align-items:center;
+  gap:.4rem;
+  margin-top:1.15rem;
+  padding:.35rem .95rem;
+  background:rgba(201,151,28,.12);
+  border:1px solid rgba(201,151,28,.3);
+  border-radius:2px;
+  color:var(--gold-light);
+  font-size:.7rem;
+  letter-spacing:.18em;
+  text-transform:uppercase;
+  font-weight:600;
+}
+
+.section-label{
+  display:flex;
+  align-items:center;
+  gap:.6rem;
+  margin:.55rem 0 .75rem;
+  color:rgba(255,255,255,.3);
+  font-size:.68rem;
+  letter-spacing:.22em;
+  text-transform:uppercase;
+  font-weight:600;
+}
+
+.section-label::after{content:'';flex:1;height:1px;background:rgba(255,255,255,.1)}
+
+.stack{display:grid;gap:.85rem}
+
+.log-card{
+  background:linear-gradient(135deg, rgba(26,80,48,.6) 0%, rgba(15,48,28,.7) 100%);
+  border:1px solid rgba(255,255,255,.12);
+  border-top:1px solid rgba(255,255,255,.18);
+  border-radius:14px;
+  padding:1.15rem;
+  backdrop-filter:blur(16px);
+  box-shadow:0 8px 32px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.06);
+  position:relative;
+  overflow:hidden;
+}
+
+.log-card.credits-feature{
+  background:linear-gradient(135deg, rgba(92,68,14,.38) 0%, rgba(26,80,48,.68) 45%, rgba(15,48,28,.78) 100%);
+  border:1px solid rgba(240,192,64,.5);
+  box-shadow:0 12px 36px rgba(0,0,0,.42), 0 0 0 1px rgba(240,192,64,.16), inset 0 1px 0 rgba(255,255,255,.1);
+}
+
+.log-card.credits-feature::before{
+  background:linear-gradient(90deg, transparent, rgba(240,192,64,.9), transparent);
+}
+
+.credits-kicker{
+  display:inline-block;
+  margin-bottom:.5rem;
+  padding:.2rem .55rem;
+  border:1px solid rgba(240,192,64,.45);
+  background:rgba(240,192,64,.12);
+  color:#fde68a;
+  border-radius:999px;
+  font-size:.68rem;
   letter-spacing:.08em;
   text-transform:uppercase;
+  font-weight:700;
 }
 
-.card{
-  background:rgba(255,255,255,.07);
-  border:1px solid rgba(255,255,255,.12);
-  border-radius:var(--radius);
-  padding:1.1rem;
-  margin-bottom:.85rem;
-  backdrop-filter:blur(10px);
+.credits-name{
+  font-size:1.08rem;
+  font-weight:800;
+  color:#fff;
 }
 
-.card h2{
+.log-card::before{
+  content:'';
+  position:absolute;
+  top:0;left:0;right:0;
+  height:1px;
+  background:linear-gradient(90deg, transparent, rgba(201,151,28,.5), transparent);
+}
+
+.log-version{
   font-family:var(--font-display);
-  font-size:1.35rem;
-  margin-bottom:.3rem;
+  font-size:clamp(1.15rem,3.4vw,1.6rem);
+  line-height:1.2;
+  margin-bottom:.22rem;
 }
 
-.card h3{
-  font-size:.98rem;
+.log-subtitle{
   color:#fde68a;
+  font-size:.92rem;
   margin-bottom:.5rem;
 }
 
 .note{
-  color:rgba(255,255,255,.78);
+  color:rgba(255,255,255,.82);
   line-height:1.65;
   font-size:.92rem;
 }
@@ -105,16 +261,13 @@ body{
 .credits-link{color:#93c5fd;text-decoration:none;font-weight:700}
 .credits-link:hover{text-decoration:underline}
 
-.changes{
-  list-style:none;
-  margin-top:.35rem;
-}
+.changes{list-style:none;margin-top:.35rem}
 
 .changes li{
-  color:rgba(255,255,255,.84);
-  font-size:.92rem;
-  line-height:1.55;
-  margin-bottom:.3rem;
+  color:rgba(255,255,255,.86);
+  font-size:.91rem;
+  line-height:1.57;
+  margin-bottom:.32rem;
   padding-left:.95rem;
   position:relative;
 }
@@ -134,113 +287,150 @@ body{
   text-align:center;
   color:rgba(255,255,255,.56);
   font-size:.82rem;
-  margin-top:.75rem;
+  margin-top:1rem;
+}
+
+@media(max-width:640px){
+  .page{padding:.9rem .75rem 1.5rem}
+  .log-card{padding:.98rem}
+  .news-subtitle-row{letter-spacing:.08em;font-size:.72rem}
 }
 </style>
 </head>
 <body>
   <main class="page">
     <div class="top-actions">
-      <a class="btn btn-back" href="index.html">Back to Home</a>
+      <a class="btn-back" href="index.html">Back to Home</a>
     </div>
 
-    <header class="header">
-      <div class="logo-wrap">
-        <img src="logo.svg" alt="Monopoly logo" class="logo-mark">
-        <div class="logo"><span>Credits</span> & Logs</div>
+    <header class="news-hero">
+      <div class="news-ornament">Bangladesh Edition</div>
+      <div class="news-logo-mark">
+        <img src="logo.svg" alt="Monopoly logo">
       </div>
-      <div class="subtitle">Credits and patch logs for Bangladeshi Monopoly</div>
-      <div class="tag">Credits + Changelog</div>
+      <h1 class="news-title">
+        <span class="accent">Credits &</span>
+        Patch Logs
+      </h1>
+      <div class="news-subtitle-row">
+        <span>Release Notes</span>
+        <span class="dot-sep"></span>
+        <span>Credits</span>
+        <span class="dot-sep"></span>
+        <span>Stability</span>
+      </div>
+      <div class="news-badge">Latest Build Notes</div>
     </header>
 
-    <section class="card">
-      <h2>Credits</h2>
-      <h3>Made by</h3>
-      <p class="note">
-        Made by <strong style="color:#fff">wakifrajin</strong>.
-      </p>
+    <div class="section-label">Featured Credits</div>
+    <section class="log-card credits-feature">
+      <div class="credits-kicker">Primary Creator</div>
+      <h2 class="log-version">Project Credits</h2>
+      <h3 class="log-subtitle">Made by</h3>
+      <p class="note credits-name">wakifrajin</p>
+      <p class="note" style="margin-top:.2rem">Lead design, gameplay systems, and ongoing updates.</p>
       <p style="margin-top:.45rem">
         <a class="credits-link" href="https://github.com/WakifRajin" target="_blank" rel="noopener noreferrer">https://github.com/WakifRajin</a>
       </p>
     </section>
 
-    <section class="card">
-      <h2>Update 0.0.7 - Classic Board and Stability Fixes</h2>
-      <h3>Rule parity and turn-flow reliability</h3>
+    <div class="section-label">Latest Update</div>
+    <section class="log-card">
+      <h2 class="log-version">Update 0.0.8 - UI Updates and Custom Board Editor</h2>
+      <h3 class="log-subtitle">Homepage polish, board tools, audio, and reliability</h3>
       <ul class="changes">
-        <li>Added the new Classic board with original Monopoly-style economy: $200 GO, $1500 start money, classic property values, classic railroads/utilities, and $50 jail bail.</li>
-        <li>Added theme-specific Chance and Community card profiles so Classic uses original-scale card values.</li>
-        <li>Utility rent logic is now theme-aware and ownership-safe, fixing incorrect utility rent edge cases.</li>
-        <li>Fixed async turn-flow race issues that could cause mixed turn prompts or wrong-player action locks.</li>
-        <li>Fixed "Resolving card effect" and movement lock stuck states by forcing immediate UI unlock after effect/move completion.</li>
-        <li>Improved Classic AI economy behavior: fewer unnecessary mortgages, better unmortgage recovery, and no auction attempts when auctions are disabled.</li>
+        <li>Redesigned the home screen with the new layout and structured Play, Explore, and Dev sections.</li>
+        <li>Updated home action cards and typography for better readability on desktop and mobile.</li>
+        <li>Added and exposed the Custom Board Editor flow from home for easier board experimentation and setup.</li>
+        <li>Expanded in-game audio with event-based sound effects and background music support.</li>
+        <li>Added sound controls in settings so players can toggle SFX and music and adjust volume.</li>
+        <li>Applied general bug fixes across gameplay flow, including turn-state, movement-card, and UI lock edge cases.</li>
+        <li>Improved online stability with better snapshot handling, AI takeover continuity, and sync reliability.</li>
+        <li>Refined the Report button so it stays compact and fully inside the viewport.</li>
+        <li>Redesigned this Credits and Patch Logs page to match the new homepage visual language.</li>
       </ul>
     </section>
 
-    <section class="card">
-      <h2>Update 0.0.6 - Winner Screen Upgrade</h2>
-      <h3>Cleaner endgame flow</h3>
-      <ul class="changes">
-        <li>Winner screen now always stays above overlays, including bank auctions.</li>
-        <li>Added winner actions: View Board and Play Again.</li>
-        <li>Added a compact leaderboard showing other players and their final cash.</li>
-        <li>Post-game board view is now read-only to prevent accidental extra actions.</li>
-      </ul>
-    </section>
+    <div class="section-label">Previous Updates</div>
+    <div class="stack">
+      <section class="log-card">
+        <h2 class="log-version">Update 0.0.7 - Classic Board and Stability Fixes</h2>
+        <h3 class="log-subtitle">Rule parity and turn-flow reliability</h3>
+        <ul class="changes">
+          <li>Added the new Classic board with original Monopoly-style economy: $200 GO, $1500 start money, classic property values, classic railroads and utilities, and $50 jail bail.</li>
+          <li>Added theme-specific Chance and Community card profiles so Classic uses original-scale card values.</li>
+          <li>Utility rent logic is now theme-aware and ownership-safe, fixing incorrect utility rent edge cases.</li>
+          <li>Fixed async turn-flow race issues that could cause mixed turn prompts or wrong-player action locks.</li>
+          <li>Fixed resolving-card and movement-lock stuck states by forcing immediate UI unlock after effect or move completion.</li>
+          <li>Improved Classic AI economy behavior: fewer unnecessary mortgages, better unmortgage recovery, and no auction attempts when auctions are disabled.</li>
+        </ul>
+      </section>
 
-    <section class="card">
-      <h2>Update 0.0.5 - Bankruptcy and Online Reliability</h2>
-      <h3>Debt resolution stability</h3>
-      <ul class="changes">
-        <li>Improved AI debt handling so AI can sell, mortgage, or declare bankruptcy without getting stuck.</li>
-        <li>Debt prompt state now syncs into game snapshots for better online consistency.</li>
-        <li>Center turn messaging now shows active debt resolution status in online matches.</li>
-        <li>Added winner fallback checks so endgame winner display appears more reliably online.</li>
-      </ul>
-    </section>
+      <section class="log-card">
+        <h2 class="log-version">Update 0.0.6 - Winner Screen Upgrade</h2>
+        <h3 class="log-subtitle">Cleaner endgame flow</h3>
+        <ul class="changes">
+          <li>Winner screen now always stays above overlays, including bank auctions.</li>
+          <li>Added winner actions: View Board and Play Again.</li>
+          <li>Added a compact leaderboard showing other players and their final cash.</li>
+          <li>Post-game board view is now read-only to prevent accidental extra actions.</li>
+        </ul>
+      </section>
 
-    <section class="card">
-      <h2>Update 0.0.4 - Home and Patch Notes</h2>
-      <h3>New discoverability for updates</h3>
-      <ul class="changes">
-        <li>Added a small circular What's New button at the bottom of the home screen.</li>
-        <li>Patch notes are now tracked in update-version format instead of dates.</li>
-      </ul>
-    </section>
+      <section class="log-card">
+        <h2 class="log-version">Update 0.0.5 - Bankruptcy and Online Reliability</h2>
+        <h3 class="log-subtitle">Debt resolution stability</h3>
+        <ul class="changes">
+          <li>Improved AI debt handling so AI can sell, mortgage, or declare bankruptcy without getting stuck.</li>
+          <li>Debt prompt state now syncs into game snapshots for better online consistency.</li>
+          <li>Center turn messaging now shows active debt resolution status in online matches.</li>
+          <li>Added winner fallback checks so endgame winner display appears more reliably online.</li>
+        </ul>
+      </section>
 
-    <section class="card">
-      <h2>Update 0.0.3 - Auction System Revamp</h2>
-      <h3>Gameplay and menu improvements</h3>
-      <ul class="changes">
-        <li>Added a new Auction System toggle in lobby settings (On or Off).</li>
-        <li>Auction opening bid no longer starts at zero.</li>
-        <li>Opening bid now starts around 60% to 80% of the property base price.</li>
-        <li>Auction base price is now shown inside the auction panel.</li>
-        <li>When auctions are disabled, unsold properties remain with the bank instead of opening auctions.</li>
-      </ul>
-    </section>
+      <section class="log-card">
+        <h2 class="log-version">Update 0.0.4 - Home and Patch Notes</h2>
+        <h3 class="log-subtitle">New discoverability for updates</h3>
+        <ul class="changes">
+          <li>Added a small circular What's New button at the bottom of the home screen.</li>
+          <li>Patch notes are now tracked in update-version format instead of dates.</li>
+        </ul>
+      </section>
 
-    <section class="card">
-      <h2>Update 0.0.2 - Online Sync and Stability</h2>
-      <h3>Host room settings and rule consistency</h3>
-      <ul class="changes">
-        <li>Auction settings now sync correctly in online rooms.</li>
-        <li>Host controls are respected for lobby game-setting updates.</li>
-        <li>Bankruptcy and leave-liquidation flows now follow auction on/off state consistently.</li>
-        <li>Auction states are validated and normalized during online snapshot hydration.</li>
-      </ul>
-    </section>
+      <section class="log-card">
+        <h2 class="log-version">Update 0.0.3 - Auction System Revamp</h2>
+        <h3 class="log-subtitle">Gameplay and menu improvements</h3>
+        <ul class="changes">
+          <li>Added a new Auction System toggle in lobby settings (On or Off).</li>
+          <li>Auction opening bid no longer starts at zero.</li>
+          <li>Opening bid now starts around 60% to 80% of the property base price.</li>
+          <li>Auction base price is now shown inside the auction panel.</li>
+          <li>When auctions are disabled, unsold properties remain with the bank instead of opening auctions.</li>
+        </ul>
+      </section>
 
-    <section class="card">
-      <h2>Update 0.0.1 - UI Updates</h2>
-      <h3>Auction panel improvements</h3>
-      <ul class="changes">
-        <li>Auction panel has improved display content for bidding context.</li>
-        <li>Current bid, leader, bidder cash, and base price are shown together for clarity.</li>
-      </ul>
-    </section>
+      <section class="log-card">
+        <h2 class="log-version">Update 0.0.2 - Online Sync and Stability</h2>
+        <h3 class="log-subtitle">Host room settings and rule consistency</h3>
+        <ul class="changes">
+          <li>Auction settings now sync correctly in online rooms.</li>
+          <li>Host controls are respected for lobby game-setting updates.</li>
+          <li>Bankruptcy and leave-liquidation flows now follow auction on and off state consistently.</li>
+          <li>Auction states are validated and normalized during online snapshot hydration.</li>
+        </ul>
+      </section>
 
-    <p class="footer-note">This page can be updated with each release to track balancing and bug fixes.</p>
+      <section class="log-card">
+        <h2 class="log-version">Update 0.0.1 - UI Updates</h2>
+        <h3 class="log-subtitle">Auction panel improvements</h3>
+        <ul class="changes">
+          <li>Auction panel has improved display content for bidding context.</li>
+          <li>Current bid, leader, bidder cash, and base price are shown together for clarity.</li>
+        </ul>
+      </section>
+    </div>
+
+    <p class="footer-note">This page is updated with each release to track balancing and bug fixes.</p>
   </main>
 </body>
 </html>
