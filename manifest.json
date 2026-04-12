@@ -1,0 +1,25 @@
+{
+  "name": "Bangladeshi Monopoly",
+  "short_name": "Monopoly BD",
+  "description": "A modern browser-based Bangladeshi Monopoly game with local and online modes.",
+  "lang": "en",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b1e10",
+  "theme_color": "#1a7a3c",
+  "categories": [
+    "games",
+    "entertainment"
+  ],
+  "icons": [
+    {
+      "src": "logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
