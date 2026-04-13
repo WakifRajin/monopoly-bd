@@ -956,6 +956,8 @@ tr.row-selected {
           <button class="btn warning" id="generate-seed-btn">Generate Seed</button>
           <button class="btn secondary" id="load-seed-btn">Load Seed</button>
           <button class="btn ghost" id="copy-seed-btn">Copy Seed</button>
+          <button class="btn secondary" id="use-seed-in-game-btn">Use In Game</button>
+          <button class="btn ghost" id="download-seed-btn">Download Seed</button>
         </div>
 
         <div class="seed-status" id="seed-status">Ready.</div>
@@ -1136,6 +1138,7 @@ tr.row-selected {
 <script>
 (function () {
   const STORAGE_KEY = 'monopoly_board_editor_seed';
+  const GAME_STORAGE_KEY = 'monopoly_custom_board_seed';
   const COLOR_OPTIONS = ['BROWN', 'LBLUE', 'PINK', 'ORANGE', 'RED', 'YELLOW', 'GREEN', 'DBLUE'];
   const COLOR_HEX = {
     BROWN: '#8B4513',
@@ -1277,6 +1280,8 @@ tr.row-selected {
     generateSeedBtn: document.getElementById('generate-seed-btn'),
     loadSeedBtn: document.getElementById('load-seed-btn'),
     copySeedBtn: document.getElementById('copy-seed-btn'),
+    useSeedInGameBtn: document.getElementById('use-seed-in-game-btn'),
+    downloadSeedBtn: document.getElementById('download-seed-btn'),
     seedStatus: document.getElementById('seed-status'),
     boardPreview: document.getElementById('board-preview'),
     spaceRows: document.getElementById('space-rows'),
@@ -2228,6 +2233,7 @@ tr.row-selected {
     try {
       const seed = buildSeed(BOARD);
       localStorage.setItem(STORAGE_KEY, seed);
+      localStorage.setItem(GAME_STORAGE_KEY, seed);
     } catch (_err) {
       // Ignore localStorage issues.
     }
@@ -2300,6 +2306,49 @@ tr.row-selected {
       } catch (_copyErr) {
         setSeedStatus('Clipboard permission blocked. Copy manually from the box.', 'error');
       }
+    }
+  }
+
+  function ensureSeedInTextarea() {
+    const current = String(els.seedCode.value || '').trim();
+    if (current) return current;
+    readMetaFromInputs();
+    const generated = buildSeed(BOARD);
+    els.seedCode.value = generated;
+    return generated;
+  }
+
+  function useSeedInGame() {
+    try {
+      const seed = ensureSeedInTextarea();
+      localStorage.setItem(STORAGE_KEY, seed);
+      localStorage.setItem(GAME_STORAGE_KEY, seed);
+      setSeedStatus('Seed saved for game lobby. Open Home and load the saved custom board.', 'success');
+    } catch (err) {
+      setSeedStatus(err.message || 'Could not save seed for game.', 'error');
+    }
+  }
+
+  function downloadSeedFile() {
+    try {
+      const seed = ensureSeedInTextarea();
+      const rawName = String(BOARD?.meta?.boardName || 'custom-board').trim();
+      const safeName = rawName
+        .replace(/[^a-zA-Z0-9-_]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .toLowerCase() || 'custom-board';
+      const blob = new Blob([seed], { type: 'text/plain;charset=utf-8' });
+      const href = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = href;
+      link.download = safeName + '.mbdseed.txt';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(href);
+      setSeedStatus('Seed downloaded as file.', 'success');
+    } catch (err) {
+      setSeedStatus(err.message || 'Could not download seed file.', 'error');
     }
   }
 
@@ -2427,6 +2476,8 @@ tr.row-selected {
     els.generateSeedBtn.addEventListener('click', generateSeed);
     els.loadSeedBtn.addEventListener('click', loadSeedFromTextarea);
     els.copySeedBtn.addEventListener('click', copySeed);
+    els.useSeedInGameBtn.addEventListener('click', useSeedInGame);
+    els.downloadSeedBtn.addEventListener('click', downloadSeedFile);
     els.groupControls.addEventListener('change', onGroupControlChange);
 
     els.spaceRows.addEventListener('input', onSpaceTableInput);
@@ -2466,6 +2517,7 @@ tr.row-selected {
       els.seedCode.value = fromUrl;
       try {
         BOARD = parseSeed(fromUrl);
+        persistSeedSilently();
         setSeedStatus('Loaded seed from URL.', 'success');
       } catch (err) {
         setSeedStatus('URL seed could not be loaded: ' + (err.message || 'invalid seed'), 'error');
@@ -2478,6 +2530,7 @@ tr.row-selected {
       if (fromStorage) {
         BOARD = parseSeed(fromStorage);
         els.seedCode.value = fromStorage;
+        persistSeedSilently();
         setSeedStatus('Restored last editor session.', 'success');
       }
     } catch (_err) {

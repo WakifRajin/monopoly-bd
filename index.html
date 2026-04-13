@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Bangladeshi Monopoly</title>
 <link rel="icon" type="image/svg+xml" href="logo.svg">
-<link rel="manifest" href="manifest.json">
 <link rel="prefetch" href="whats-new.html">
 <link rel="prefetch" href="test-lab.html">
 <link rel="prefetch" href="boardeditor.html">
@@ -699,7 +698,8 @@ body.route-leaving::after{opacity:1}
 
 #lobby-screen .input-group label{color:rgba(255,255,255,.72)}
 #lobby-screen .input-group input,
-#lobby-screen .input-group select{
+#lobby-screen .input-group select,
+#lobby-screen .input-group textarea{
   background:rgba(255,255,255,.1);
   border:1px solid rgba(255,255,255,.2);
 }
@@ -722,6 +722,31 @@ body.route-leaving::after{opacity:1}
 #lobby-screen #online-room-status{margin-top:.75rem;color:rgba(255,255,255,.65);font-size:.82rem;line-height:1.5}
 
 #lobby-screen #board-theme-grid{display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:.5rem}
+#custom-board-card .input-group{margin-bottom:.38rem}
+#custom-board-seed{
+  min-height:112px;
+  max-height:240px;
+  font-family:Consolas, 'Courier New', monospace;
+  font-size:.8rem;
+  line-height:1.42;
+  letter-spacing:.01em;
+  white-space:pre;
+  overflow-wrap:normal;
+  word-break:normal;
+  overflow-x:auto;
+}
+#custom-board-seed::placeholder{
+  font-family:var(--font-body);
+  font-size:.86rem;
+  letter-spacing:0;
+}
+#custom-board-card .setup-player-actions{
+  margin-top:.5rem;
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(132px,1fr));
+  gap:.45rem;
+}
+#custom-board-card .setup-player-actions .btn{width:100%}
 
 .setup-note{margin-top:.35rem;font-size:.76rem;color:rgba(255,255,255,.55)}
 
@@ -748,6 +773,7 @@ body.route-leaving::after{opacity:1}
 @media(max-width:640px){
   #lobby-screen .two-col{grid-template-columns:1fr}
   .setup-subtitle-row{letter-spacing:.08em;font-size:.72rem}
+  #custom-board-seed{min-height:126px}
 }
 
 /* ── HOW TO PLAY (Homepage-style) ── */
@@ -964,9 +990,10 @@ body.route-leaving::after{opacity:1}
 
 .input-group{margin-bottom:1rem}
 .input-group label{display:block;color:rgba(255,255,255,.7);font-size:.85rem;margin-bottom:.4rem;font-weight:500}
-.input-group input,.input-group select{width:100%;padding:.7rem 1rem;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:8px;color:#fff;font-family:var(--font-body);font-size:.95rem;outline:none;transition:border .2s}
-.input-group input::placeholder{color:rgba(255,255,255,.35)}
-.input-group input:focus,.input-group select:focus{border-color:var(--green-light)}
+.input-group input,.input-group select,.input-group textarea{width:100%;padding:.7rem 1rem;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:8px;color:#fff;font-family:var(--font-body);font-size:.95rem;outline:none;transition:border .2s}
+.input-group input::placeholder,.input-group textarea::placeholder{color:rgba(255,255,255,.35)}
+.input-group input:focus,.input-group select:focus,.input-group textarea:focus{border-color:var(--green-light)}
+.input-group textarea{min-height:102px;resize:vertical}
 .input-group select option{background:#1a3d25;color:#fff}
 
 .player-slot{display:flex;align-items:center;gap:.8rem;padding:.75rem;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;margin-bottom:.6rem;transition:all .2s}
@@ -1743,6 +1770,23 @@ body[data-theme="classic"] .center-sub{
       <h2>Choose Board Theme</h2>
       <div id="board-theme-grid"></div>
     </div>
+    <div class="card" id="custom-board-card">
+      <h3>Custom Board Seed</h3>
+      <div class="setup-note" style="margin-bottom:.5rem">
+        Load a board seed from Board Editor to use it in this match. In online rooms, the host selection is synced for everyone.
+      </div>
+      <div class="input-group">
+        <label for="custom-board-seed">Seed Code (MBD1...)</label>
+        <textarea id="custom-board-seed" rows="4" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off" placeholder="Paste custom board seed from Board Editor"></textarea>
+      </div>
+      <div class="setup-player-actions" style="margin-top:.5rem">
+        <button class="btn btn-secondary btn-sm" id="load-custom-board-btn" onclick="loadCustomBoardSeedFromInput()">Load Seed</button>
+        <button class="btn btn-secondary btn-sm" id="use-saved-custom-board-btn" onclick="loadSavedCustomBoardSeed()">Use Saved</button>
+        <button class="btn btn-gold btn-sm" id="download-custom-board-btn" onclick="downloadActiveCustomBoardSeed()">Download Seed</button>
+        <button class="btn btn-danger btn-sm" id="clear-custom-board-btn" onclick="clearCustomBoardThemeSelection()">Clear</button>
+      </div>
+      <div class="setup-note" id="custom-board-status" style="margin-top:.45rem">No custom board loaded.</div>
+    </div>
     <div class="card">
       <h3>Game Settings</h3>
       <div class="two-col">
@@ -1882,7 +1926,7 @@ body[data-theme="classic"] .center-sub{
       <ul class="how-to">
         <li>Landing on an unowned property/railroad/utility lets you buy it at face price.</li>
         <li>If you cannot afford a landed property, buy is disabled and you can auction it or skip.</li>
-        <li>Auction includes all non-bankrupt players. You can toggle auctions on/off in lobby settings. Bid controls scale by board economy (inflated boards: +100/+200/+500/+1000, Classic: +10/+20/+50/+100), or Pass.</li>
+        <li>Auction includes all non-bankrupt players. You can toggle auctions on/off in lobby settings. Bid controls are +100, +200, +500, +1000, or Pass.</li>
         <li>When enabled, auctions start from an opening value (about 60%-80% of base property price), not from 0.</li>
         <li>You cannot place a bid above your current cash. Auction ends when only one non-passed bidder remains with a valid high bid, or everyone passes.</li>
         <li>If all pass, the property remains unsold (owner stays none).</li>
@@ -1941,7 +1985,7 @@ body[data-theme="classic"] .center-sub{
       <h2>9. Trading and Timer Rules</h2>
       <ul class="how-to">
         <li>Trades can include properties and cash from both sides.</li>
-        <li>Properties with buildings cannot be included in trade offers.</li>
+        <li>A property cannot be traded if it has buildings, or if any property in its same color group has buildings.</li>
         <li>Recipient can accept or decline. Proposer can cancel while pending.</li>
         <li>Trade is validated again on response (ownership and available cash must still be valid).</li>
         <li>Auto-advance timer (Off / 10 / 20 / 30 / 45 / 60 seconds) runs only during end phase after movement resolves.</li>
@@ -2090,10 +2134,10 @@ body[data-theme="classic"] .center-sub{
       Bidding: <strong id="auc-bidder" style="color:#fff"></strong> (<span id="auc-bidder-money"></span>)
     </div>
     <div class="bid-btns" id="bid-btns">
-      <button class="btn btn-sm btn-secondary bid-step-btn" data-step-index="0" onclick="placeBid(100)">+100</button>
-      <button class="btn btn-sm btn-secondary bid-step-btn" data-step-index="1" onclick="placeBid(200)">+200</button>
-      <button class="btn btn-sm btn-secondary bid-step-btn" data-step-index="2" onclick="placeBid(500)">+500</button>
-      <button class="btn btn-sm btn-secondary bid-step-btn" data-step-index="3" onclick="placeBid(1000)">+1000</button>
+      <button class="btn btn-sm btn-secondary" onclick="placeBid(100)">+100</button>
+      <button class="btn btn-sm btn-secondary" onclick="placeBid(200)">+200</button>
+      <button class="btn btn-sm btn-secondary" onclick="placeBid(500)">+500</button>
+      <button class="btn btn-sm btn-secondary" onclick="placeBid(1000)">+1000</button>
       <button class="btn btn-sm btn-danger" onclick="passAuction()">Pass</button>
     </div>
   </div>
@@ -2297,7 +2341,6 @@ const ROOM_CLEANUP_BATCH_LIMIT = 16;
 const ROOM_HEARTBEAT_INTERVAL_MS = 1000 * 20;
 const AUCTION_OPENING_MIN_PERCENT = 60;
 const AUCTION_OPENING_MAX_PERCENT = 80;
-const AUCTION_BASE_BID_STEPS = [100, 200, 500, 1000];
 const DEFAULT_RAILROAD_PRICE = 2000;
 const DEFAULT_RAILROAD_RENT = [250, 500, 1000, 2000];
 const DEFAULT_RAILROAD_MORTGAGE = 1000;
@@ -2309,8 +2352,13 @@ const SFX_PREF_ENABLED_KEY = 'monopoly_sfx_enabled';
 const SFX_PREF_VOLUME_KEY = 'monopoly_sfx_volume';
 const SFX_PREF_BGM_ENABLED_KEY = 'monopoly_bgm_enabled';
 const SFX_DEFAULT_VOLUME = 0.55;
+const CUSTOM_BOARD_THEME_ID = 'custom';
+const CUSTOM_BOARD_SEED_PREFIX = 'MBD1';
+const CUSTOM_BOARD_STORAGE_KEY = 'monopoly_custom_board_seed';
+const CUSTOM_BOARD_EDITOR_STORAGE_KEY = 'monopoly_board_editor_seed';
 const BUG_REPORT_URL = 'https://github.com/WakifRajin/monopoly-bd/issues/new?title=Bug%20Report&body=Describe%20the%20issue%20here&labels=bug';
 let LOBBY_CONTEXT = 'offline';
+let ACTIVE_CUSTOM_BOARD_SEED = '';
 
 function ensureLocalUid() {
   const key = 'monopoly_online_uid';
@@ -2723,17 +2771,6 @@ function getAuctionOpeningBid(price, openingPercent = null) {
   return Math.max(0, Math.floor(base * pct / 100));
 }
 
-function getAuctionBidScale(themeId = G?.boardThemeId || selectedThemeId) {
-  const goSalary = getThemeGoSalary(themeId);
-  if (!Number.isFinite(goSalary) || goSalary <= 0) return 1;
-  return Math.max(0.1, goSalary / 2000);
-}
-
-function getAuctionBidSteps(themeId = G?.boardThemeId || selectedThemeId) {
-  const scale = getAuctionBidScale(themeId);
-  return AUCTION_BASE_BID_STEPS.map(step => Math.max(1, Math.floor(step * scale)));
-}
-
 function resolveLocalPlayerIndex() {
   if (!G.players || !G.players.length) return -1;
 
@@ -2817,6 +2854,152 @@ function getOnlinePlayerName() {
   const input = document.getElementById('online-player-name');
   const fallback = lobbyPlayers?.[0]?.name || 'Player';
   return sanitizeName(input?.value, fallback);
+}
+
+function customBoardHostCanEdit() {
+  return !isOnlineGame() || ONLINE.isHost;
+}
+
+function normalizeCustomBoardSeedText(seed) {
+  return String(seed || '').replace(/\s+/g, '').trim();
+}
+
+function getStoredCustomBoardSeed() {
+  const seed = normalizeCustomBoardSeedText(localStorage.getItem(CUSTOM_BOARD_STORAGE_KEY)
+    || localStorage.getItem(CUSTOM_BOARD_EDITOR_STORAGE_KEY)
+    || '');
+  return seed;
+}
+
+function setStoredCustomBoardSeed(seed) {
+  const raw = normalizeCustomBoardSeedText(seed);
+  if (!raw) return;
+  localStorage.setItem(CUSTOM_BOARD_STORAGE_KEY, raw);
+  localStorage.setItem(CUSTOM_BOARD_EDITOR_STORAGE_KEY, raw);
+}
+
+function clearStoredCustomBoardSeed() {
+  localStorage.removeItem(CUSTOM_BOARD_STORAGE_KEY);
+  localStorage.removeItem(CUSTOM_BOARD_EDITOR_STORAGE_KEY);
+}
+
+function setCustomBoardStatus(text, isError = false) {
+  const el = document.getElementById('custom-board-status');
+  if (!el) return;
+  el.textContent = String(text || '');
+  el.style.color = isError ? '#ff9ca1' : 'rgba(255,255,255,.68)';
+}
+
+function refreshCustomBoardPanel() {
+  const seedInput = document.getElementById('custom-board-seed');
+  const loadBtn = document.getElementById('load-custom-board-btn');
+  const useSavedBtn = document.getElementById('use-saved-custom-board-btn');
+  const downloadBtn = document.getElementById('download-custom-board-btn');
+  const clearBtn = document.getElementById('clear-custom-board-btn');
+  const hostEditable = customBoardHostCanEdit();
+
+  if (seedInput && !seedInput.value && ACTIVE_CUSTOM_BOARD_SEED) {
+    seedInput.value = ACTIVE_CUSTOM_BOARD_SEED;
+  }
+
+  if (seedInput) seedInput.disabled = !hostEditable;
+  if (loadBtn) loadBtn.disabled = !hostEditable;
+  if (useSavedBtn) useSavedBtn.disabled = !hostEditable;
+  if (clearBtn) clearBtn.disabled = !hostEditable;
+  if (downloadBtn) downloadBtn.disabled = !ACTIVE_CUSTOM_BOARD_SEED;
+
+  const theme = BOARD_THEMES[CUSTOM_BOARD_THEME_ID];
+  if (theme) {
+    setCustomBoardStatus(`Loaded: ${theme.name}. Select "Custom" in board themes to play it.`);
+  } else {
+    setCustomBoardStatus('No custom board loaded. Paste a seed or use saved seed.');
+  }
+}
+
+function loadSavedCustomBoardSeed() {
+  if (!customBoardHostCanEdit()) {
+    toast('Only the host can change board settings in online mode.', 'danger');
+    return;
+  }
+  const seed = getStoredCustomBoardSeed();
+  if (!seed) {
+    setCustomBoardStatus('No saved custom board seed found.', true);
+    toast('No saved custom board seed found.', 'danger');
+    return;
+  }
+  const ok = applyCustomBoardSeed(seed, { persist: true, quiet: false });
+  if (!ok) return;
+  applyThemeById(CUSTOM_BOARD_THEME_ID);
+  refreshStartingMoneyUi(CUSTOM_BOARD_THEME_ID, true);
+  renderBoardThemeSelector();
+  refreshCustomBoardPanel();
+  syncLobbySettingsToRoom().catch(err => console.error(err));
+  toast('Saved custom board loaded.', 'gold');
+}
+
+function loadCustomBoardSeedFromInput() {
+  if (!customBoardHostCanEdit()) {
+    toast('Only the host can change board settings in online mode.', 'danger');
+    return;
+  }
+  const seedInput = document.getElementById('custom-board-seed');
+  const seed = normalizeCustomBoardSeedText(seedInput?.value || '');
+  if (seedInput && seedInput.value !== seed) {
+    seedInput.value = seed;
+  }
+  if (!seed) {
+    setCustomBoardStatus('Paste a seed first.', true);
+    toast('Paste a custom board seed first.', 'danger');
+    return;
+  }
+  const ok = applyCustomBoardSeed(seed, { persist: true, quiet: false });
+  if (!ok) return;
+  applyThemeById(CUSTOM_BOARD_THEME_ID);
+  refreshStartingMoneyUi(CUSTOM_BOARD_THEME_ID, true);
+  renderBoardThemeSelector();
+  refreshCustomBoardPanel();
+  syncLobbySettingsToRoom().catch(err => console.error(err));
+  toast('Custom board loaded.', 'gold');
+}
+
+function clearCustomBoardThemeSelection() {
+  if (!customBoardHostCanEdit()) {
+    toast('Only the host can change board settings in online mode.', 'danger');
+    return;
+  }
+  removeActiveCustomBoardTheme(true);
+  if (selectedThemeId === CUSTOM_BOARD_THEME_ID) {
+    applyThemeById('dhaka');
+    refreshStartingMoneyUi('dhaka', true);
+  }
+  const seedInput = document.getElementById('custom-board-seed');
+  if (seedInput) seedInput.value = '';
+  renderBoardThemeSelector();
+  refreshCustomBoardPanel();
+  syncLobbySettingsToRoom().catch(err => console.error(err));
+}
+
+function downloadActiveCustomBoardSeed() {
+  const seed = String(ACTIVE_CUSTOM_BOARD_SEED || '').trim();
+  if (!seed) {
+    toast('No active custom board seed to download.', 'danger');
+    return;
+  }
+  const themeName = String(BOARD_THEMES[CUSTOM_BOARD_THEME_ID]?.name || 'custom-board').trim();
+  const safeName = themeName
+    .replace(/[^a-zA-Z0-9-_]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .toLowerCase() || 'custom-board';
+  const blob = new Blob([seed], { type: 'text/plain;charset=utf-8' });
+  const href = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = href;
+  link.download = `${safeName}.mbdseed.txt`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(href);
+  setCustomBoardStatus(`Downloaded seed for ${themeName}.`);
 }
 
 ensureLocalUid();
@@ -3144,6 +3327,10 @@ function buildSpacesFromTheme(themeId) {
 }
 
 function applyThemeById(themeId) {
+  if (themeId === CUSTOM_BOARD_THEME_ID && !BOARD_THEMES[CUSTOM_BOARD_THEME_ID]) {
+    const savedSeed = ACTIVE_CUSTOM_BOARD_SEED || getStoredCustomBoardSeed();
+    if (savedSeed) applyCustomBoardSeed(savedSeed, { persist: false, quiet: true });
+  }
   const nextId = BOARD_THEMES[themeId] ? themeId : 'dhaka';
   selectedThemeId = nextId;
   window.ACTIVE_THEME = BOARD_THEMES[nextId];
@@ -3296,8 +3483,289 @@ function cloneCardDeck(deck) {
   }));
 }
 
+function customClampInt(value, fallback = 0, min = 0) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.max(min, Math.round(n));
+}
+
+function customSeedChecksumFNV1a(str) {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) {
+    hash ^= str.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+    hash >>>= 0;
+  }
+  return hash.toString(16).padStart(8, '0');
+}
+
+function customSeedFromBase64Url(text) {
+  const normalized = String(text || '').replace(/-/g, '+').replace(/_/g, '/');
+  const padded = normalized + '='.repeat((4 - (normalized.length % 4)) % 4);
+  const binary = atob(padded);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return new TextDecoder().decode(bytes);
+}
+
+function normalizeCustomCardAction(action) {
+  const normalized = String(action || '').trim().toLowerCase();
+  return ['goto', 'money', 'jail', 'jailcard', 'nearest', 'repairs', 'birthday'].includes(normalized)
+    ? normalized
+    : 'money';
+}
+
+function normalizeCustomCardValue(action, value) {
+  if (action === 'nearest') {
+    const target = String(value || '').trim();
+    return target || 'railroad';
+  }
+  if (action === 'repairs') {
+    const raw = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+    return {
+      house: customClampInt(raw.house, 0, 0),
+      hotel: customClampInt(raw.hotel, 0, 0),
+    };
+  }
+  const n = Number(value);
+  return Number.isFinite(n) ? Math.round(n) : 0;
+}
+
+function decodeCustomCardDeck(rawDeck, fallbackDeck) {
+  const source = Array.isArray(rawDeck) ? rawDeck : [];
+  const basis = source.length ? source : fallbackDeck;
+  return basis.map((entry, idx) => {
+    const fallback = fallbackDeck[idx] || { text: 'Card', action: 'money', value: 0 };
+    let row = entry;
+    if (Array.isArray(entry)) {
+      row = { text: entry[0], action: entry[1], value: entry[2] };
+    }
+    if (!row || typeof row !== 'object') row = fallback;
+    const action = normalizeCustomCardAction(row.action);
+    return {
+      text: String(row.text || fallback.text || 'Card').slice(0, 220),
+      action,
+      value: normalizeCustomCardValue(action, row.value !== undefined ? row.value : fallback.value),
+    };
+  });
+}
+
+function expandCustomBoardSeedPayload(payload) {
+  if (!payload || Number(payload.v) !== 1 || !Array.isArray(payload.m) || !Array.isArray(payload.s)) {
+    throw new Error('Seed payload format is invalid.');
+  }
+
+  const meta = {
+    boardName: String(payload.m[0] || 'Custom Board').slice(0, 48),
+    currencySymbol: String(payload.m[1] || '$').slice(0, 4) || '$',
+    economyScale: Number(payload.m[2]) || 1,
+    goSalary: customClampInt(payload.m[3], 200, 0),
+    startMoney: customClampInt(payload.m[4], 1500, 0),
+    jailBail: customClampInt(payload.m[5], 50, 0),
+    utilityOne: customClampInt(payload.m[6], 4, 0),
+    utilityBoth: customClampInt(payload.m[7], 10, 0),
+  };
+
+  const spaces = payload.s.map(row => {
+    if (!Array.isArray(row) || row.length < 5) {
+      throw new Error('Seed contains an invalid space row.');
+    }
+
+    const id = customClampInt(row[0], 0, 0);
+    const typeCode = String(row[1] || 'p').toLowerCase();
+    const name = String(row[2] || 'Space').slice(0, 48);
+
+    if (typeCode === 'p') {
+      const color = String(row[3] || 'BROWN').toUpperCase();
+      const group = customClampInt(row[4], 0, 0);
+      const price = customClampInt(row[5], 0, 0);
+      const house = customClampInt(row[6], 0, 0);
+      const mortgage = customClampInt(row[7], 0, 0);
+      const rent = row.slice(8, 14).map(v => customClampInt(v, 0, 0));
+      while (rent.length < 6) rent.push(0);
+      return { id, type: 'property', name, color, group, price, house, mortgage, rent };
+    }
+
+    if (typeCode === 'r') {
+      const price = customClampInt(row[3], 0, 0);
+      const mortgage = customClampInt(row[4], 0, 0);
+      const rent = row.slice(5, 9).map(v => customClampInt(v, 0, 0));
+      while (rent.length < 4) rent.push(0);
+      return { id, type: 'railroad', name, color: '', group: null, price, house: 0, mortgage, rent };
+    }
+
+    if (typeCode === 'u') {
+      const price = customClampInt(row[3], 0, 0);
+      const mortgage = customClampInt(row[4], 0, 0);
+      return { id, type: 'utility', name, color: '', group: null, price, house: 0, mortgage, rent: [] };
+    }
+
+    throw new Error('Seed contains an unknown space type.');
+  });
+
+  const cardsPayload = payload.c;
+  let chanceRaw = null;
+  let communityRaw = null;
+  if (Array.isArray(cardsPayload)) {
+    chanceRaw = cardsPayload[0];
+    communityRaw = cardsPayload[1];
+  } else if (cardsPayload && typeof cardsPayload === 'object') {
+    chanceRaw = cardsPayload.ch || cardsPayload.chance;
+    communityRaw = cardsPayload.cc || cardsPayload.community;
+  }
+
+  const cards = {
+    chance: decodeCustomCardDeck(chanceRaw, CHANCE_CARDS_CLASSIC),
+    community: decodeCustomCardDeck(communityRaw, COMMUNITY_CARDS_CLASSIC),
+  };
+
+  return { meta, spaces, cards };
+}
+
+function parseCustomBoardSeed(seed) {
+  const raw = String(seed || '').trim();
+  if (!raw) throw new Error('Seed is empty.');
+  const parts = raw.split('.');
+  if (parts.length !== 3 || parts[0] !== CUSTOM_BOARD_SEED_PREFIX) {
+    throw new Error('Invalid seed format.');
+  }
+  const checksum = String(parts[1] || '').toLowerCase();
+  const json = customSeedFromBase64Url(parts[2]);
+  const actualChecksum = customSeedChecksumFNV1a(json).toLowerCase();
+  if (checksum !== actualChecksum) {
+    throw new Error('Seed checksum mismatch.');
+  }
+  const payload = JSON.parse(json);
+  return expandCustomBoardSeedPayload(payload);
+}
+
+function makeThemeFromCustomBoard(board, seed) {
+  const byId = new Map((board.spaces || []).map(space => [Number(space.id), space]));
+  const goSalary = customClampInt(board?.meta?.goSalary, 200, 0);
+  const startMoneyDefault = customClampInt(board?.meta?.startMoney, 1500, 0);
+  const jailBail = customClampInt(board?.meta?.jailBail, 50, 0);
+  const utilityOne = customClampInt(board?.meta?.utilityOne, 4, 0);
+  const utilityBoth = Math.max(utilityOne, customClampInt(board?.meta?.utilityBoth, 10, 0));
+
+  const stationIds = [5, 15, 25, 35];
+  const utilityIds = [12, 28];
+  const stations = stationIds.map((id, idx) => String(byId.get(id)?.name || `Railroad ${idx + 1}`));
+  const utilities = utilityIds.map((id, idx) => ({
+    name: String(byId.get(id)?.name || (idx === 0 ? 'Electric Company' : 'Water Works')),
+    icon: idx === 0 ? '⚡' : '💧',
+  }));
+
+  const firstRailroad = stationIds.map(id => byId.get(id)).find(space => space && space.type === 'railroad') || null;
+  const firstUtility = utilityIds.map(id => byId.get(id)).find(space => space && space.type === 'utility') || null;
+  const railroadPrice = customClampInt(firstRailroad?.price, 200, 0);
+  const railroadMortgage = customClampInt(firstRailroad?.mortgage, Math.floor(railroadPrice / 2), 0);
+  const railroadRent = Array.isArray(firstRailroad?.rent)
+    ? firstRailroad.rent.slice(0, 4).map(v => customClampInt(v, 0, 0))
+    : [25, 50, 100, 200];
+  while (railroadRent.length < 4) railroadRent.push(railroadRent[railroadRent.length - 1] || 0);
+
+  const utilityPrice = customClampInt(firstUtility?.price, 150, 0);
+  const utilityMortgage = customClampInt(firstUtility?.mortgage, Math.floor(utilityPrice / 2), 0);
+
+  const properties = (board.spaces || [])
+    .filter(space => space && space.type === 'property')
+    .sort((a, b) => Number(a.id) - Number(b.id))
+    .map(space => ({
+      name: String(space.name || 'Property').slice(0, 48),
+      color: String(space.color || 'BROWN').toUpperCase(),
+      price: customClampInt(space.price, 0, 0),
+      rent: Array.isArray(space.rent)
+        ? space.rent.slice(0, 6).map(v => customClampInt(v, 0, 0))
+        : [0, 0, 0, 0, 0, 0],
+      house: customClampInt(space.house, 0, 0),
+      mortgage: customClampInt(space.mortgage, 0, 0),
+      group: customClampInt(space.group, 0, 0),
+    }));
+
+  if (!properties.length) {
+    throw new Error('Seed has no property spaces.');
+  }
+
+  return {
+    id: CUSTOM_BOARD_THEME_ID,
+    name: String(board?.meta?.boardName || 'Custom Board').slice(0, 48),
+    flag: '🧩',
+    desc: 'Imported custom board',
+    currency: String(board?.meta?.currencySymbol || '$').slice(0, 4) || '$',
+    locale: 'en-US',
+    goSalary,
+    startMoneyDefault,
+    jailBail,
+    railroadPrice,
+    railroadRent,
+    railroadMortgage,
+    utilityPrice,
+    utilityMortgage,
+    utilityRentOneMultiplier: utilityOne,
+    utilityRentBothMultiplier: utilityBoth,
+    stations,
+    utilities,
+    spaces: properties,
+    taxNames: ['Income Tax', 'Luxury Tax'],
+    taxAmounts: [Math.max(0, goSalary), Math.max(0, Math.floor(goSalary / 2))],
+    cardProfile: 'custom',
+    chanceCards: cloneCardDeck(board.cards?.chance || CHANCE_CARDS_CLASSIC),
+    communityCards: cloneCardDeck(board.cards?.community || COMMUNITY_CARDS_CLASSIC),
+    customSeed: String(seed || '').trim(),
+  };
+}
+
+function applyCustomBoardSeed(seed, { persist = true, quiet = false } = {}) {
+  const rawSeed = String(seed || '').trim();
+  if (!rawSeed) {
+    if (!quiet) setCustomBoardStatus('Seed is empty.', true);
+    return false;
+  }
+  try {
+    const parsed = parseCustomBoardSeed(rawSeed);
+    const customTheme = makeThemeFromCustomBoard(parsed, rawSeed);
+    BOARD_THEMES[CUSTOM_BOARD_THEME_ID] = customTheme;
+    ACTIVE_CUSTOM_BOARD_SEED = rawSeed;
+    if (persist) setStoredCustomBoardSeed(rawSeed);
+
+    const seedInput = document.getElementById('custom-board-seed');
+    if (seedInput) seedInput.value = rawSeed;
+    if (!quiet) setCustomBoardStatus(`Custom board loaded: ${customTheme.name}`);
+    return true;
+  } catch (err) {
+    if (!quiet) {
+      const msg = err?.message || 'Invalid custom board seed.';
+      setCustomBoardStatus(msg, true);
+      toast(msg, 'danger');
+    }
+    return false;
+  }
+}
+
+function removeActiveCustomBoardTheme(clearStorage = false) {
+  delete BOARD_THEMES[CUSTOM_BOARD_THEME_ID];
+  ACTIVE_CUSTOM_BOARD_SEED = '';
+  if (clearStorage) clearStoredCustomBoardSeed();
+}
+
+function initializeCustomBoardFromStorage() {
+  const seed = getStoredCustomBoardSeed();
+  if (!seed) return false;
+  const ok = applyCustomBoardSeed(seed, { persist: false, quiet: true });
+  if (!ok) clearStoredCustomBoardSeed();
+  return ok;
+}
+
 function getThemeCardDecks(themeId = selectedThemeId) {
   const theme = getThemeById(themeId);
+  if (Array.isArray(theme.chanceCards) && Array.isArray(theme.communityCards)) {
+    return {
+      chance: cloneCardDeck(theme.chanceCards),
+      community: cloneCardDeck(theme.communityCards),
+    };
+  }
   const isClassicDeck = theme.cardProfile === 'classic';
   const chance = isClassicDeck ? CHANCE_CARDS_CLASSIC : CHANCE_CARDS_INFLATED;
   const community = isClassicDeck ? COMMUNITY_CARDS_CLASSIC : COMMUNITY_CARDS_INFLATED;
@@ -3398,6 +3866,9 @@ function initGameState(players, startMoney, options = {}) {
     bankruptcySeq: 0,
     pendingTrade: null,
     boardThemeId: selectedThemeId,
+    customBoardSeed: selectedThemeId === CUSTOM_BOARD_THEME_ID
+      ? String(ACTIVE_CUSTOM_BOARD_SEED || '').trim() || null
+      : null,
     auctionEnabled,
     gameOver: false,
   };
@@ -3461,10 +3932,14 @@ function getRoomRef() {
 function defaultLobbySettings() {
   const rawStart = Number.parseInt(document.getElementById('starting-money')?.value, 10);
   const auctionEnabled = sanitizeAuctionEnabled(document.getElementById('auction-enabled')?.value, true);
+  const customBoardSeed = selectedThemeId === CUSTOM_BOARD_THEME_ID
+    ? String(ACTIVE_CUSTOM_BOARD_SEED || '').trim()
+    : '';
   return {
     startMoney: Number.isFinite(rawStart) && rawStart > 0 ? rawStart : getThemeStartMoneyDefault(selectedThemeId),
     timerDuration: parseInt(document.getElementById('lobby-timer')?.value, 10) || 0,
     themeId: selectedThemeId,
+    customBoardSeed: customBoardSeed || null,
     auctionEnabled,
   };
 }
@@ -3519,9 +3994,18 @@ function hydrateRemoteGameState(raw) {
     clearLogArchive(remoteGameStartedAt);
   }
 
-  const remoteThemeId = BOARD_THEMES[next.boardThemeId] ? next.boardThemeId : selectedThemeId;
+  const requestedThemeId = String(next.boardThemeId || selectedThemeId);
+  if (requestedThemeId === CUSTOM_BOARD_THEME_ID && typeof next.customBoardSeed === 'string' && next.customBoardSeed.trim()) {
+    const loaded = applyCustomBoardSeed(next.customBoardSeed, { persist: false, quiet: true });
+    if (!loaded) removeActiveCustomBoardTheme(false);
+  }
+
+  const remoteThemeId = BOARD_THEMES[requestedThemeId] ? requestedThemeId : selectedThemeId;
   applyThemeById(remoteThemeId);
   next.boardThemeId = selectedThemeId;
+  next.customBoardSeed = selectedThemeId === CUSTOM_BOARD_THEME_ID
+    ? String(ACTIVE_CUSTOM_BOARD_SEED || '').trim() || null
+    : null;
 
   const players = indexedObjectToArray(next.players).filter(p => p && typeof p === 'object');
   if (!players.length) {
@@ -3785,6 +4269,10 @@ async function applyRoomSnapshot(data) {
   }
 
   const settings = data.settings || {};
+  if (settings.themeId === CUSTOM_BOARD_THEME_ID && typeof settings.customBoardSeed === 'string' && settings.customBoardSeed.trim()) {
+    const loaded = applyCustomBoardSeed(settings.customBoardSeed, { persist: false, quiet: true });
+    if (!loaded) removeActiveCustomBoardTheme(false);
+  }
   if (settings.themeId && BOARD_THEMES[settings.themeId]) {
     applyThemeById(settings.themeId);
   }
@@ -3801,6 +4289,7 @@ async function applyRoomSnapshot(data) {
     const auctionSelect = document.getElementById('auction-enabled');
     if (auctionSelect) auctionSelect.value = settings.auctionEnabled ? 'on' : 'off';
   }
+  refreshCustomBoardPanel();
 
   if (ONLINE.status === 'playing' && data.gameState) {
     ONLINE.isApplyingRemote = true;
@@ -4580,6 +5069,7 @@ function renderLobby() {
   refreshStartingMoneyUi(selectedThemeId, false);
   updateOnlineLobbyUI();
   renderBoardThemeSelector();
+  refreshCustomBoardPanel();
 }
 
 function onLobbyNameChange(i, value) {
@@ -4684,6 +5174,17 @@ async function startGame() {
     });
   }
 
+  if (selectedThemeId === CUSTOM_BOARD_THEME_ID && !BOARD_THEMES[CUSTOM_BOARD_THEME_ID]) {
+    const seedInput = document.getElementById('custom-board-seed');
+    const candidateSeed = String(seedInput?.value || ACTIVE_CUSTOM_BOARD_SEED || getStoredCustomBoardSeed() || '').trim();
+    if (!candidateSeed) {
+      toast('Load a custom board seed before starting.', 'danger');
+      return;
+    }
+    const loaded = applyCustomBoardSeed(candidateSeed, { persist: true, quiet: false });
+    if (!loaded) return;
+  }
+
   const parsedStartMoney = Number.parseInt(document.getElementById('starting-money').value, 10);
   const startMoney = Number.isFinite(parsedStartMoney) && parsedStartMoney > 0
     ? parsedStartMoney
@@ -4693,7 +5194,7 @@ async function startGame() {
 
   // Apply selected theme
   applyThemeById(selectedThemeId);
-  const t = BOARD_THEMES[selectedThemeId];
+  const t = getThemeById(selectedThemeId);
 
   initGameState(names, startMoney, { auctionEnabled });
   buildBoard();
@@ -5514,7 +6015,7 @@ function aiTryProposeTrade(player) {
     const myAssets = [...player.properties, ...player.railroads, ...player.utilities]
       .filter(id => {
         const prop = G.properties[id];
-        return prop && prop.owner === player.id && !prop.mortgaged && !propertyHasBuildings(id);
+        return prop && prop.owner === player.id && !prop.mortgaged && !tradeAssetBuildingBlockReason(id);
       })
       .sort((a, b) => estimateAssetValue(a) - estimateAssetValue(b));
 
@@ -5739,9 +6240,7 @@ function runOfflineAiStep() {
     if (isAiPlayer(bidder) && !bidder.bankrupt) {
       const a = G.auctionState;
       const reserve = aiCashReserve(bidder);
-      const bidSteps = getAuctionBidSteps(G.boardThemeId || selectedThemeId);
-      const minStep = bidSteps[0] || 1;
-      const nextBid = (Number(a.currentBid) || 0) + minStep;
+      const nextBid = (Number(a.currentBid) || 0) + 100;
       if (bidder.money < nextBid && aiTryMortgageToTarget(bidder, nextBid + Math.floor(reserve * 0.4))) {
         return;
       }
@@ -5756,13 +6255,10 @@ function runOfflineAiStep() {
       }
 
       const room = maxBid - (Number(a.currentBid) || 0);
-      let increment = minStep;
-      for (let i = bidSteps.length - 1; i >= 0; i--) {
-        if (room >= bidSteps[i]) {
-          increment = bidSteps[i];
-          break;
-        }
-      }
+      let increment = 100;
+      if (room >= 1000) increment = 1000;
+      else if (room >= 500) increment = 500;
+      else if (room >= 200) increment = 200;
       placeBid(increment);
       return;
     }
@@ -6376,41 +6872,18 @@ function drawCard(type, p) {
       });
       if (cost > 0) { chargeMoney(actor, cost, null, true); addLog(`${actor.name} paid ${fmtCurrency(cost)} for repairs.`, 'danger'); }
     } else if (card.action === 'birthday') {
-      let paidCount = 0;
-      let debtInterrupted = false;
-      for (let oi = 0; oi < G.players.length; oi++) {
-        if (oi === actor.id) continue;
-        const op = G.players[oi];
-        if (!op || op.bankrupt) continue;
-        const paid = chargeMoney(op, card.value, actor);
-        if (paid) {
-          paidCount++;
-          continue;
+      G.players.forEach((op, oi) => {
+        if (oi !== actor.id && !op.bankrupt) {
+          op.money -= card.value;
+          actor.money += card.value;
         }
-        // Debt prompt is global; pause collection until this debt is resolved.
-        if (DEBT_PROMPT.active) {
-          debtInterrupted = true;
-          break;
-        }
-      }
-      if (debtInterrupted) {
-        addLog(`${actor.name}'s birthday collection paused while a player settles debt.`, 'important');
-      } else {
-        addLog(`${actor.name} collected ${fmtCurrency(card.value)} from ${paidCount} player${paidCount === 1 ? '' : 's'} for birthday!`, 'success');
-      }
+      });
+      addLog(`${actor.name} collected ${fmtCurrency(card.value)} from each player for birthday!`, 'success');
     }
-    if (DEBT_PROMPT.active) {
-      const payerId = Number(DEBT_PROMPT.payerId);
-      if (Number.isInteger(payerId) && payerId >= 0 && payerId < G.players.length && !G.players[payerId]?.bankrupt) {
-        G.currentPlayerIdx = payerId;
-      }
-      G.phase = 'action';
-    } else {
-      G.phase = rolledDoublesThisTurn() ? 'roll' : 'end';
-    }
+    G.phase = rolledDoublesThisTurn() ? 'roll' : 'end';
     renderAll();
     updateActionButtons();
-    if (!DEBT_PROMPT.active) checkBankruptcy();
+    checkBankruptcy();
   };
 
   if (shouldAutoActForAi(getLivePlayer(playerId) || p)) {
@@ -6609,7 +7082,6 @@ function renderAuction() {
   const bidder = Number.isInteger(bidderId) ? G.players[bidderId] : null;
   const leader = Number.isInteger(a.highBidder) ? G.players[a.highBidder] : null;
   const basePrice = Number(SPACES[a.propId]?.price) || 0;
-  const bidSteps = getAuctionBidSteps(G.boardThemeId || selectedThemeId);
   document.getElementById('auc-prop-name').textContent = a.propName;
   document.getElementById('auc-base-price').textContent = fmtCurrency(basePrice);
   document.getElementById('auc-bid').textContent = fmtCurrency(a.currentBid);
@@ -6618,13 +7090,6 @@ function renderAuction() {
     ? `${bidder.name}${aiBidderTurn ? ' (AI thinking...)' : ''}`
     : 'Waiting for bidder sync...';
   document.getElementById('auc-bidder-money').textContent = fmtCurrency(bidder?.money || 0);
-
-  document.querySelectorAll('#bid-btns .bid-step-btn').forEach(btn => {
-    const idx = Number(btn.dataset.stepIndex);
-    const amount = bidSteps[idx] || bidSteps[0] || 1;
-    btn.textContent = `+${amount}`;
-    btn.setAttribute('onclick', `placeBid(${amount})`);
-  });
 
   openOverlay('auction-overlay');
 
@@ -6879,6 +7344,25 @@ function propertyHasBuildings(id) {
   return !!(prop && (prop.houses > 0 || prop.hotel));
 }
 
+function propertyGroupHasBuildings(id, includeSelf = true) {
+  const sp = SPACES[id];
+  if (!sp || sp.type !== 'property') return false;
+  const groupIds = SPACES
+    .filter(s => s.type === 'property' && s.group === sp.group)
+    .map(s => s.id);
+  return groupIds.some(gid => (includeSelf || gid !== id) && propertyHasBuildings(gid));
+}
+
+function tradeAssetBuildingBlockReason(id) {
+  const sp = SPACES[id];
+  if (!sp) return '';
+  if (propertyHasBuildings(id)) return `Sell buildings on ${sp.name} before trading it.`;
+  if (propertyGroupHasBuildings(id, false)) {
+    return `Sell buildings in the ${sp.color} group before trading ${sp.name}.`;
+  }
+  return '';
+}
+
 function mortgageValueForSpace(sp) {
   return Math.floor((Number(sp?.price) || 0) / 2);
 }
@@ -6891,11 +7375,7 @@ function canMortgageAsset(player, id) {
 
   // Monopoly rule: cannot mortgage a color property while any property in that color group has buildings.
   if (sp.type === 'property') {
-    const groupIds = SPACES
-      .filter(s => s.type === 'property' && s.group === sp.group)
-      .map(s => s.id);
-    const groupHasBuildings = groupIds.some(gid => propertyHasBuildings(gid));
-    if (groupHasBuildings) return false;
+    if (propertyGroupHasBuildings(id, true)) return false;
   }
   return true;
 }
@@ -7117,14 +7597,16 @@ function validatePendingTrade(trade) {
     const sp = SPACES[id];
     const prop = G.properties[id];
     if (!sp || !prop || prop.owner !== from.id) return `${from.name} no longer owns ${sp?.name || 'a property'}.`;
-    if (propertyHasBuildings(id)) return `Sell buildings on ${sp.name} before trading it.`;
+    const blockReason = tradeAssetBuildingBlockReason(id);
+    if (blockReason) return blockReason;
   }
 
   for (const id of trade.toProps || []) {
     const sp = SPACES[id];
     const prop = G.properties[id];
     if (!sp || !prop || prop.owner !== to.id) return `${to.name} no longer owns ${sp?.name || 'a property'}.`;
-    if (propertyHasBuildings(id)) return `Sell buildings on ${sp.name} before trading it.`;
+    const blockReason = tradeAssetBuildingBlockReason(id);
+    if (blockReason) return blockReason;
   }
 
   return '';
@@ -7194,13 +7676,28 @@ function renderTradeProps() {
     el.innerHTML = '';
     props.forEach(id => {
       const sp = SPACES[id];
-      const selected = tradeSelected[isMyList ? 'mine' : 'theirs'].includes(id);
+      const listKey = isMyList ? 'mine' : 'theirs';
+      const list = tradeSelected[listKey];
+      const blockReason = tradeAssetBuildingBlockReason(id);
+      const selected = list.includes(id);
+      if (blockReason && selected) {
+        const idx = list.indexOf(id);
+        if (idx >= 0) list.splice(idx, 1);
+      }
       const item = document.createElement('div');
-      item.className = 'trade-prop-item' + (selected ? ' selected' : '');
+      item.className = 'trade-prop-item' + (selected && !blockReason ? ' selected' : '');
       const c = sp.type === 'property' ? COLOR[sp.color] : '#666';
       item.innerHTML = `<div class="tprop-dot" style="background:${c}"></div>${sp.name}`;
+      if (blockReason) {
+        item.style.opacity = '.55';
+        item.style.cursor = 'not-allowed';
+        item.title = blockReason;
+      }
       item.onclick = () => {
-        const list = tradeSelected[isMyList ? 'mine' : 'theirs'];
+        if (blockReason) {
+          toast(blockReason, 'danger');
+          return;
+        }
         const idx = list.indexOf(id);
         if (idx >= 0) list.splice(idx, 1); else list.push(id);
         renderTradeProps();
@@ -7234,14 +7731,14 @@ function confirmTrade() {
   const myMoney = Math.max(0, parseInt(document.getElementById('trade-my-money').value, 10) || 0);
   const theirMoney = Math.max(0, parseInt(document.getElementById('trade-their-money').value, 10) || 0);
 
-  const myBlocked = tradeSelected.mine.find(id => propertyHasBuildings(id));
+  const myBlocked = tradeSelected.mine.find(id => !!tradeAssetBuildingBlockReason(id));
   if (myBlocked !== undefined) {
-    toast(`Sell buildings on ${SPACES[myBlocked].name} before trading it.`, 'danger');
+    toast(tradeAssetBuildingBlockReason(myBlocked), 'danger');
     return;
   }
-  const theirBlocked = tradeSelected.theirs.find(id => propertyHasBuildings(id));
+  const theirBlocked = tradeSelected.theirs.find(id => !!tradeAssetBuildingBlockReason(id));
   if (theirBlocked !== undefined) {
-    toast(`${partner.name} must sell buildings on ${SPACES[theirBlocked].name} first.`, 'danger');
+    toast(tradeAssetBuildingBlockReason(theirBlocked), 'danger');
     return;
   }
 
@@ -7592,12 +8089,6 @@ function showDebtPrompt(p, amount, recipient = null, toParking = false) {
   DEBT_PROMPT.recipientId = recipient && !recipient.bankrupt ? recipient.id : null;
   DEBT_PROMPT.toParking = !!toParking;
 
-  // Debt resolution must immediately hand control to the payer.
-  if (G && Array.isArray(G.players) && Number(G.currentPlayerIdx) !== p.id) {
-    G.currentPlayerIdx = p.id;
-    if (G.phase === 'roll') G.phase = 'action';
-  }
-
   const shortBy = Math.max(0, DEBT_PROMPT.amount - (Number(p.money) || 0));
   const creditorName = DEBT_PROMPT.recipientId !== null ? (G.players[DEBT_PROMPT.recipientId]?.name || 'another player') : 'the bank';
   const titleEl = document.getElementById('bankrupt-name');
@@ -7750,7 +8241,6 @@ function declareBankruptcy(p, creditor = null, debtAmount = 0, toBank = false) {
 
   const assets = [...p.properties, ...p.railroads, ...p.utilities];
   const auctionsEnabled = isAuctionSystemEnabled();
-  let pendingDebtPromptForCreditor = false;
 
   if (creditor && !creditor.bankrupt && creditor.id !== p.id) {
     addLog(`${p.name} is BANKRUPT to ${creditor.name}! Assets transferred.`, 'danger');
@@ -7772,19 +8262,16 @@ function declareBankruptcy(p, creditor = null, debtAmount = 0, toBank = false) {
     });
 
     if (interestDue > 0) {
-      const paidInterest = chargeMoney(creditor, interestDue, null, false);
-      if (paidInterest) {
-        addLog(`${creditor.name} paid ${fmtCurrency(interestDue)} mortgage interest to the bank.`, 'danger');
-      } else if (DEBT_PROMPT.active && DEBT_PROMPT.payerId === creditor.id) {
-        pendingDebtPromptForCreditor = true;
-        addLog(`${creditor.name} must settle ${fmtCurrency(interestDue)} mortgage interest to the bank.`, 'danger');
+      creditor.money -= interestDue;
+      addLog(`${creditor.name} paid ${fmtCurrency(interestDue)} mortgage interest to the bank.`, 'danger');
+      if (creditor.money < 0 && !creditor.bankrupt) {
+        addLog(`${creditor.name} cannot cover mortgage interest and goes bankrupt to the bank.`, 'danger');
+        declareBankruptcy(creditor, null, Math.abs(creditor.money), true);
       }
     }
 
-    if (!pendingDebtPromptForCreditor) {
-      document.getElementById('bankrupt-name').textContent = `${p.name} is Bankrupt!`;
-      document.getElementById('bankrupt-desc').textContent = `${p.name} could not pay ${creditor.name} and turned over all assets.`;
-    }
+    document.getElementById('bankrupt-name').textContent = `${p.name} is Bankrupt!`;
+    document.getElementById('bankrupt-desc').textContent = `${p.name} could not pay ${creditor.name} and turned over all assets.`;
   } else {
     const debtTxt = debtAmount > 0 ? ` (${fmtCurrency(debtAmount)})` : '';
     addLog(
@@ -7826,21 +8313,14 @@ function declareBankruptcy(p, creditor = null, debtAmount = 0, toBank = false) {
   const continueBtn = document.getElementById('bankrupt-continue-btn');
   const mortgageBtn = document.getElementById('bankrupt-mortgage-btn');
   const sellBtn = document.getElementById('bankrupt-sell-btn');
-  if (!pendingDebtPromptForCreditor) {
-    if (continueBtn) continueBtn.textContent = 'Continue';
-    if (mortgageBtn) mortgageBtn.style.display = 'none';
-    if (sellBtn) sellBtn.style.display = 'none';
-  }
+  if (continueBtn) continueBtn.textContent = 'Continue';
+  if (mortgageBtn) mortgageBtn.style.display = 'none';
+  if (sellBtn) sellBtn.style.display = 'none';
 
   p.properties = [];
   p.railroads = [];
   p.utilities = [];
   p.bankrupt = true;
-
-  if (pendingDebtPromptForCreditor) {
-    openOverlay('bankrupt-overlay');
-    return;
-  }
 
   if (shouldAutoActForAi(p)) {
     closeOverlay('bankrupt-overlay');
@@ -9026,6 +9506,10 @@ function openBoardEditorPage() {
   if (openBoardEditorPage._busy) return;
   openBoardEditorPage._busy = true;
   document.body.classList.add('route-leaving');
+  const seed = String(ACTIVE_CUSTOM_BOARD_SEED || '').trim();
+  if (seed) {
+    localStorage.setItem(CUSTOM_BOARD_EDITOR_STORAGE_KEY, seed);
+  }
   window.setTimeout(() => {
     window.location.href = 'boardeditor.html';
   }, 170);
@@ -9182,6 +9666,7 @@ function installLobbyEvents() {
   const startMoney = document.getElementById('starting-money');
   const timerSelect = document.getElementById('lobby-timer');
   const auctionSelect = document.getElementById('auction-enabled');
+  const customSeedInput = document.getElementById('custom-board-seed');
 
   const rememberedName = localStorage.getItem('monopoly_online_name');
   if (nameInput && rememberedName) nameInput.value = rememberedName;
@@ -9235,6 +9720,32 @@ function installLobbyEvents() {
     });
   }
 
+  if (customSeedInput) {
+    const onSeedInputUpdated = () => {
+      const normalized = normalizeCustomBoardSeedText(customSeedInput.value);
+      if (!normalized) {
+        setCustomBoardStatus('No custom board loaded. Paste a seed or use saved seed.');
+        return;
+      }
+      if (normalized === ACTIVE_CUSTOM_BOARD_SEED) {
+        setCustomBoardStatus('Seed matches the loaded custom board. Select "Custom" in board themes to play it.');
+        return;
+      }
+      setCustomBoardStatus(`Seed ready (${normalized.length} chars). Click "Load Seed" to apply it.`);
+    };
+    customSeedInput.addEventListener('paste', () => {
+      requestAnimationFrame(() => {
+        const normalized = normalizeCustomBoardSeedText(customSeedInput.value);
+        if (normalized && normalized !== customSeedInput.value) {
+          customSeedInput.value = normalized;
+        }
+        onSeedInputUpdated();
+      });
+    });
+    customSeedInput.addEventListener('input', onSeedInputUpdated);
+    customSeedInput.addEventListener('change', onSeedInputUpdated);
+  }
+
   setInterval(() => {
     if (!ONLINE.ready) return;
     if (isOnlineGame()) {
@@ -9284,6 +9795,7 @@ installSfxUnlockListeners();
 installOnlineMutationHooks();
 installLobbyEvents();
 registerServiceWorker();
+initializeCustomBoardFromStorage();
 refreshStartingMoneyUi(selectedThemeId, false);
 renderLobby();
 updateOnlineLobbyUI();
