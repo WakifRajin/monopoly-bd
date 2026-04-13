@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Bangladeshi Monopoly</title>
 <link rel="icon" type="image/svg+xml" href="logo.svg">
-<link rel="manifest" href="manifest.json">
 <link rel="prefetch" href="whats-new.html">
 <link rel="prefetch" href="test-lab.html">
 <link rel="prefetch" href="boardeditor.html">
@@ -1927,7 +1926,7 @@ body[data-theme="classic"] .center-sub{
       <ul class="how-to">
         <li>Landing on an unowned property/railroad/utility lets you buy it at face price.</li>
         <li>If you cannot afford a landed property, buy is disabled and you can auction it or skip.</li>
-        <li>Auction includes all non-bankrupt players. You can toggle auctions on/off in lobby settings. Bid controls scale by board economy (inflated boards: +100/+200/+500/+1000, Classic: +10/+20/+50/+100), or Pass.</li>
+        <li>Auction includes all non-bankrupt players. You can toggle auctions on/off in lobby settings. Bid controls are +100, +200, +500, +1000, or Pass.</li>
         <li>When enabled, auctions start from an opening value (about 60%-80% of base property price), not from 0.</li>
         <li>You cannot place a bid above your current cash. Auction ends when only one non-passed bidder remains with a valid high bid, or everyone passes.</li>
         <li>If all pass, the property remains unsold (owner stays none).</li>
@@ -2135,10 +2134,10 @@ body[data-theme="classic"] .center-sub{
       Bidding: <strong id="auc-bidder" style="color:#fff"></strong> (<span id="auc-bidder-money"></span>)
     </div>
     <div class="bid-btns" id="bid-btns">
-      <button class="btn btn-sm btn-secondary bid-step-btn" data-step-index="0" onclick="placeBid(100)">+100</button>
-      <button class="btn btn-sm btn-secondary bid-step-btn" data-step-index="1" onclick="placeBid(200)">+200</button>
-      <button class="btn btn-sm btn-secondary bid-step-btn" data-step-index="2" onclick="placeBid(500)">+500</button>
-      <button class="btn btn-sm btn-secondary bid-step-btn" data-step-index="3" onclick="placeBid(1000)">+1000</button>
+      <button class="btn btn-sm btn-secondary" onclick="placeBid(100)">+100</button>
+      <button class="btn btn-sm btn-secondary" onclick="placeBid(200)">+200</button>
+      <button class="btn btn-sm btn-secondary" onclick="placeBid(500)">+500</button>
+      <button class="btn btn-sm btn-secondary" onclick="placeBid(1000)">+1000</button>
       <button class="btn btn-sm btn-danger" onclick="passAuction()">Pass</button>
     </div>
   </div>
@@ -2342,7 +2341,6 @@ const ROOM_CLEANUP_BATCH_LIMIT = 16;
 const ROOM_HEARTBEAT_INTERVAL_MS = 1000 * 20;
 const AUCTION_OPENING_MIN_PERCENT = 60;
 const AUCTION_OPENING_MAX_PERCENT = 80;
-const AUCTION_BASE_BID_STEPS = [100, 200, 500, 1000];
 const DEFAULT_RAILROAD_PRICE = 2000;
 const DEFAULT_RAILROAD_RENT = [250, 500, 1000, 2000];
 const DEFAULT_RAILROAD_MORTGAGE = 1000;
@@ -2771,17 +2769,6 @@ function getAuctionOpeningBid(price, openingPercent = null) {
     ? Math.max(AUCTION_OPENING_MIN_PERCENT, Math.min(AUCTION_OPENING_MAX_PERCENT, Math.round(rawPct)))
     : pickAuctionOpeningPercent();
   return Math.max(0, Math.floor(base * pct / 100));
-}
-
-function getAuctionBidScale(themeId = G?.boardThemeId || selectedThemeId) {
-  const goSalary = getThemeGoSalary(themeId);
-  if (!Number.isFinite(goSalary) || goSalary <= 0) return 1;
-  return Math.max(0.1, goSalary / 2000);
-}
-
-function getAuctionBidSteps(themeId = G?.boardThemeId || selectedThemeId) {
-  const scale = getAuctionBidScale(themeId);
-  return AUCTION_BASE_BID_STEPS.map(step => Math.max(1, Math.floor(step * scale)));
 }
 
 function resolveLocalPlayerIndex() {
@@ -6253,9 +6240,7 @@ function runOfflineAiStep() {
     if (isAiPlayer(bidder) && !bidder.bankrupt) {
       const a = G.auctionState;
       const reserve = aiCashReserve(bidder);
-      const bidSteps = getAuctionBidSteps(G.boardThemeId || selectedThemeId);
-      const minStep = bidSteps[0] || 1;
-      const nextBid = (Number(a.currentBid) || 0) + minStep;
+      const nextBid = (Number(a.currentBid) || 0) + 100;
       if (bidder.money < nextBid && aiTryMortgageToTarget(bidder, nextBid + Math.floor(reserve * 0.4))) {
         return;
       }
@@ -6270,13 +6255,10 @@ function runOfflineAiStep() {
       }
 
       const room = maxBid - (Number(a.currentBid) || 0);
-      let increment = minStep;
-      for (let i = bidSteps.length - 1; i >= 0; i--) {
-        if (room >= bidSteps[i]) {
-          increment = bidSteps[i];
-          break;
-        }
-      }
+      let increment = 100;
+      if (room >= 1000) increment = 1000;
+      else if (room >= 500) increment = 500;
+      else if (room >= 200) increment = 200;
       placeBid(increment);
       return;
     }
@@ -6890,41 +6872,18 @@ function drawCard(type, p) {
       });
       if (cost > 0) { chargeMoney(actor, cost, null, true); addLog(`${actor.name} paid ${fmtCurrency(cost)} for repairs.`, 'danger'); }
     } else if (card.action === 'birthday') {
-      let paidCount = 0;
-      let debtInterrupted = false;
-      for (let oi = 0; oi < G.players.length; oi++) {
-        if (oi === actor.id) continue;
-        const op = G.players[oi];
-        if (!op || op.bankrupt) continue;
-        const paid = chargeMoney(op, card.value, actor);
-        if (paid) {
-          paidCount++;
-          continue;
+      G.players.forEach((op, oi) => {
+        if (oi !== actor.id && !op.bankrupt) {
+          op.money -= card.value;
+          actor.money += card.value;
         }
-        // Debt prompt is global; pause collection until this debt is resolved.
-        if (DEBT_PROMPT.active) {
-          debtInterrupted = true;
-          break;
-        }
-      }
-      if (debtInterrupted) {
-        addLog(`${actor.name}'s birthday collection paused while a player settles debt.`, 'important');
-      } else {
-        addLog(`${actor.name} collected ${fmtCurrency(card.value)} from ${paidCount} player${paidCount === 1 ? '' : 's'} for birthday!`, 'success');
-      }
+      });
+      addLog(`${actor.name} collected ${fmtCurrency(card.value)} from each player for birthday!`, 'success');
     }
-    if (DEBT_PROMPT.active) {
-      const payerId = Number(DEBT_PROMPT.payerId);
-      if (Number.isInteger(payerId) && payerId >= 0 && payerId < G.players.length && !G.players[payerId]?.bankrupt) {
-        G.currentPlayerIdx = payerId;
-      }
-      G.phase = 'action';
-    } else {
-      G.phase = rolledDoublesThisTurn() ? 'roll' : 'end';
-    }
+    G.phase = rolledDoublesThisTurn() ? 'roll' : 'end';
     renderAll();
     updateActionButtons();
-    if (!DEBT_PROMPT.active) checkBankruptcy();
+    checkBankruptcy();
   };
 
   if (shouldAutoActForAi(getLivePlayer(playerId) || p)) {
@@ -7123,7 +7082,6 @@ function renderAuction() {
   const bidder = Number.isInteger(bidderId) ? G.players[bidderId] : null;
   const leader = Number.isInteger(a.highBidder) ? G.players[a.highBidder] : null;
   const basePrice = Number(SPACES[a.propId]?.price) || 0;
-  const bidSteps = getAuctionBidSteps(G.boardThemeId || selectedThemeId);
   document.getElementById('auc-prop-name').textContent = a.propName;
   document.getElementById('auc-base-price').textContent = fmtCurrency(basePrice);
   document.getElementById('auc-bid').textContent = fmtCurrency(a.currentBid);
@@ -7132,13 +7090,6 @@ function renderAuction() {
     ? `${bidder.name}${aiBidderTurn ? ' (AI thinking...)' : ''}`
     : 'Waiting for bidder sync...';
   document.getElementById('auc-bidder-money').textContent = fmtCurrency(bidder?.money || 0);
-
-  document.querySelectorAll('#bid-btns .bid-step-btn').forEach(btn => {
-    const idx = Number(btn.dataset.stepIndex);
-    const amount = bidSteps[idx] || bidSteps[0] || 1;
-    btn.textContent = `+${amount}`;
-    btn.setAttribute('onclick', `placeBid(${amount})`);
-  });
 
   openOverlay('auction-overlay');
 
@@ -8138,12 +8089,6 @@ function showDebtPrompt(p, amount, recipient = null, toParking = false) {
   DEBT_PROMPT.recipientId = recipient && !recipient.bankrupt ? recipient.id : null;
   DEBT_PROMPT.toParking = !!toParking;
 
-  // Debt resolution must immediately hand control to the payer.
-  if (G && Array.isArray(G.players) && Number(G.currentPlayerIdx) !== p.id) {
-    G.currentPlayerIdx = p.id;
-    if (G.phase === 'roll') G.phase = 'action';
-  }
-
   const shortBy = Math.max(0, DEBT_PROMPT.amount - (Number(p.money) || 0));
   const creditorName = DEBT_PROMPT.recipientId !== null ? (G.players[DEBT_PROMPT.recipientId]?.name || 'another player') : 'the bank';
   const titleEl = document.getElementById('bankrupt-name');
@@ -8296,7 +8241,6 @@ function declareBankruptcy(p, creditor = null, debtAmount = 0, toBank = false) {
 
   const assets = [...p.properties, ...p.railroads, ...p.utilities];
   const auctionsEnabled = isAuctionSystemEnabled();
-  let pendingDebtPromptForCreditor = false;
 
   if (creditor && !creditor.bankrupt && creditor.id !== p.id) {
     addLog(`${p.name} is BANKRUPT to ${creditor.name}! Assets transferred.`, 'danger');
@@ -8318,19 +8262,16 @@ function declareBankruptcy(p, creditor = null, debtAmount = 0, toBank = false) {
     });
 
     if (interestDue > 0) {
-      const paidInterest = chargeMoney(creditor, interestDue, null, false);
-      if (paidInterest) {
-        addLog(`${creditor.name} paid ${fmtCurrency(interestDue)} mortgage interest to the bank.`, 'danger');
-      } else if (DEBT_PROMPT.active && DEBT_PROMPT.payerId === creditor.id) {
-        pendingDebtPromptForCreditor = true;
-        addLog(`${creditor.name} must settle ${fmtCurrency(interestDue)} mortgage interest to the bank.`, 'danger');
+      creditor.money -= interestDue;
+      addLog(`${creditor.name} paid ${fmtCurrency(interestDue)} mortgage interest to the bank.`, 'danger');
+      if (creditor.money < 0 && !creditor.bankrupt) {
+        addLog(`${creditor.name} cannot cover mortgage interest and goes bankrupt to the bank.`, 'danger');
+        declareBankruptcy(creditor, null, Math.abs(creditor.money), true);
       }
     }
 
-    if (!pendingDebtPromptForCreditor) {
-      document.getElementById('bankrupt-name').textContent = `${p.name} is Bankrupt!`;
-      document.getElementById('bankrupt-desc').textContent = `${p.name} could not pay ${creditor.name} and turned over all assets.`;
-    }
+    document.getElementById('bankrupt-name').textContent = `${p.name} is Bankrupt!`;
+    document.getElementById('bankrupt-desc').textContent = `${p.name} could not pay ${creditor.name} and turned over all assets.`;
   } else {
     const debtTxt = debtAmount > 0 ? ` (${fmtCurrency(debtAmount)})` : '';
     addLog(
@@ -8372,21 +8313,14 @@ function declareBankruptcy(p, creditor = null, debtAmount = 0, toBank = false) {
   const continueBtn = document.getElementById('bankrupt-continue-btn');
   const mortgageBtn = document.getElementById('bankrupt-mortgage-btn');
   const sellBtn = document.getElementById('bankrupt-sell-btn');
-  if (!pendingDebtPromptForCreditor) {
-    if (continueBtn) continueBtn.textContent = 'Continue';
-    if (mortgageBtn) mortgageBtn.style.display = 'none';
-    if (sellBtn) sellBtn.style.display = 'none';
-  }
+  if (continueBtn) continueBtn.textContent = 'Continue';
+  if (mortgageBtn) mortgageBtn.style.display = 'none';
+  if (sellBtn) sellBtn.style.display = 'none';
 
   p.properties = [];
   p.railroads = [];
   p.utilities = [];
   p.bankrupt = true;
-
-  if (pendingDebtPromptForCreditor) {
-    openOverlay('bankrupt-overlay');
-    return;
-  }
 
   if (shouldAutoActForAi(p)) {
     closeOverlay('bankrupt-overlay');
@@ -9860,15 +9794,8 @@ installSfxUnlockListeners();
 
 installOnlineMutationHooks();
 installLobbyEvents();
-<<<<<<< Updated upstream
-registerServiceWorker();
-=======
-<<<<<<< Updated upstream
-=======
 registerServiceWorker();
 initializeCustomBoardFromStorage();
->>>>>>> Stashed changes
->>>>>>> Stashed changes
 refreshStartingMoneyUi(selectedThemeId, false);
 renderLobby();
 updateOnlineLobbyUI();
