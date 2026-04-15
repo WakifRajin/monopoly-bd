@@ -3130,9 +3130,13 @@ const AI_CTRL = {
   timerId: null,
   lastKey: "",
   lastTradeAttemptKey: "",
+  tradeByPlayer: {},
 };
 const AI_RUNNER_LEASE_MS = 3200;
 const AI_RUNNER_RENEW_MS = 1200;
+const AI_TRADE_SAME_OFFER_LIMIT = 2;
+const AI_TRADE_DECLINE_STREAK_COOLDOWN = 2;
+const AI_TRADE_PROPOSAL_COOLDOWN_MOVES = 2;
 const DEBT_PROMPT = {
   active: false,
   payerId: null,
@@ -3158,6 +3162,13 @@ function initGameState(players, startMoney, options = {}) {
   const shuffledChance = shuffle(themeDecks.chance);
   const shuffledComm = shuffle(themeDecks.community);
   const auctionEnabled = sanitizeAuctionEnabled(options.auctionEnabled, true);
+  if (AI_CTRL.timerId) {
+    clearTimeout(AI_CTRL.timerId);
+    AI_CTRL.timerId = null;
+  }
+  AI_CTRL.lastKey = "";
+  AI_CTRL.lastTradeAttemptKey = "";
+  AI_CTRL.tradeByPlayer = {};
   clearLogArchive(gameStartedAt);
   jailPromptShownKey = "";
   tradeReviewShownKey = "";
@@ -5590,21 +5601,286 @@ function aiCashReserve(player) {
   return Math.max(floorReserve, dynamicReserve);
 }
 
+function aiPropertyGroupIds(spaceId) {
+  const sp = SPACES[spaceId];
+  if (!sp || sp.type !== "property") return [];
+  return SPACES.filter(
+    (s) => s.type === "property" && s.group === sp.group,
+  ).map((s) => s.id);
+}
+
+function aiOwnerForSpace(spaceId, ownerOverrides = null) {
+  if (ownerOverrides instanceof Map && ownerOverrides.has(spaceId)) {
+    return ownerOverrides.get(spaceId);
+  }
+  const prop = G?.properties?.[spaceId];
+  return prop ? prop.owner : null;
+}
+
+function aiCountGroupOwnedByPlayer(playerId, groupIds, ownerOverrides = null) {
+  if (!Number.isInteger(playerId) || !Array.isArray(groupIds)) return 0;
+  return groupIds.filter(
+    (id) => aiOwnerForSpace(id, ownerOverrides) === playerId,
+  ).length;
+}
+
+function aiPlayerOwnsFullGroup(playerId, groupIds, ownerOverrides = null) {
+  if (
+    !Number.isInteger(playerId) ||
+    !Array.isArray(groupIds) ||
+    !groupIds.length
+  )
+    return false;
+  return groupIds.every(
+    (id) => aiOwnerForSpace(id, ownerOverrides) === playerId,
+  );
+}
+
+function aiCountOpponentMonopolyThreats(
+  spaceId,
+  excludedPlayerId = null,
+  candidatePlayerIds = null,
+  ownerOverrides = null,
+) {
+  const groupIds = aiPropertyGroupIds(spaceId);
+  if (!groupIds.length) return 0;
+  const ownerNow = aiOwnerForSpace(spaceId, ownerOverrides);
+  const eligibleIds = Array.isArray(candidatePlayerIds)
+    ? candidatePlayerIds
+    : Array.isArray(G?.players)
+      ? G.players.filter((p) => p && !p.bankrupt).map((p) => p.id)
+      : [];
+
+  let threats = 0;
+  eligibleIds.forEach((pidRaw) => {
+    const pid = Number(pidRaw);
+    if (!Number.isInteger(pid)) return;
+    if (Number.isInteger(excludedPlayerId) && pid === excludedPlayerId) return;
+    if (ownerNow === pid) return;
+    const owned = aiCountGroupOwnedByPlayer(pid, groupIds, ownerOverrides);
+    if (owned === groupIds.length - 1) threats++;
+  });
+
+  return threats;
+}
+
+function aiEvaluateTradeGroupSwing(trade, aiPlayerId) {
+  const base = {
+    aiMonopoliesGained: 0,
+    aiMonopoliesLost: 0,
+    oppMonopoliesGained: 0,
+    oppMonopoliesLost: 0,
+    aiProgressDelta: 0,
+    oppProgressDelta: 0,
+  };
+  if (!trade || !Number.isInteger(aiPlayerId)) return { ...base };
+
+  const fromId = Number(trade.fromId);
+  const toId = Number(trade.toId);
+  const opponentId = aiPlayerId === fromId ? toId : fromId;
+  if (!Number.isInteger(opponentId)) return { ...base };
+
+  const ownerOverrides = new Map();
+  (trade.fromProps || []).forEach((idRaw) => {
+    const id = Number(idRaw);
+    if (!Number.isInteger(id)) return;
+    ownerOverrides.set(id, toId);
+  });
+  (trade.toProps || []).forEach((idRaw) => {
+    const id = Number(idRaw);
+    if (!Number.isInteger(id)) return;
+    ownerOverrides.set(id, fromId);
+  });
+
+  const affectedGroups = new Set();
+  [...(trade.fromProps || []), ...(trade.toProps || [])].forEach((idRaw) => {
+    const id = Number(idRaw);
+    if (!Number.isInteger(id)) return;
+    const sp = SPACES[id];
+    if (sp && sp.type === "property") affectedGroups.add(sp.group);
+  });
+
+  const result = { ...base };
+  affectedGroups.forEach((group) => {
+    const groupIds = SPACES.filter(
+      (s) => s.type === "property" && s.group === group,
+    ).map((s) => s.id);
+    if (!groupIds.length) return;
+
+    const aiBefore = aiPlayerOwnsFullGroup(aiPlayerId, groupIds);
+    const aiAfter = aiPlayerOwnsFullGroup(aiPlayerId, groupIds, ownerOverrides);
+    if (aiAfter && !aiBefore) result.aiMonopoliesGained++;
+    if (!aiAfter && aiBefore) result.aiMonopoliesLost++;
+
+    const oppBefore = aiPlayerOwnsFullGroup(opponentId, groupIds);
+    const oppAfter = aiPlayerOwnsFullGroup(opponentId, groupIds, ownerOverrides);
+    if (oppAfter && !oppBefore) result.oppMonopoliesGained++;
+    if (!oppAfter && oppBefore) result.oppMonopoliesLost++;
+
+    const aiOwnedBefore = aiCountGroupOwnedByPlayer(aiPlayerId, groupIds);
+    const aiOwnedAfter = aiCountGroupOwnedByPlayer(
+      aiPlayerId,
+      groupIds,
+      ownerOverrides,
+    );
+    const oppOwnedBefore = aiCountGroupOwnedByPlayer(opponentId, groupIds);
+    const oppOwnedAfter = aiCountGroupOwnedByPlayer(
+      opponentId,
+      groupIds,
+      ownerOverrides,
+    );
+    result.aiProgressDelta += (aiOwnedAfter - aiOwnedBefore) / groupIds.length;
+    result.oppProgressDelta +=
+      (oppOwnedAfter - oppOwnedBefore) / groupIds.length;
+  });
+
+  return result;
+}
+
+function aiTradeMemoryForPlayer(playerId) {
+  if (!Number.isInteger(playerId)) return null;
+  if (!AI_CTRL.tradeByPlayer || typeof AI_CTRL.tradeByPlayer !== "object") {
+    AI_CTRL.tradeByPlayer = {};
+  }
+  const key = String(playerId);
+  if (
+    !AI_CTRL.tradeByPlayer[key] ||
+    typeof AI_CTRL.tradeByPlayer[key] !== "object"
+  ) {
+    AI_CTRL.tradeByPlayer[key] = {
+      lastOfferKey: "",
+      sameOfferCount: 0,
+      declineStreak: 0,
+      cooldownMoves: 0,
+      lastCooldownTickTurnKey: "",
+      lastCooldownBlockTurnKey: "",
+    };
+  }
+  return AI_CTRL.tradeByPlayer[key];
+}
+
+function aiTradeOfferSignature({
+  fromId,
+  toId,
+  fromProps = [],
+  toProps = [],
+  fromMoney = 0,
+  toMoney = 0,
+} = {}) {
+  const normProps = (arr) =>
+    (Array.isArray(arr) ? arr : [])
+      .map((id) => Number(id))
+      .filter(Number.isInteger)
+      .sort((a, b) => a - b)
+      .join(".");
+  return [
+    Number(fromId),
+    Number(toId),
+    normProps(fromProps),
+    normProps(toProps),
+    Math.max(0, Number(fromMoney) || 0),
+    Math.max(0, Number(toMoney) || 0),
+  ].join("|");
+}
+
+function aiCanProposeTradeOffer(memory, offerKey) {
+  if (!memory || !offerKey) return true;
+  return !(
+    memory.lastOfferKey === offerKey &&
+    memory.sameOfferCount >= AI_TRADE_SAME_OFFER_LIMIT
+  );
+}
+
+function aiRecordTradeProposal(memory, offerKey) {
+  if (!memory || !offerKey) return;
+  if (memory.lastOfferKey === offerKey) {
+    memory.sameOfferCount = (Number(memory.sameOfferCount) || 0) + 1;
+  } else {
+    memory.lastOfferKey = offerKey;
+    memory.sameOfferCount = 1;
+  }
+  memory.lastCooldownBlockTurnKey = "";
+}
+
+function aiShouldSkipTradeProposalsThisTurn(memory, turnKey) {
+  if (!memory) return false;
+  if (memory.lastCooldownBlockTurnKey === turnKey) return true;
+  if ((Number(memory.cooldownMoves) || 0) > 0) {
+    if (memory.lastCooldownTickTurnKey !== turnKey) {
+      memory.cooldownMoves = Math.max(
+        0,
+        (Number(memory.cooldownMoves) || 0) - 1,
+      );
+      memory.lastCooldownTickTurnKey = turnKey;
+    }
+    memory.lastCooldownBlockTurnKey = turnKey;
+    return true;
+  }
+  return false;
+}
+
+function aiRecordTradeResolution(trade, accepted) {
+  if (!trade) return;
+  const proposerId = Number(trade.fromId);
+  if (!Number.isInteger(proposerId)) return;
+  const proposer = G.players?.[proposerId];
+  if (!isAiPlayer(proposer)) return;
+
+  const memory = aiTradeMemoryForPlayer(proposerId);
+  if (!memory) return;
+
+  if (accepted) {
+    memory.declineStreak = 0;
+    memory.cooldownMoves = 0;
+    memory.lastCooldownTickTurnKey = "";
+    memory.lastCooldownBlockTurnKey = "";
+    return;
+  }
+
+  memory.declineStreak = (Number(memory.declineStreak) || 0) + 1;
+  if (memory.declineStreak >= AI_TRADE_DECLINE_STREAK_COOLDOWN) {
+    memory.cooldownMoves = Math.max(
+      Number(memory.cooldownMoves) || 0,
+      AI_TRADE_PROPOSAL_COOLDOWN_MOVES,
+    );
+    memory.declineStreak = 0;
+    memory.lastCooldownTickTurnKey = "";
+    memory.lastCooldownBlockTurnKey = "";
+  }
+}
+
 function aiPropertyPriority(player, spaceId) {
   const sp = SPACES[spaceId];
-  if (!sp) return 0;
+  if (!sp || !player) return 0;
   const price = Number(sp.price) || estimateAssetValue(spaceId);
   let score = price;
 
   if (sp.type === "property") {
-    const groupIds = SPACES.filter(
-      (s) => s.type === "property" && s.group === sp.group,
-    ).map((s) => s.id);
-    const ownedCount = groupIds.filter(
-      (id) => G.properties[id]?.owner === player.id,
-    ).length;
-    if (ownedCount >= groupIds.length - 1) score += Math.floor(price * 0.85);
-    else if (ownedCount > 0) score += Math.floor(price * 0.22 * ownedCount);
+    const groupIds = aiPropertyGroupIds(spaceId);
+    const groupSize = groupIds.length || 1;
+    const ownedNow = aiCountGroupOwnedByPlayer(player.id, groupIds);
+    const wouldGainControl = aiOwnerForSpace(spaceId) !== player.id;
+    const ownedAfter = Math.min(
+      groupSize,
+      ownedNow + (wouldGainControl ? 1 : 0),
+    );
+
+    if (ownedAfter >= groupSize) {
+      score += Math.floor(price * 1.35);
+    } else if (ownedAfter === groupSize - 1) {
+      score += Math.floor(price * 0.62);
+    } else if (ownedAfter > 1) {
+      score += Math.floor(price * 0.22 * (ownedAfter - 1));
+    }
+
+    score += Math.floor((ownedAfter / groupSize) * price * 0.34);
+
+    const threatCount = aiCountOpponentMonopolyThreats(spaceId, player.id);
+    if (threatCount > 0) {
+      score += Math.floor(
+        price * (0.45 + 0.12 * Math.min(2, threatCount - 1)),
+      );
+    }
   } else if (sp.type === "railroad") {
     score += (player.railroads?.length || 0) * 700;
   } else if (sp.type === "utility") {
@@ -5744,6 +6020,8 @@ function aiTryProposeTrade(player) {
   const turnKey = `${player.id}|${player.pos}|${G.phase}|${G.dice?.join("-") || "0-0"}`;
   if (AI_CTRL.lastTradeAttemptKey === turnKey) return false;
   AI_CTRL.lastTradeAttemptKey = turnKey;
+  const tradeMemory = aiTradeMemoryForPlayer(player.id);
+  if (aiShouldSkipTradeProposalsThisTurn(tradeMemory, turnKey)) return false;
 
   const reserve = aiCashReserve(player);
   let bestOffer = null;
@@ -5761,21 +6039,26 @@ function aiTryProposeTrade(player) {
     let score = 0;
 
     if (sp.type === "property") {
-      const groupIds = SPACES.filter(
-        (s) => s.type === "property" && s.group === sp.group,
-      ).map((s) => s.id);
+      const groupIds = aiPropertyGroupIds(id);
       if (groupIds.some((gid) => propertyHasBuildings(gid))) continue;
-      const ownedByMe = groupIds.filter(
-        (gid) => G.properties[gid]?.owner === player.id,
-      ).length;
-      if (ownedByMe === 0) continue;
-      const missingAfterTrade = groupIds.filter(
-        (gid) => gid !== id && G.properties[gid]?.owner !== player.id,
-      ).length;
-      if (missingAfterTrade > 0) continue;
 
-      ask = Math.max(600, Math.floor((Number(sp.price) || 1200) * 1.06));
-      score = 1600 + (Number(sp.price) || 0) - ask;
+      const ownedByMe = aiCountGroupOwnedByPlayer(player.id, groupIds);
+      if (ownedByMe <= 0) continue;
+      const groupSize = groupIds.length || 1;
+      const ownedAfter = Math.min(groupSize, ownedByMe + 1);
+      const completesGroup = ownedAfter >= groupSize;
+      const progressRatio = ownedAfter / groupSize;
+
+      ask = Math.max(
+        420,
+        Math.floor(
+          (Number(sp.price) || 1200) *
+            (completesGroup ? 1.08 : 0.9 + progressRatio * 0.22),
+        ),
+      );
+      score =
+        Math.floor(900 * progressRatio) +
+        (completesGroup ? 1450 : Math.floor(260 * ownedByMe));
     } else if (sp.type === "railroad") {
       if ((player.railroads?.length || 0) === 0) continue;
       ask = Math.max(700, Math.floor((Number(sp.price) || 2000) * 0.95));
@@ -5791,6 +6074,15 @@ function aiTryProposeTrade(player) {
     const budget = Math.max(0, player.money - Math.floor(reserve * 0.55));
     ask = Math.min(ask, owner.money, budget);
     if (ask <= 0) continue;
+    const offerKey = aiTradeOfferSignature({
+      fromId: player.id,
+      toId: owner.id,
+      fromProps: [],
+      toProps: [id],
+      fromMoney: ask,
+      toMoney: 0,
+    });
+    if (!aiCanProposeTradeOffer(tradeMemory, offerKey)) continue;
 
     const finalScore = score + Math.max(0, (Number(sp.price) || 0) - ask);
     if (!bestOffer || finalScore > bestOffer.score) {
@@ -5799,12 +6091,14 @@ function aiTryProposeTrade(player) {
         propId: id,
         ask,
         score: finalScore,
+        offerKey,
       };
     }
   }
 
   if (bestOffer) {
     const target = G.players[bestOffer.ownerId];
+    aiRecordTradeProposal(tradeMemory, bestOffer.offerKey);
     G.pendingTrade = {
       id: `tr_ai_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
       fromId: player.id,
@@ -5845,26 +6139,77 @@ function aiTryProposeTrade(player) {
       .sort((a, b) => b.money - a.money);
 
     if (myAssets.length && buyers.length) {
-      const propId = myAssets[0];
-      const buyer = buyers[0];
-      const ask = Math.min(
-        buyer.money,
-        Math.max(350, Math.floor(estimateAssetValue(propId) * 0.78)),
-      );
-      if (ask > 0) {
+      const severeStress = player.money < Math.floor(reserve * 0.25);
+      let bestLiquidation = null;
+
+      myAssets.forEach((propId) => {
+        buyers.forEach((buyer) => {
+          if (!buyer || buyer.money <= 0) return;
+          const ask = Math.min(
+            buyer.money,
+            Math.max(350, Math.floor(estimateAssetValue(propId) * 0.78)),
+          );
+          if (ask <= 0) return;
+
+          const swing = aiEvaluateTradeGroupSwing(
+            {
+              fromId: player.id,
+              toId: buyer.id,
+              fromProps: [propId],
+              toProps: [],
+            },
+            player.id,
+          );
+          const createsOpponentMonopoly = swing.oppMonopoliesGained > 0;
+          const breaksMyMonopoly = swing.aiMonopoliesLost > 0;
+          if (!severeStress && (createsOpponentMonopoly || breaksMyMonopoly))
+            return;
+
+          const offerKey = aiTradeOfferSignature({
+            fromId: player.id,
+            toId: buyer.id,
+            fromProps: [propId],
+            toProps: [],
+            fromMoney: 0,
+            toMoney: ask,
+          });
+          if (!aiCanProposeTradeOffer(tradeMemory, offerKey)) return;
+
+          const liquidationScore =
+            ask -
+            Math.floor(estimateAssetValue(propId) * 0.7) -
+            swing.oppMonopoliesGained * Math.floor(900 * aiEconomyScale()) -
+            swing.aiMonopoliesLost * Math.floor(1200 * aiEconomyScale()) +
+            (severeStress ? ask : 0);
+
+          if (!bestLiquidation || liquidationScore > bestLiquidation.score) {
+            bestLiquidation = {
+              propId,
+              buyerId: buyer.id,
+              ask,
+              score: liquidationScore,
+              offerKey,
+            };
+          }
+        });
+      });
+
+      if (bestLiquidation) {
+        const buyer = G.players[bestLiquidation.buyerId];
+        aiRecordTradeProposal(tradeMemory, bestLiquidation.offerKey);
         G.pendingTrade = {
           id: `tr_ai_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
           fromId: player.id,
           toId: buyer.id,
-          fromProps: [propId],
+          fromProps: [bestLiquidation.propId],
           toProps: [],
           fromMoney: 0,
-          toMoney: ask,
+          toMoney: bestLiquidation.ask,
           createdAt: Date.now(),
         };
         tradeReviewShownKey = "";
         addLog(
-          `${player.name} offered ${SPACES[propId]?.name || "a property"} to ${buyer.name} for ${fmtCurrency(ask)}.`,
+          `${player.name} offered ${SPACES[bestLiquidation.propId]?.name || "a property"} to ${buyer.name} for ${fmtCurrency(bestLiquidation.ask)}.`,
           "important",
         );
         renderAll();
@@ -6100,9 +6445,38 @@ function runOfflineAiStep() {
           (sum, id) => sum + estimateAssetValue(id),
           0,
         ) + Math.max(0, Number(trade.toMoney) || 0);
-      const accept =
-        receiveValue >=
-        giveValue - Math.max(300, Math.floor(recipient.money * 0.05));
+      const reserve = aiCashReserve(recipient);
+      const stressed = recipient.money < Math.floor(reserve * 0.5);
+      const critical = recipient.money < Math.floor(reserve * 0.24);
+      const cashDelta =
+        Math.max(0, Number(trade.fromMoney) || 0) -
+        Math.max(0, Number(trade.toMoney) || 0);
+      const swing = aiEvaluateTradeGroupSwing(trade, recipient.id);
+      const scale = aiEconomyScale();
+
+      if (
+        swing.oppMonopoliesGained > 0 &&
+        !critical &&
+        swing.aiMonopoliesGained < swing.oppMonopoliesGained
+      ) {
+        respondTrade(false);
+        return;
+      }
+
+      let score = receiveValue - giveValue;
+      score += swing.aiMonopoliesGained * Math.floor(2200 * scale);
+      score -= swing.aiMonopoliesLost * Math.floor(2600 * scale);
+      score -=
+        swing.oppMonopoliesGained * Math.floor((critical ? 1100 : 4200) * scale);
+      score += swing.oppMonopoliesLost * Math.floor(850 * scale);
+      score += Math.floor(swing.aiProgressDelta * 1000 * scale);
+      score -= Math.floor(Math.max(0, swing.oppProgressDelta) * 1200 * scale);
+      if (stressed && cashDelta > 0) score += Math.floor(cashDelta * 0.75);
+
+      const acceptThreshold = stressed
+        ? -Math.floor(reserve * 0.14)
+        : Math.floor(reserve * 0.05);
+      const accept = score >= acceptThreshold;
       respondTrade(accept);
       return;
     }
@@ -6122,10 +6496,26 @@ function runOfflineAiStep() {
         return;
       }
 
-      const valueCap = Math.floor(
-        aiPropertyPriority(bidder, a.propId) * (0.95 + Math.random() * 0.15),
+      const threatCount = aiCountOpponentMonopolyThreats(
+        a.propId,
+        bidder.id,
+        a.activePlayers,
       );
-      const cashCap = Math.max(0, bidder.money - Math.floor(reserve * 0.45));
+      const basePrice =
+        Number(SPACES[a.propId]?.price) || estimateAssetValue(a.propId);
+      const defensePremium =
+        threatCount > 0
+          ? Math.floor(basePrice * (0.24 + 0.08 * Math.min(2, threatCount - 1)))
+          : 0;
+      const valueCap = Math.floor(
+        (aiPropertyPriority(bidder, a.propId) + defensePremium) *
+          (0.93 + Math.random() * 0.16),
+      );
+      const reserveFactor = threatCount > 0 ? 0.3 : 0.45;
+      const cashCap = Math.max(
+        0,
+        bidder.money - Math.floor(reserve * reserveFactor),
+      );
       const maxBid = Math.max(0, Math.min(valueCap, cashCap));
 
       if (nextBid > maxBid || bidder.money < nextBid) {
@@ -8004,6 +8394,7 @@ function respondTrade(acceptTrade) {
   const to = G.players[trade.toId];
 
   if (!acceptTrade) {
+    aiRecordTradeResolution(trade, false);
     addLog(
       `${to?.name || "Player"} declined ${from?.name || "player"}'s trade proposal.`,
       "danger",
@@ -8029,6 +8420,7 @@ function respondTrade(acceptTrade) {
   }
 
   applyAcceptedTrade(trade);
+  aiRecordTradeResolution(trade, true);
   G.pendingTrade = null;
   tradeReviewShownKey = "";
   closeOverlay("trade-review-overlay");
