@@ -1343,6 +1343,11 @@ function maybeScheduleOfflineAiTurn() {
     return;
   }
 
+  if (isOnlineGame() && AI_CTRL.syncInFlight) {
+    clearOfflineAiTimer(false);
+    return;
+  }
+
   const current = curPlayer();
   const bidderId = currentAuctionBidderId();
   const bidder = Number.isInteger(bidderId) ? G.players[bidderId] : null;
@@ -1494,9 +1499,16 @@ function tryAutoResolveAiDebtPrompt() {
 
 function syncAiDirectMutation(reason) {
   if (!isOnlineGame() || ONLINE.isApplyingRemote) return;
-  syncRoomState(reason).catch((err) => {
-    console.error(err);
-  });
+  if (AI_CTRL.syncInFlight) return;
+  AI_CTRL.syncInFlight = true;
+  syncRoomState(reason)
+    .catch((err) => {
+      console.error(err);
+    })
+    .finally(() => {
+      AI_CTRL.syncInFlight = false;
+      maybeScheduleOfflineAiTurn();
+    });
 }
 
 function runOfflineAiStep() {
@@ -1507,6 +1519,12 @@ function runOfflineAiStep() {
     return;
   }
   if (!canRunAiController()) {
+    AI_CTRL.lastKey = "";
+    maybeScheduleOfflineAiTurn();
+    return;
+  }
+
+  if (isOnlineGame() && AI_CTRL.syncInFlight) {
     AI_CTRL.lastKey = "";
     maybeScheduleOfflineAiTurn();
     return;
@@ -1535,11 +1553,8 @@ function runOfflineAiStep() {
   if (debtStateAdjusted) {
     renderAll();
     updateActionButtons();
-    if (isOnlineGame() && !ONLINE.isApplyingRemote) {
-      syncRoomState("normalize-debt-turn").catch((err) => {
-        console.error(err);
-      });
-    }
+    syncAiDirectMutation("normalize-debt-turn");
+    return;
   }
 
   if (G.pendingTrade) {

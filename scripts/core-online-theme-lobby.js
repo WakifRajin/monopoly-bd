@@ -3131,6 +3131,7 @@ const AI_CTRL = {
   lastKey: "",
   lastTradeAttemptKey: "",
   tradeByPlayer: {},
+  syncInFlight: false,
 };
 const AI_RUNNER_LEASE_MS = 3200;
 const AI_RUNNER_RENEW_MS = 1200;
@@ -3169,6 +3170,7 @@ function initGameState(players, startMoney, options = {}) {
   AI_CTRL.lastKey = "";
   AI_CTRL.lastTradeAttemptKey = "";
   AI_CTRL.tradeByPlayer = {};
+  AI_CTRL.syncInFlight = false;
   clearLogArchive(gameStartedAt);
   jailPromptShownKey = "";
   tradeReviewShownKey = "";
