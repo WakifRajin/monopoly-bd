@@ -42,8 +42,6 @@ const ONLINE = {
   lastRoomCleanupAt: 0,
   heartbeatInFlight: false,
   lastHeartbeatAt: 0,
-  syncInFlight: false,
-  syncQueuedReason: "",
   snapshotApplyInFlight: false,
   queuedSnapshot: null,
 };
@@ -3644,25 +3642,17 @@ function hydrateRemoteGameState(raw) {
 
 async function syncRoomState(reason = "") {
   if (!isOnlineGame() || ONLINE.isApplyingRemote || !FIREBASE.api) return;
-  const queuedReason = String(reason || "sync");
-  ONLINE.syncQueuedReason = queuedReason;
-  if (ONLINE.syncInFlight) return;
+
+  if (ONLINE.syncInFlight) {
+    ONLINE.syncQueuedReason = reason || ONLINE.syncQueuedReason || "sync";
+    return;
+  }
 
   ONLINE.syncInFlight = true;
+
   try {
-    let guardCount = 0;
-    while (
-      ONLINE.syncQueuedReason &&
-      isOnlineGame() &&
-      !ONLINE.isApplyingRemote &&
-      FIREBASE.api
-    ) {
-      guardCount++;
-      if (guardCount > 24) break;
-
-      const activeReason = String(ONLINE.syncQueuedReason || "sync");
-      ONLINE.syncQueuedReason = "";
-
+    let currentReason = reason || "sync";
+    while (true) {
       const baseRevision = Number(ONLINE.revision) || 0;
       const nextRevision = baseRevision + 1;
       syncDebtPromptToGameState();
@@ -3685,7 +3675,7 @@ async function syncRoomState(reason = "") {
             gameState: nextGameState,
             revision: nextRevision,
             updatedAt: Date.now(),
-            lastReason: activeReason,
+            lastReason: currentReason,
           };
           if (nextSettings) out.settings = nextSettings;
           return out;
@@ -3694,20 +3684,18 @@ async function syncRoomState(reason = "") {
 
       if (txResult?.committed) {
         ONLINE.revision = nextRevision;
-      } else {
-        // Keep this write queued so state changes are not dropped on contention.
-        if (!ONLINE.syncQueuedReason) ONLINE.syncQueuedReason = activeReason;
-
-        const snapVal = txResult?.snapshot?.val
-          ? txResult.snapshot.val()
-          : null;
-        const serverRevision = Number(snapVal?.revision);
-        if (Number.isFinite(serverRevision) && serverRevision >= 0) {
-          ONLINE.revision = serverRevision;
+        if (ONLINE.syncQueuedReason) {
+          currentReason = ONLINE.syncQueuedReason;
+          ONLINE.syncQueuedReason = null;
+          continue;
         }
-
-        // Yield once so listener snapshots can catch up before retry.
-        await new Promise((resolve) => setTimeout(resolve, 0));
+        break;
+      } else {
+        const snapData = txResult?.snapshot?.val ? txResult.snapshot.val() : null;
+        if (snapData) {
+          ONLINE.revision = Number(snapData.revision) || 0;
+        }
+        continue;
       }
     }
   } catch (err) {
@@ -3715,25 +3703,6 @@ async function syncRoomState(reason = "") {
     toast(firebaseErrorMessage(err, "Failed to sync room state."), "danger");
   } finally {
     ONLINE.syncInFlight = false;
-    if (
-      ONLINE.syncQueuedReason &&
-      isOnlineGame() &&
-      !ONLINE.isApplyingRemote &&
-      FIREBASE.api
-    ) {
-      const followUpReason = ONLINE.syncQueuedReason;
-      setTimeout(() => {
-        syncRoomState(followUpReason).catch((err) => {
-          console.error(err);
-        });
-      }, 0);
-    } else if (
-      isOnlineGame() &&
-      !ONLINE.isApplyingRemote &&
-      typeof maybeScheduleOfflineAiTurn === "function"
-    ) {
-      maybeScheduleOfflineAiTurn();
-    }
   }
 }
 
@@ -3922,8 +3891,6 @@ function attachRoomListener(roomId) {
   ONLINE.lastSnapshotAt = Date.now();
   ONLINE.heartbeatInFlight = false;
   ONLINE.lastHeartbeatAt = 0;
-  ONLINE.syncInFlight = false;
-  ONLINE.syncQueuedReason = "";
   ONLINE.aiRunner = null;
   ONLINE.aiRunnerRequestAt = 0;
   ONLINE.pendingCardResolutions = 0;
@@ -4325,24 +4292,7 @@ function applyOnlineDepartureRuleToRoomData(
 
   gs.players = gamePlayers.map((p, i) => ({ ...p, id: i }));
 
-  let quitterIdx = gs.players.findIndex(
-    (p) => String(p.uid || "") === String(leavingUid || ""),
-  );
-  if (quitterIdx < 0) {
-    // Fallback by diffing connected room uids against in-game human uids.
-    const remainingUidSet = new Set(
-      remainingRoomPlayers.map((p) => String(p?.uid || "")).filter(Boolean),
-    );
-    const unmatchedGameHumans = gs.players.filter((p) => {
-      const uid = String(p?.uid || "");
-      if (!uid) return false;
-      if (normalizePlayerKind(p?.kind) === "ai") return false;
-      return !remainingUidSet.has(uid);
-    });
-    if (unmatchedGameHumans.length === 1) {
-      quitterIdx = Number(unmatchedGameHumans[0].id);
-    }
-  }
+  let quitterIdx = gs.players.findIndex((p) => p.uid === leavingUid);
   if (quitterIdx < 0 && leavingRoomPlayer?.token) {
     quitterIdx = gs.players.findIndex(
       (p) => String(p.token || "") === String(leavingRoomPlayer.token || ""),
@@ -4353,6 +4303,16 @@ function applyOnlineDepartureRuleToRoomData(
     quitterIdx = gs.players.findIndex(
       (p) => sanitizeName(p.name, "A player") === targetName,
     );
+  }
+
+  if (quitterIdx < 0) {
+    const activeUids = remainingRoomPlayers.map((p) => p.uid).filter(Boolean);
+    const unmatched = gs.players.filter(
+      (p) => !p.bankrupt && normalizePlayerKind(p.kind) !== "ai" && !activeUids.includes(p.uid),
+    );
+    if (unmatched.length === 1) {
+      quitterIdx = unmatched[0].id;
+    }
   }
 
   if (quitterIdx < 0) {
@@ -4615,8 +4575,6 @@ async function leaveOnlineRoom(
     ONLINE.lastSnapshotAt = 0;
     ONLINE.heartbeatInFlight = false;
     ONLINE.lastHeartbeatAt = 0;
-    ONLINE.syncInFlight = false;
-    ONLINE.syncQueuedReason = "";
     ONLINE.aiRunner = null;
     ONLINE.aiRunnerRequestAt = 0;
     ONLINE.pendingCardResolutions = 0;
@@ -4655,8 +4613,6 @@ async function leaveOnlineRoom(
   ONLINE.lastSnapshotAt = 0;
   ONLINE.heartbeatInFlight = false;
   ONLINE.lastHeartbeatAt = 0;
-  ONLINE.syncInFlight = false;
-  ONLINE.syncQueuedReason = "";
   ONLINE.aiRunner = null;
   ONLINE.aiRunnerRequestAt = 0;
   ONLINE.pendingCardResolutions = 0;
