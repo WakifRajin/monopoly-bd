@@ -1492,6 +1492,13 @@ function tryAutoResolveAiDebtPrompt() {
   return true;
 }
 
+function syncAiDirectMutation(reason) {
+  if (!isOnlineGame() || ONLINE.isApplyingRemote) return;
+  syncRoomState(reason).catch((err) => {
+    console.error(err);
+  });
+}
+
 function runOfflineAiStep() {
   AI_CTRL.timerId = null;
 
@@ -1597,6 +1604,7 @@ function runOfflineAiStep() {
         bidder.money < nextBid &&
         aiTryMortgageToTarget(bidder, nextBid + Math.floor(reserve * 0.4))
       ) {
+        syncAiDirectMutation("ai-auction-mortgage");
         return;
       }
 
@@ -1643,11 +1651,7 @@ function runOfflineAiStep() {
   if (tryAutoResolveAiDebtPrompt()) {
     renderAll();
     updateActionButtons();
-    if (isOnlineGame() && !ONLINE.isApplyingRemote) {
-      syncRoomState("ai-debt-resolution").catch((err) => {
-        console.error(err);
-      });
-    }
+    syncAiDirectMutation("ai-debt-resolution");
     return;
   }
 
@@ -1667,6 +1671,7 @@ function runOfflineAiStep() {
       p.money < price &&
       aiTryMortgageToTarget(p, price + Math.floor(reserve * 0.35))
     ) {
+      syncAiDirectMutation("ai-buy-prep-mortgage");
       return;
     }
     const score = aiPropertyPriority(p, spaceId);
@@ -1690,6 +1695,7 @@ function runOfflineAiStep() {
       );
       renderAll();
       updateActionButtons();
+      syncAiDirectMutation("ai-buy-skip-auction-off");
     }
     return;
   }
@@ -1713,9 +1719,11 @@ function runOfflineAiStep() {
       p.money < Math.floor(reserve * 0.35) &&
       aiTryMortgageToTarget(p, Math.floor(reserve * 0.85))
     ) {
+      syncAiDirectMutation("ai-cash-mortgage");
       return;
     }
     if (aiTryUnmortgage(p)) {
+      syncAiDirectMutation("ai-unmortgage");
       return;
     }
     if ((G.phase === "action" || G.phase === "end") && aiTryBuildOne(p)) {
@@ -1867,7 +1875,7 @@ function updateActionButtons() {
             : `💀 ${debtPayer?.name || "Player"} resolving debt`
           : aiTurnActive
             ? aiWaitingForRunner
-              ? `🤖 Waiting for ${runnerName}`
+              ? `🤖 ${p.name} (run by ${runnerName})`
               : `🤖 ${p.name} is thinking...`
             : !turnOwnedByMe
               ? `⏳ ${p.name} is playing`
@@ -1899,7 +1907,7 @@ function updateActionButtons() {
         : `💀 ${debtPayer?.name || "Player"} is resolving debt (short ${fmtCurrency(debtShortBy)}).`;
     } else if (aiTurnActive)
       cm.textContent = aiWaitingForRunner
-        ? `🤖 Waiting for ${runnerName} to run AI`
+        ? `🤖 ${p.name} is being run by ${runnerName}`
         : `🤖 ${p.name} is making a move`;
     else if (!turnOwnedByMe) cm.textContent = `Watching ${p.name}'s turn`;
     else if (inJail && G.phase === "roll")
@@ -1926,7 +1934,7 @@ function updateActionButtons() {
         : `💀 ${debtPayer?.name || "Player"} is resolving debt`;
     } else if (aiTurnActive)
       mobileTurnLine.textContent = aiWaitingForRunner
-        ? `🤖 Waiting for ${runnerName}`
+        ? `🤖 ${p.name} (run by ${runnerName})`
         : `🤖 ${p.name} is thinking`;
     else if (!turnOwnedByMe)
       mobileTurnLine.textContent = `⏳ Watching ${p.name}'s turn`;
