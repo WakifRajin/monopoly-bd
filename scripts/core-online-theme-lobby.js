@@ -42,6 +42,8 @@ const ONLINE = {
   lastRoomCleanupAt: 0,
   heartbeatInFlight: false,
   lastHeartbeatAt: 0,
+  syncInFlight: false,
+  syncQueuedReason: "",
   snapshotApplyInFlight: false,
   queuedSnapshot: null,
 };
@@ -3131,7 +3133,6 @@ const AI_CTRL = {
   lastKey: "",
   lastTradeAttemptKey: "",
   tradeByPlayer: {},
-  syncInFlight: false,
 };
 const AI_RUNNER_LEASE_MS = 3200;
 const AI_RUNNER_RENEW_MS = 1200;
@@ -3170,7 +3171,6 @@ function initGameState(players, startMoney, options = {}) {
   AI_CTRL.lastKey = "";
   AI_CTRL.lastTradeAttemptKey = "";
   AI_CTRL.tradeByPlayer = {};
-  AI_CTRL.syncInFlight = false;
   clearLogArchive(gameStartedAt);
   jailPromptShownKey = "";
   tradeReviewShownKey = "";
@@ -3644,42 +3644,78 @@ function hydrateRemoteGameState(raw) {
 
 async function syncRoomState(reason = "") {
   if (!isOnlineGame() || ONLINE.isApplyingRemote || !FIREBASE.api) return;
+  const queuedReason = String(reason || "sync");
+  ONLINE.syncQueuedReason = queuedReason;
+  if (ONLINE.syncInFlight) return;
+
+  ONLINE.syncInFlight = true;
   try {
-    const baseRevision = Number(ONLINE.revision) || 0;
-    const nextRevision = baseRevision + 1;
-    syncDebtPromptToGameState();
-    const nextGameState = safeGameStateForRoom();
-    const nextSettings = ONLINE.isHost ? defaultLobbySettings() : null;
+    while (
+      ONLINE.syncQueuedReason &&
+      isOnlineGame() &&
+      !ONLINE.isApplyingRemote &&
+      FIREBASE.api
+    ) {
+      const activeReason = String(ONLINE.syncQueuedReason || "sync");
+      ONLINE.syncQueuedReason = "";
 
-    const txResult = await FIREBASE.api.runTransaction(
-      getRoomRef(),
-      (current) => {
-        if (!current || typeof current !== "object") return current;
+      const baseRevision = Number(ONLINE.revision) || 0;
+      const nextRevision = baseRevision + 1;
+      syncDebtPromptToGameState();
+      const nextGameState = safeGameStateForRoom();
+      const nextSettings = ONLINE.isHost ? defaultLobbySettings() : null;
 
-        const serverRevision = Number(current.revision) || 0;
-        if (serverRevision !== baseRevision) {
-          return;
-        }
+      const txResult = await FIREBASE.api.runTransaction(
+        getRoomRef(),
+        (current) => {
+          if (!current || typeof current !== "object") return current;
 
-        const out = {
-          ...current,
-          status: "playing",
-          gameState: nextGameState,
-          revision: nextRevision,
-          updatedAt: Date.now(),
-          lastReason: reason || "sync",
-        };
-        if (nextSettings) out.settings = nextSettings;
-        return out;
-      },
-    );
+          const serverRevision = Number(current.revision) || 0;
+          if (serverRevision !== baseRevision) {
+            return;
+          }
 
-    if (txResult?.committed) {
-      ONLINE.revision = nextRevision;
+          const out = {
+            ...current,
+            status: "playing",
+            gameState: nextGameState,
+            revision: nextRevision,
+            updatedAt: Date.now(),
+            lastReason: activeReason,
+          };
+          if (nextSettings) out.settings = nextSettings;
+          return out;
+        },
+      );
+
+      if (txResult?.committed) {
+        ONLINE.revision = nextRevision;
+      }
     }
   } catch (err) {
     console.error(err);
     toast(firebaseErrorMessage(err, "Failed to sync room state."), "danger");
+  } finally {
+    ONLINE.syncInFlight = false;
+    if (
+      ONLINE.syncQueuedReason &&
+      isOnlineGame() &&
+      !ONLINE.isApplyingRemote &&
+      FIREBASE.api
+    ) {
+      const followUpReason = ONLINE.syncQueuedReason;
+      setTimeout(() => {
+        syncRoomState(followUpReason).catch((err) => {
+          console.error(err);
+        });
+      }, 0);
+    } else if (
+      isOnlineGame() &&
+      !ONLINE.isApplyingRemote &&
+      typeof maybeScheduleOfflineAiTurn === "function"
+    ) {
+      maybeScheduleOfflineAiTurn();
+    }
   }
 }
 
@@ -3868,6 +3904,8 @@ function attachRoomListener(roomId) {
   ONLINE.lastSnapshotAt = Date.now();
   ONLINE.heartbeatInFlight = false;
   ONLINE.lastHeartbeatAt = 0;
+  ONLINE.syncInFlight = false;
+  ONLINE.syncQueuedReason = "";
   ONLINE.aiRunner = null;
   ONLINE.aiRunnerRequestAt = 0;
   ONLINE.pendingCardResolutions = 0;
@@ -4559,6 +4597,8 @@ async function leaveOnlineRoom(
     ONLINE.lastSnapshotAt = 0;
     ONLINE.heartbeatInFlight = false;
     ONLINE.lastHeartbeatAt = 0;
+    ONLINE.syncInFlight = false;
+    ONLINE.syncQueuedReason = "";
     ONLINE.aiRunner = null;
     ONLINE.aiRunnerRequestAt = 0;
     ONLINE.pendingCardResolutions = 0;
@@ -4597,6 +4637,8 @@ async function leaveOnlineRoom(
   ONLINE.lastSnapshotAt = 0;
   ONLINE.heartbeatInFlight = false;
   ONLINE.lastHeartbeatAt = 0;
+  ONLINE.syncInFlight = false;
+  ONLINE.syncQueuedReason = "";
   ONLINE.aiRunner = null;
   ONLINE.aiRunnerRequestAt = 0;
   ONLINE.pendingCardResolutions = 0;

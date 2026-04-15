@@ -1343,7 +1343,7 @@ function maybeScheduleOfflineAiTurn() {
     return;
   }
 
-  if (isOnlineGame() && AI_CTRL.syncInFlight) {
+  if (isOnlineGame() && ONLINE.syncInFlight) {
     clearOfflineAiTimer(false);
     return;
   }
@@ -1499,16 +1499,9 @@ function tryAutoResolveAiDebtPrompt() {
 
 function syncAiDirectMutation(reason) {
   if (!isOnlineGame() || ONLINE.isApplyingRemote) return;
-  if (AI_CTRL.syncInFlight) return;
-  AI_CTRL.syncInFlight = true;
-  syncRoomState(reason)
-    .catch((err) => {
-      console.error(err);
-    })
-    .finally(() => {
-      AI_CTRL.syncInFlight = false;
-      maybeScheduleOfflineAiTurn();
-    });
+  syncRoomState(reason).catch((err) => {
+    console.error(err);
+  });
 }
 
 function runOfflineAiStep() {
@@ -1524,7 +1517,7 @@ function runOfflineAiStep() {
     return;
   }
 
-  if (isOnlineGame() && AI_CTRL.syncInFlight) {
+  if (isOnlineGame() && ONLINE.syncInFlight) {
     AI_CTRL.lastKey = "";
     maybeScheduleOfflineAiTurn();
     return;
