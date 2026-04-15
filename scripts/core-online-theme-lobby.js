@@ -3650,12 +3650,16 @@ async function syncRoomState(reason = "") {
 
   ONLINE.syncInFlight = true;
   try {
+    let guardCount = 0;
     while (
       ONLINE.syncQueuedReason &&
       isOnlineGame() &&
       !ONLINE.isApplyingRemote &&
       FIREBASE.api
     ) {
+      guardCount++;
+      if (guardCount > 24) break;
+
       const activeReason = String(ONLINE.syncQueuedReason || "sync");
       ONLINE.syncQueuedReason = "";
 
@@ -3690,6 +3694,20 @@ async function syncRoomState(reason = "") {
 
       if (txResult?.committed) {
         ONLINE.revision = nextRevision;
+      } else {
+        // Keep this write queued so state changes are not dropped on contention.
+        if (!ONLINE.syncQueuedReason) ONLINE.syncQueuedReason = activeReason;
+
+        const snapVal = txResult?.snapshot?.val
+          ? txResult.snapshot.val()
+          : null;
+        const serverRevision = Number(snapVal?.revision);
+        if (Number.isFinite(serverRevision) && serverRevision >= 0) {
+          ONLINE.revision = serverRevision;
+        }
+
+        // Yield once so listener snapshots can catch up before retry.
+        await new Promise((resolve) => setTimeout(resolve, 0));
       }
     }
   } catch (err) {
