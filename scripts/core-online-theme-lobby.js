@@ -4267,7 +4267,24 @@ function applyOnlineDepartureRuleToRoomData(
 
   gs.players = gamePlayers.map((p, i) => ({ ...p, id: i }));
 
-  let quitterIdx = gs.players.findIndex((p) => p.uid === leavingUid);
+  let quitterIdx = gs.players.findIndex(
+    (p) => String(p.uid || "") === String(leavingUid || ""),
+  );
+  if (quitterIdx < 0) {
+    // Fallback by diffing connected room uids against in-game human uids.
+    const remainingUidSet = new Set(
+      remainingRoomPlayers.map((p) => String(p?.uid || "")).filter(Boolean),
+    );
+    const unmatchedGameHumans = gs.players.filter((p) => {
+      const uid = String(p?.uid || "");
+      if (!uid) return false;
+      if (normalizePlayerKind(p?.kind) === "ai") return false;
+      return !remainingUidSet.has(uid);
+    });
+    if (unmatchedGameHumans.length === 1) {
+      quitterIdx = Number(unmatchedGameHumans[0].id);
+    }
+  }
   if (quitterIdx < 0 && leavingRoomPlayer?.token) {
     quitterIdx = gs.players.findIndex(
       (p) => String(p.token || "") === String(leavingRoomPlayer.token || ""),
@@ -4307,6 +4324,7 @@ function applyOnlineDepartureRuleToRoomData(
     ) {
       gs.pendingTrade = null;
     }
+    gs.pendingBuy = null;
 
     const aiMsg = `${quitterName} left the match. AI takeover is active.`;
     if (!Array.isArray(gs.log)) gs.log = [];
