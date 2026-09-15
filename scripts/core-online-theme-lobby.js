@@ -454,7 +454,7 @@ function sanitizeName(v, fallback = "Player") {
 // characters at the decode boundary so no seed can inject HTML anywhere.
 function sanitizeBoardText(v, fallback = "", maxLength = 48) {
   const clean = String(v ?? "")
-    .replace(/[ -]/g, "")
+    .replace(/[\u0000-\u001F\u007F]/g, "")
     .replace(/[<>"'`\\&]/g, "")
     .replace(/\s+/g, " ")
     .trim();
