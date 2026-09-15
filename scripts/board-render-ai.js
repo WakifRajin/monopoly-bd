@@ -22,14 +22,14 @@ function buildBoard() {
     if (s.type === "property") {
       const c = COLOR[s.color];
       inner = `<div class="color-bar" style="background:${c};height:18%"></div>
-               <div class="sp-name">${s.name}</div>
+               <div class="sp-name">${escHtml(s.name)}</div>
                <div class="sp-price">${fmtCurrency(s.price)}</div>`;
     } else if (s.type === "railroad") {
-      inner = `<div class="sp-icon">🚂</div><div class="sp-name">${s.name}</div><div class="sp-price">${fmtCurrency(s.price)}</div>`;
+      inner = `<div class="sp-icon">🚂</div><div class="sp-name">${escHtml(s.name)}</div><div class="sp-price">${fmtCurrency(s.price)}</div>`;
     } else if (s.type === "utility") {
-      inner = `<div class="sp-icon">${s.icon}</div><div class="sp-name">${s.name}</div><div class="sp-price">${fmtCurrency(s.price)}</div>`;
+      inner = `<div class="sp-icon">${escHtml(s.icon)}</div><div class="sp-name">${escHtml(s.name)}</div><div class="sp-price">${fmtCurrency(s.price)}</div>`;
     } else if (s.type === "go") {
-      inner = `<div class="sp-name"><div style="font-size:1.6em">🏁</div><div style="color:#c0392b;font-weight:900;font-size:1.1em;font-family:'Times New Roman',Georgia,serif">GO</div><div style="font-size:.65em;color:#1a5c1a">Collect ${(window.ACTIVE_THEME || BOARD_THEMES.dhaka).currency}${(window.ACTIVE_THEME || BOARD_THEMES.dhaka).goSalary}</div></div>`;
+      inner = `<div class="sp-name"><div style="font-size:1.6em">🏁</div><div style="color:#c0392b;font-weight:900;font-size:1.1em;font-family:'Times New Roman',Georgia,serif">GO</div><div style="font-size:.65em;color:#1a5c1a">Collect ${escHtml((window.ACTIVE_THEME || BOARD_THEMES.dhaka).currency)}${Number((window.ACTIVE_THEME || BOARD_THEMES.dhaka).goSalary) || 0}</div></div>`;
     } else if (s.type === "jail") {
       inner = `<div class="sp-name"><div style="font-size:1.2em">⛓️</div><div style="font-family:'Times New Roman',Georgia,serif;font-weight:700">JAIL</div><div style="font-size:.75em">Just Visiting</div></div>`;
     } else if (s.type === "parking") {
@@ -41,7 +41,7 @@ function buildBoard() {
     } else if (s.type === "community") {
       inner = `<div class="sp-name"><div style="font-size:1.3em">📦</div><div style="font-size:.75em;color:#2563eb;font-weight:700;font-family:'Times New Roman',Georgia,serif">COMMUNITY</div><div style="font-size:.7em;color:#2563eb;font-family:'Times New Roman',Georgia,serif">CHEST</div></div>`;
     } else if (s.type === "tax") {
-      inner = `<div class="sp-name"><div style="font-size:1.3em">${s.icon}</div><div style="font-size:.8em;font-family:'Times New Roman',Georgia,serif;font-weight:700">${s.name}</div><div class="sp-price">${fmtCurrency(s.amount)}</div></div>`;
+      inner = `<div class="sp-name"><div style="font-size:1.3em">${escHtml(s.icon)}</div><div style="font-size:.8em;font-family:'Times New Roman',Georgia,serif;font-weight:700">${escHtml(s.name)}</div><div class="sp-price">${fmtCurrency(s.amount)}</div></div>`;
     }
     el.innerHTML = inner;
     board.appendChild(el);
@@ -53,7 +53,7 @@ function buildBoard() {
   const t = window.ACTIVE_THEME || BOARD_THEMES.dhaka;
   center.innerHTML = `
     <div class="center-title">MONOPOLY</div>
-    <div class="center-sub">${t.flag} ${t.name.toUpperCase()} EDITION</div>
+    <div class="center-sub">${escHtml(t.flag)} ${escHtml(String(t.name).toUpperCase())} EDITION</div>
     <div class="dice-row">
       <div class="die" id="die1" data-v="${die1Value}">${'<span class="dot"></span>'.repeat(7)}</div>
       <div class="die" id="die2" data-v="${die2Value}">${'<span class="dot"></span>'.repeat(7)}</div>
@@ -154,7 +154,8 @@ function renderPlayerCards() {
       p.properties
         .map((pid) => {
           const sp = SPACES[pid];
-          return `<div class="pprop-dot" style="background:${COLOR[sp.color]}" title="${sp.name}"></div>`;
+          if (!sp) return "";
+          return `<div class="pprop-dot" style="background:${COLOR[sp.color] || "#666"}" title="${escHtml(sp.name)}"></div>`;
         })
         .join("") +
       p.railroads
@@ -170,11 +171,11 @@ function renderPlayerCards() {
       div.className = "pcard" + (active ? " active-turn" : "") + bankruptCls;
       div.innerHTML = `
         <div class="prow1">
-          <div class="ptoken" style="color:${p.color}">${p.token}</div>
-          <div class="pname">${p.name}${isAiPlayer(p) ? " 🤖" : ""}${p.bankrupt ? " 💀" : ""}</div>
+          <div class="ptoken" style="color:${sanitizeColor(p.color)}">${escHtml(p.token)}</div>
+          <div class="pname">${escHtml(p.name)}${isAiPlayer(p) ? " 🤖" : ""}${p.bankrupt ? " 💀" : ""}</div>
           <div class="pmoney">${fmtCurrency(p.money)}</div>
         </div>
-        <div class="ppos">${p.inJail ? "⛓️ In Jail" : `📍 ${SPACES[p.pos].name}`}</div>
+        <div class="ppos">${p.inJail ? "⛓️ In Jail" : `📍 ${escHtml(SPACES[p.pos]?.name || "On board")}`}</div>
         ${propDots ? `<div class="pprops">${propDots}</div>` : ""}
       `;
       div.title = `Tap to view ${p.name}'s portfolio and money log`;
@@ -188,7 +189,7 @@ function renderPlayerCards() {
         "mobile-player-chip" + (active ? " active-turn" : "") + bankruptCls;
       chip.innerHTML = `
         <div class="mobile-player-main">
-          <span class="mobile-player-token" style="color:${p.color}">${p.token}</span>
+          <span class="mobile-player-token" style="color:${sanitizeColor(p.color)}">${escHtml(p.token)}</span>
           <span class="mobile-player-name">${escHtml(p.name)}${isAiPlayer(p) ? " 🤖" : ""}${p.bankrupt ? " 💀" : ""}</span>
         </div>
         <div class="mobile-player-meta">${fmtCurrency(p.money)} • ${escHtml(location)}</div>
@@ -1343,6 +1344,11 @@ function maybeScheduleOfflineAiTurn() {
     return;
   }
 
+  if (isOnlineGame() && ONLINE.syncInFlight) {
+    clearOfflineAiTimer(false);
+    return;
+  }
+
   const current = curPlayer();
   const bidderId = currentAuctionBidderId();
   const bidder = Number.isInteger(bidderId) ? G.players[bidderId] : null;
@@ -1492,6 +1498,13 @@ function tryAutoResolveAiDebtPrompt() {
   return true;
 }
 
+function syncAiDirectMutation(reason) {
+  if (!isOnlineGame() || ONLINE.isApplyingRemote) return;
+  syncRoomState(reason).catch((err) => {
+    console.error(err);
+  });
+}
+
 function runOfflineAiStep() {
   AI_CTRL.timerId = null;
 
@@ -1500,6 +1513,12 @@ function runOfflineAiStep() {
     return;
   }
   if (!canRunAiController()) {
+    AI_CTRL.lastKey = "";
+    maybeScheduleOfflineAiTurn();
+    return;
+  }
+
+  if (isOnlineGame() && ONLINE.syncInFlight) {
     AI_CTRL.lastKey = "";
     maybeScheduleOfflineAiTurn();
     return;
@@ -1528,11 +1547,8 @@ function runOfflineAiStep() {
   if (debtStateAdjusted) {
     renderAll();
     updateActionButtons();
-    if (isOnlineGame() && !ONLINE.isApplyingRemote) {
-      syncRoomState("normalize-debt-turn").catch((err) => {
-        console.error(err);
-      });
-    }
+    syncAiDirectMutation("normalize-debt-turn");
+    return;
   }
 
   if (G.pendingTrade) {
@@ -1597,6 +1613,7 @@ function runOfflineAiStep() {
         bidder.money < nextBid &&
         aiTryMortgageToTarget(bidder, nextBid + Math.floor(reserve * 0.4))
       ) {
+        syncAiDirectMutation("ai-auction-mortgage");
         return;
       }
 
@@ -1643,11 +1660,7 @@ function runOfflineAiStep() {
   if (tryAutoResolveAiDebtPrompt()) {
     renderAll();
     updateActionButtons();
-    if (isOnlineGame() && !ONLINE.isApplyingRemote) {
-      syncRoomState("ai-debt-resolution").catch((err) => {
-        console.error(err);
-      });
-    }
+    syncAiDirectMutation("ai-debt-resolution");
     return;
   }
 
@@ -1667,6 +1680,7 @@ function runOfflineAiStep() {
       p.money < price &&
       aiTryMortgageToTarget(p, price + Math.floor(reserve * 0.35))
     ) {
+      syncAiDirectMutation("ai-buy-prep-mortgage");
       return;
     }
     const score = aiPropertyPriority(p, spaceId);
@@ -1690,6 +1704,7 @@ function runOfflineAiStep() {
       );
       renderAll();
       updateActionButtons();
+      syncAiDirectMutation("ai-buy-skip-auction-off");
     }
     return;
   }
@@ -1713,9 +1728,11 @@ function runOfflineAiStep() {
       p.money < Math.floor(reserve * 0.35) &&
       aiTryMortgageToTarget(p, Math.floor(reserve * 0.85))
     ) {
+      syncAiDirectMutation("ai-cash-mortgage");
       return;
     }
     if (aiTryUnmortgage(p)) {
+      syncAiDirectMutation("ai-unmortgage");
       return;
     }
     if ((G.phase === "action" || G.phase === "end") && aiTryBuildOne(p)) {
@@ -1867,7 +1884,7 @@ function updateActionButtons() {
             : `💀 ${debtPayer?.name || "Player"} resolving debt`
           : aiTurnActive
             ? aiWaitingForRunner
-              ? `🤖 Waiting for ${runnerName}`
+              ? `🤖 ${p.name} (run by ${runnerName})`
               : `🤖 ${p.name} is thinking...`
             : !turnOwnedByMe
               ? `⏳ ${p.name} is playing`
@@ -1899,7 +1916,7 @@ function updateActionButtons() {
         : `💀 ${debtPayer?.name || "Player"} is resolving debt (short ${fmtCurrency(debtShortBy)}).`;
     } else if (aiTurnActive)
       cm.textContent = aiWaitingForRunner
-        ? `🤖 Waiting for ${runnerName} to run AI`
+        ? `🤖 ${p.name} is being run by ${runnerName}`
         : `🤖 ${p.name} is making a move`;
     else if (!turnOwnedByMe) cm.textContent = `Watching ${p.name}'s turn`;
     else if (inJail && G.phase === "roll")
@@ -1926,7 +1943,7 @@ function updateActionButtons() {
         : `💀 ${debtPayer?.name || "Player"} is resolving debt`;
     } else if (aiTurnActive)
       mobileTurnLine.textContent = aiWaitingForRunner
-        ? `🤖 Waiting for ${runnerName}`
+        ? `🤖 ${p.name} (run by ${runnerName})`
         : `🤖 ${p.name} is thinking`;
     else if (!turnOwnedByMe)
       mobileTurnLine.textContent = `⏳ Watching ${p.name}'s turn`;

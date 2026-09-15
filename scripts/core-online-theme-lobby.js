@@ -66,7 +66,7 @@ const ONLINE_MUTATION_FUNCS = [
   "sendChat",
 ];
 
-const ROOM_SCHEMA_VERSION = 2;
+const ROOM_SCHEMA_VERSION = 3;
 const GAME_LOG_LIMIT = 250;
 const GAME_LOG_ARCHIVE_LIMIT = 5000;
 const OPEN_ROOM_STALE_MS = 1000 * 60 * 10;
@@ -144,6 +144,17 @@ async function generateUniqueRoomId(maxAttempts = 20) {
   return null;
 }
 
+// RTDB security rules cannot search an array, so membership is mirrored into a
+// uid -> true map that rules can index directly. Keep it in step with players[].
+function membersMapFromPlayers(players) {
+  const out = {};
+  indexedObjectToArray(players).forEach((p) => {
+    const uid = String(p?.uid || "");
+    if (uid) out[uid] = true;
+  });
+  return out;
+}
+
 function tokenForPlayer(players, uid) {
   const fallback = TOKENS[players.length % TOKENS.length] || TOKENS[0];
   const existing = players.find((p) => p.uid === uid);
@@ -199,6 +210,7 @@ async function updateLocalPlayerProfile(next = {}) {
       ...data,
       players,
       playerUids: players.map((p) => p.uid).filter(Boolean),
+      members: membersMapFromPlayers(players),
       updatedAt: Date.now(),
     };
   });
@@ -435,6 +447,18 @@ function sanitizeName(v, fallback = "Player") {
     .trim()
     .replace(/\s+/g, " ");
   return clean.slice(0, 24) || fallback;
+}
+
+// Board-supplied strings (custom board seeds) are rendered through innerHTML in
+// several places, and a seed can arrive from a remote room host. Strip markup
+// characters at the decode boundary so no seed can inject HTML anywhere.
+function sanitizeBoardText(v, fallback = "", maxLength = 48) {
+  const clean = String(v ?? "")
+    .replace(/[\u0000-\u001F\u007F]/g, "")
+    .replace(/[<>"'`\\&]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  return clean.slice(0, maxLength) || fallback;
 }
 
 function sanitizeToken(v, fallback = TOKENS[0]) {
@@ -2217,9 +2241,9 @@ function renderBoardThemeSelector() {
     const btn = document.createElement("div");
     const active = t.id === selectedThemeId;
     btn.style.cssText = `padding:.75rem;border-radius:9px;cursor:${hostCanEditTheme ? "pointer" : "not-allowed"};border:2px solid ${active ? "var(--gold-light)" : "rgba(255,255,255,.15)"};background:${active ? "rgba(201,151,28,.2)" : "rgba(255,255,255,.06)"};transition:all .2s;${hostCanEditTheme ? "" : "opacity:.65"}`;
-    btn.innerHTML = `<div style="font-size:1.5rem;margin-bottom:.3rem">${t.flag}</div>
-      <div style="font-weight:700;color:#fff;font-size:.9rem">${t.name}</div>
-      <div style="font-size:.75rem;color:rgba(255,255,255,.5);margin-top:.15rem">${t.desc}</div>`;
+    btn.innerHTML = `<div style="font-size:1.5rem;margin-bottom:.3rem">${escHtml(t.flag)}</div>
+      <div style="font-weight:700;color:#fff;font-size:.9rem">${escHtml(t.name)}</div>
+      <div style="font-size:.75rem;color:rgba(255,255,255,.5);margin-top:.15rem">${escHtml(t.desc)}</div>`;
     btn.onclick = async () => {
       if (!hostCanEditTheme) return;
       applyThemeById(t.id);
@@ -2808,7 +2832,7 @@ function decodeCustomCardDeck(rawDeck, fallbackDeck) {
     if (!row || typeof row !== "object") row = fallback;
     const action = normalizeCustomCardAction(row.action);
     return {
-      text: String(row.text || fallback.text || "Card").slice(0, 220),
+      text: sanitizeBoardText(row.text, fallback.text || "Card", 220),
       action,
       value: normalizeCustomCardValue(
         action,
@@ -2829,8 +2853,8 @@ function expandCustomBoardSeedPayload(payload) {
   }
 
   const meta = {
-    boardName: String(payload.m[0] || "Custom Board").slice(0, 48),
-    currencySymbol: String(payload.m[1] || "$").slice(0, 4) || "$",
+    boardName: sanitizeBoardText(payload.m[0], "Custom Board", 48),
+    currencySymbol: sanitizeBoardText(payload.m[1], "$", 4),
     economyScale: Number(payload.m[2]) || 1,
     goSalary: customClampInt(payload.m[3], 200, 0),
     startMoney: customClampInt(payload.m[4], 1500, 0),
@@ -2846,10 +2870,10 @@ function expandCustomBoardSeedPayload(payload) {
 
     const id = customClampInt(row[0], 0, 0);
     const typeCode = String(row[1] || "p").toLowerCase();
-    const name = String(row[2] || "Space").slice(0, 48);
+    const name = sanitizeBoardText(row[2], "Space", 48);
 
     if (typeCode === "p") {
-      const color = String(row[3] || "BROWN").toUpperCase();
+      const color = sanitizeBoardText(row[3], "BROWN", 24).toUpperCase();
       const group = customClampInt(row[4], 0, 0);
       const price = customClampInt(row[5], 0, 0);
       const house = customClampInt(row[6], 0, 0);
@@ -3642,42 +3666,67 @@ function hydrateRemoteGameState(raw) {
 
 async function syncRoomState(reason = "") {
   if (!isOnlineGame() || ONLINE.isApplyingRemote || !FIREBASE.api) return;
+
+  if (ONLINE.syncInFlight) {
+    ONLINE.syncQueuedReason = reason || ONLINE.syncQueuedReason || "sync";
+    return;
+  }
+
+  ONLINE.syncInFlight = true;
+
   try {
-    const baseRevision = Number(ONLINE.revision) || 0;
-    const nextRevision = baseRevision + 1;
-    syncDebtPromptToGameState();
-    const nextGameState = safeGameStateForRoom();
-    const nextSettings = ONLINE.isHost ? defaultLobbySettings() : null;
+    let currentReason = reason || "sync";
+    while (true) {
+      const baseRevision = Number(ONLINE.revision) || 0;
+      const nextRevision = baseRevision + 1;
+      syncDebtPromptToGameState();
+      const nextGameState = safeGameStateForRoom();
+      const nextSettings = ONLINE.isHost ? defaultLobbySettings() : null;
 
-    const txResult = await FIREBASE.api.runTransaction(
-      getRoomRef(),
-      (current) => {
-        if (!current || typeof current !== "object") return current;
+      const txResult = await FIREBASE.api.runTransaction(
+        getRoomRef(),
+        (current) => {
+          if (!current || typeof current !== "object") return current;
 
-        const serverRevision = Number(current.revision) || 0;
-        if (serverRevision !== baseRevision) {
-          return;
+          const serverRevision = Number(current.revision) || 0;
+          if (serverRevision !== baseRevision) {
+            return;
+          }
+
+          const out = {
+            ...current,
+            status: "playing",
+            gameState: nextGameState,
+            revision: nextRevision,
+            updatedAt: Date.now(),
+            lastReason: currentReason,
+          };
+          if (nextSettings) out.settings = nextSettings;
+          return out;
+        },
+      );
+
+      if (txResult?.committed) {
+        ONLINE.revision = nextRevision;
+        if (ONLINE.syncQueuedReason) {
+          currentReason = ONLINE.syncQueuedReason;
+          ONLINE.syncQueuedReason = null;
+          continue;
         }
-
-        const out = {
-          ...current,
-          status: "playing",
-          gameState: nextGameState,
-          revision: nextRevision,
-          updatedAt: Date.now(),
-          lastReason: reason || "sync",
-        };
-        if (nextSettings) out.settings = nextSettings;
-        return out;
-      },
-    );
-
-    if (txResult?.committed) {
-      ONLINE.revision = nextRevision;
+        break;
+      } else {
+        const snapData = txResult?.snapshot?.val ? txResult.snapshot.val() : null;
+        if (snapData) {
+          ONLINE.revision = Number(snapData.revision) || 0;
+        }
+        continue;
+      }
     }
   } catch (err) {
     console.error(err);
     toast(firebaseErrorMessage(err, "Failed to sync room state."), "danger");
+  } finally {
+    ONLINE.syncInFlight = false;
   }
 }
 
@@ -3989,6 +4038,28 @@ async function createOnlineRoom() {
       }
     }
 
+    // The hash lives outside the room document, at a path no client can read.
+    // Joiners prove knowledge of the password by writing their own hash to
+    // roomAuth/<room>/proofs/<uid>; the security rules do the comparison.
+    if (visibility === "closed") {
+      try {
+        await FIREBASE.api.set(
+          FIREBASE.api.ref(
+            FIREBASE.db,
+            `roomAuth/${candidateRoomId}/passwordHash`,
+          ),
+          passwordHash,
+        );
+      } catch (err) {
+        console.error(err);
+        toast(
+          firebaseErrorMessage(err, "Unable to secure the room password."),
+          "danger",
+        );
+        return;
+      }
+    }
+
     const candidateRef = FIREBASE.api.ref(
       FIREBASE.db,
       `rooms/${candidateRoomId}`,
@@ -4011,10 +4082,10 @@ async function createOnlineRoom() {
             status: "lobby",
             hostUid: ONLINE.localUid,
             visibility,
-            passwordHash,
             hasPassword: visibility === "closed",
             players: [candidateMe],
             playerUids: [ONLINE.localUid],
+            members: { [ONLINE.localUid]: true },
             settings,
             gameState: null,
             revision: 0,
@@ -4078,13 +4149,37 @@ async function joinOnlineRoom() {
     return;
   }
   const entered = String(passEl?.value || "").trim();
-  let enteredHash = "";
-  if (entered) {
+  const roomIsClosed = (baseRoom.visibility || "open") === "closed";
+  if (roomIsClosed && !entered) {
+    toast("Password required for closed room.", "danger");
+    return;
+  }
+  if (roomIsClosed) {
+    let enteredHash = "";
     try {
       enteredHash = await hashRoomPassword(roomId, entered);
     } catch (err) {
       toast(
         err.message || "Unable to verify room password in this browser.",
+        "danger",
+      );
+      return;
+    }
+    // The room's hash is not readable by anyone, so the password cannot be
+    // checked here. Publish our hash to a write-only proof path and let the
+    // security rules compare it; a wrong password fails the room write below.
+    try {
+      await FIREBASE.api.set(
+        FIREBASE.api.ref(
+          FIREBASE.db,
+          `roomAuth/${roomId}/proofs/${ONLINE.localUid}`,
+        ),
+        enteredHash,
+      );
+    } catch (err) {
+      console.error(err);
+      toast(
+        firebaseErrorMessage(err, "Unable to verify the room password."),
         "danger",
       );
       return;
@@ -4106,26 +4201,6 @@ async function joinOnlineRoom() {
       if ((roomData.status || "lobby") !== "lobby") {
         txError = "Game already started";
         return;
-      }
-      const isClosed = (roomData.visibility || "open") === "closed";
-      const requiredHash = String(roomData.passwordHash || "");
-      const requiredLegacyPassword = String(roomData.password || "");
-      let needsPasswordMigration = false;
-      if (isClosed) {
-        if (!entered) {
-          txError = "Password required for closed room";
-          return;
-        }
-        const matchesHash = requiredHash ? enteredHash === requiredHash : false;
-        const matchesLegacy = requiredLegacyPassword
-          ? entered === requiredLegacyPassword
-          : false;
-        if (!matchesHash && !matchesLegacy) {
-          txError = "Invalid room password";
-          return;
-        }
-        needsPasswordMigration =
-          !requiredHash && !!requiredLegacyPassword && matchesLegacy;
       }
       let players = indexedObjectToArray(roomData.players).filter(
         (p) => p && typeof p === "object",
@@ -4172,14 +4247,22 @@ async function joinOnlineRoom() {
         ...roomData,
         players,
         playerUids: players.map((p) => p.uid).filter(Boolean),
-        ...(needsPasswordMigration
-          ? { passwordHash: enteredHash, password: "", hasPassword: true }
-          : {}),
+        members: membersMapFromPlayers(players),
         updatedAt: Date.now(),
       };
     });
     if (!result.committed) throw new Error(txError || "Unable to join room.");
   } catch (err) {
+    console.error(err);
+    // A closed room rejects a wrong password as a rules failure, because the
+    // comparison happens on the server against a hash this client cannot read.
+    const denied =
+      String(err?.code || "").toLowerCase().includes("permission") ||
+      String(err?.message || "").toUpperCase().includes("PERMISSION_DENIED");
+    if (roomIsClosed && denied) {
+      toast("Invalid room password.", "danger");
+      return;
+    }
     toast(
       firebaseErrorMessage(err, err.message || "Unable to join room."),
       "danger",
@@ -4223,6 +4306,7 @@ function applyOnlineDepartureRuleToRoomData(
     ...roomData,
     players: remainingRoomPlayers,
     playerUids: remainingRoomPlayers.map((p) => p.uid).filter(Boolean),
+    members: membersMapFromPlayers(remainingRoomPlayers),
     hostUid: keptHost || remainingRoomPlayers[0]?.uid || null,
     revision: nextRevision,
     updatedAt: now,
@@ -4281,6 +4365,16 @@ function applyOnlineDepartureRuleToRoomData(
   }
 
   if (quitterIdx < 0) {
+    const activeUids = remainingRoomPlayers.map((p) => p.uid).filter(Boolean);
+    const unmatched = gs.players.filter(
+      (p) => !p.bankrupt && normalizePlayerKind(p.kind) !== "ai" && !activeUids.includes(p.uid),
+    );
+    if (unmatched.length === 1) {
+      quitterIdx = unmatched[0].id;
+    }
+  }
+
+  if (quitterIdx < 0) {
     out.gameState = gs;
     out.lastDepartureNotice = {
       id: `dep_${now}_${leavingUid}`,
@@ -4307,6 +4401,7 @@ function applyOnlineDepartureRuleToRoomData(
     ) {
       gs.pendingTrade = null;
     }
+    gs.pendingBuy = null;
 
     const aiMsg = `${quitterName} left the match. AI takeover is active.`;
     if (!Array.isArray(gs.log)) gs.log = [];
@@ -4632,7 +4727,7 @@ function renderLobby() {
         ? `<div style="display:flex;gap:.25rem"><button class="btn btn-sm" style="padding:.2rem .35rem;background:rgba(255,255,255,.12);color:#fff" onclick="cycleMyToken(-1)">◀</button><button class="btn btn-sm" style="padding:.2rem .35rem;background:rgba(255,255,255,.12);color:#fff" onclick="cycleMyToken(1)">▶</button></div>`
         : "";
     div.innerHTML = `
-      <div class="token-preview" style="color:${pColor}">${p.token}</div>
+      <div class="token-preview" style="color:${pColor}">${escHtml(p.token)}</div>
       <input class="name-input" value="${safeName}" placeholder="${escAttr(defaultLobbyPlayerName(i, kind))}" onchange="onLobbyNameChange(${i}, this.value)" ${readOnlyAttr} style="color:${pColor};${editable ? "" : "opacity:.8;cursor:not-allowed"}">
       ${readyBadge}
       ${typeSelect}
