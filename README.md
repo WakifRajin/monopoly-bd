@@ -111,31 +111,6 @@ If you deploy your own copy and want online rooms:
 
 ## Troubleshooting
 
-### Online service not ready
-
-- Symptom: room actions stay disabled or show online initialization errors.
-- Checks:
-	- Verify Firebase config in index.html is correct for your project.
-	- Ensure Anonymous Sign-in is enabled in Firebase Authentication.
-	- Confirm Realtime Database is created in the same Firebase project.
-
-### Permission denied errors
-
-- Symptom: join/create/sync fails with permission denied.
-- Cause: RTDB rules are blocking reads/writes.
-- Minimal authenticated-room rule example:
-
-```json
-{
-	"rules": {
-		"rooms": {
-			".read": "auth != null",
-			".write": "auth != null"
-		}
-	}
-}
-```
-
 ### Room sync delays or stale state
 
 - Symptom: one client seems behind.
