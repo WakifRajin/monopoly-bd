@@ -13,8 +13,8 @@ function showSpaceInfo(id) {
         : null;
     const c = COLOR[sp.color];
     modal.innerHTML = `
-      <div class="prop-color-header" style="background:linear-gradient(135deg,${c},${c}cc)">${sp.name}</div>
-      ${owner ? `<div style="color:rgba(255,255,255,.6);font-size:.85rem;margin-bottom:.75rem">Owned by <span style="color:${owner.color};font-weight:700">${owner.token} ${owner.name}</span>${prop.mortgaged ? " (Mortgaged)" : ""}</div>` : '<div style="color:rgba(255,255,255,.5);font-size:.82rem;margin-bottom:.75rem">For Sale — ' + fmtCurrency(sp.price) + "</div>"}
+      <div class="prop-color-header" style="background:linear-gradient(135deg,${c},${c}cc)">${escHtml(sp.name)}</div>
+      ${owner ? `<div style="color:rgba(255,255,255,.6);font-size:.85rem;margin-bottom:.75rem">Owned by <span style="color:${sanitizeColor(owner.color)};font-weight:700">${escHtml(owner.token)} ${escHtml(owner.name)}</span>${prop.mortgaged ? " (Mortgaged)" : ""}</div>` : '<div style="color:rgba(255,255,255,.5);font-size:.82rem;margin-bottom:.75rem">For Sale — ' + fmtCurrency(sp.price) + "</div>"}
       <table class="prop-table">
         <tr><td>Purchase Price</td><td>${fmtCurrency(sp.price)}</td></tr>
         <tr><td>Rent</td><td>${fmtCurrency(sp.rent[0])}</td></tr>
@@ -36,8 +36,8 @@ function showSpaceInfo(id) {
         ? G.players[prop.owner]
         : null;
     modal.innerHTML = `
-      <div class="prop-color-header" style="background:linear-gradient(135deg,#333,#555)">🚂 ${sp.name}</div>
-      ${owner ? `<div style="color:rgba(255,255,255,.6);font-size:.85rem;margin-bottom:.75rem">Owned by <span style="color:${owner.color};font-weight:700">${owner.token} ${owner.name}</span></div>` : '<div style="color:rgba(255,255,255,.5);font-size:.82rem;margin-bottom:.75rem">For Sale — ' + fmtCurrency(sp.price) + "</div>"}
+      <div class="prop-color-header" style="background:linear-gradient(135deg,#333,#555)">🚂 ${escHtml(sp.name)}</div>
+      ${owner ? `<div style="color:rgba(255,255,255,.6);font-size:.85rem;margin-bottom:.75rem">Owned by <span style="color:${sanitizeColor(owner.color)};font-weight:700">${escHtml(owner.token)} ${escHtml(owner.name)}</span></div>` : '<div style="color:rgba(255,255,255,.5);font-size:.82rem;margin-bottom:.75rem">For Sale — ' + fmtCurrency(sp.price) + "</div>"}
       <table class="prop-table">
         <tr><td>Price</td><td>${fmtCurrency(sp.price)}</td></tr>
         <tr><td>Rent (1 RR)</td><td>${fmtCurrency(sp.rent[0])}</td></tr>
@@ -50,9 +50,9 @@ function showSpaceInfo(id) {
     `;
   } else {
     modal.innerHTML = `
-      <div style="font-size:2.5rem;text-align:center;margin-bottom:.75rem">${sp.icon || "📋"}</div>
-      <h2 style="color:#fff;text-align:center;margin-bottom:.5rem">${sp.name}</h2>
-      <p style="color:rgba(255,255,255,.6);text-align:center">${sp.desc || ""}</p>
+      <div style="font-size:2.5rem;text-align:center;margin-bottom:.75rem">${escHtml(sp.icon || "📋")}</div>
+      <h2 style="color:#fff;text-align:center;margin-bottom:.5rem">${escHtml(sp.name)}</h2>
+      <p style="color:rgba(255,255,255,.6);text-align:center">${escHtml(sp.desc || "")}</p>
       <button class="btn btn-full" style="background:rgba(255,255,255,.1);color:#fff;margin-top:1rem" onclick="closeOverlay('prop-overlay')">Close</button>
     `;
   }
@@ -352,7 +352,7 @@ function openDrawer(type) {
           const bg = active ? "rgba(201,151,28,.12)" : "rgba(255,255,255,.05)";
           const color = sanitizeColor(p.color, "#ffffff");
           return `<div onclick="showPlayerPortfolio(${i});closeDrawer()" style="display:flex;align-items:center;gap:.55rem;padding:.5rem .55rem;border:1px solid ${border};border-radius:8px;background:${bg};margin-bottom:.38rem;cursor:pointer">
-          <div style="font-size:1.15rem;color:${color}">${p.token}</div>
+          <div style="font-size:1.15rem;color:${color}">${escHtml(p.token)}</div>
           <div style="min-width:0;flex:1">
             <div style="color:#fff;font-weight:700;font-size:.86rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(p.name)}${p.bankrupt ? " 💀" : ""}</div>
             <div style="color:rgba(255,255,255,.5);font-size:.74rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(where)}</div>
@@ -921,11 +921,17 @@ function rand(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 function fmt(n) {
-  return Math.abs(n).toLocaleString("en-BD");
+  const value = Number(n);
+  if (!Number.isFinite(value)) return "0";
+  return value.toLocaleString("en-BD");
 }
+// Renders the sign: a player in debt must read as -৳500, not ৳500.
 function fmtCurrency(n) {
   const t = window.ACTIVE_THEME || BOARD_THEMES.dhaka;
-  return `${t.currency}${Math.abs(n).toLocaleString(t.locale)}`;
+  const value = Number(n);
+  const safe = Number.isFinite(value) ? value : 0;
+  const sign = safe < 0 ? "-" : "";
+  return `${sign}${t.currency}${Math.abs(safe).toLocaleString(t.locale)}`;
 }
 function formatThemeCurrencyText(text) {
   const raw = String(text || "");
@@ -950,10 +956,15 @@ function escHtml(t) {
   return String(t ?? "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;")
+    .replace(/`/g, "&#96;");
 }
+// Attribute values need exactly the same escaping as text nodes now that
+// escHtml covers quotes; kept as a separate name for call-site clarity.
 function escAttr(t) {
-  return escHtml(String(t)).replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  return escHtml(t);
 }
 function rolledDoublesThisTurn() {
   return G.lastDoubles;
@@ -1152,7 +1163,7 @@ function showPlayerPortfolio(playerIdx, tab = "") {
           : "";
         propsHtml += `
           <div style="display:flex;align-items:center;gap:.6rem;padding:.55rem .7rem;background:rgba(255,255,255,.06);border-radius:7px;margin-bottom:.35rem;border-left:3px solid ${c}">
-            <div style="font-size:.9rem;flex:1;color:#fff;font-weight:600">${sp.name}${mortgStr}</div>
+            <div style="font-size:.9rem;flex:1;color:#fff;font-weight:600">${escHtml(sp.name)}${mortgStr}</div>
             ${buildings ? `<div style="font-size:.9rem">${buildings}</div>` : ""}
             <div style="font-size:.75rem;color:rgba(255,255,255,.45)">${fmtCurrency(sp.price || 0)}</div>
           </div>`;
@@ -1208,9 +1219,9 @@ function showPlayerPortfolio(playerIdx, tab = "") {
 
   modal.innerHTML = `
     <div style="display:flex;align-items:center;gap:.8rem;margin-bottom:1rem">
-      <div style="font-size:2rem;color:${p.color}">${p.token}</div>
+      <div style="font-size:2rem;color:${sanitizeColor(p.color)}">${escHtml(p.token)}</div>
       <div>
-        <div style="font-family:var(--font-display);font-size:1.3rem;color:#fff;font-weight:700">${p.name}${p.bankrupt ? " 💀" : ""}</div>
+        <div style="font-family:var(--font-display);font-size:1.3rem;color:#fff;font-weight:700">${escHtml(p.name)}${p.bankrupt ? " 💀" : ""}</div>
         <div style="font-size:.8rem;color:rgba(255,255,255,.5);margin-top:.15rem">${statusIcon}</div>
       </div>
       <div style="margin-left:auto;text-align:right">

@@ -549,15 +549,23 @@ function actionBuy() {
   if (G.pendingBuy === null) return;
   const id = G.pendingBuy;
   const sp = SPACES[id];
+  const prop = G.properties[id];
+  if (!sp || !prop) {
+    G.pendingBuy = null;
+    return;
+  }
+  if (prop.owner !== null && prop.owner !== undefined) {
+    toast(`${sp.name} is already owned.`, "danger");
+    G.pendingBuy = null;
+    return;
+  }
   if (p.money < sp.price) {
     toast("Not enough money!", "danger");
     return;
   }
   p.money -= sp.price;
-  G.properties[id].owner = p.id;
-  if (sp.type === "property") p.properties.push(id);
-  else if (sp.type === "railroad") p.railroads.push(id);
-  else if (sp.type === "utility") p.utilities.push(id);
+  prop.owner = p.id;
+  addOwnedAsset(p, id);
   G.pendingBuy = null;
   addLog(
     `${p.name} bought ${sp.name} for ${fmtCurrency(sp.price)}!`,
@@ -901,7 +909,7 @@ function openBuildModal() {
       const canSell = prop.houses > 0 || prop.hotel;
       row.innerHTML = `
         <div style="width:10px;height:10px;border-radius:2px;background:${c};flex-shrink:0"></div>
-        <div style="flex:1;color:#fff;font-size:.85rem;font-weight:600">${sp.name}</div>
+        <div style="flex:1;color:#fff;font-size:.85rem;font-weight:600">${escHtml(sp.name)}</div>
         <div style="color:rgba(255,255,255,.5);font-size:.78rem">${prop.hotel ? "🏨" : "🏠".repeat(prop.houses) || "—"}</div>
         <button onclick="buildHouse(${id})" ${canBuildMore && !prop.hotel ? "" : canBuildHotel ? "" : "disabled"} style="background:${canBuildMore || canBuildHotel ? "#2ecc71" : "rgba(255,255,255,.1)"};border:none;color:#fff;border-radius:5px;padding:.3rem .5rem;cursor:pointer;font-size:.75rem">${prop.houses === 4 && !prop.hotel ? `🏨 Hotel (${fmtCurrency(houseCost)})` : `🏠 Build (${fmtCurrency(houseCost)})`}</button>
         <button onclick="sellHouse(${id})" ${canSell ? "" : "disabled"} style="background:${canSell ? "#e74c3c" : "rgba(255,255,255,.1)"};border:none;color:#fff;border-radius:5px;padding:.3rem .5rem;cursor:pointer;font-size:.75rem">Sell (${fmtCurrency(Math.floor(houseCost / 2))})</button>
@@ -978,6 +986,15 @@ function sellHouse(propId) {
   const actorIsAi = shouldAutoActForAi(p);
   const sp = SPACES[propId];
   const prop = G.properties[propId];
+  if (!sp || !prop || sp.type !== "property") return;
+  if (prop.owner !== p.id) {
+    toast("You do not own this property.", "danger");
+    return;
+  }
+  if (!prop.hotel && prop.houses <= 0) {
+    toast("There is nothing to sell on this property.", "danger");
+    return;
+  }
   const refund = Math.floor(sp.house / 2);
   p.money += refund;
   playSfx("sell");
@@ -1073,7 +1090,7 @@ function openMortgageModal() {
     const canUnmortgage = prop.mortgaged && p.money >= unmortgageCost;
     row.innerHTML = `
       <div style="width:10px;height:10px;border-radius:2px;background:${color};flex-shrink:0"></div>
-      <div style="flex:1;color:${prop.mortgaged ? "rgba(255,255,255,.4)" : "#fff"};font-size:.85rem;font-weight:600">${sp.name}${prop.mortgaged ? " (mortgaged)" : ""}</div>
+      <div style="flex:1;color:${prop.mortgaged ? "rgba(255,255,255,.4)" : "#fff"};font-size:.85rem;font-weight:600">${escHtml(sp.name)}${prop.mortgaged ? " (mortgaged)" : ""}</div>
       ${
         !prop.mortgaged
           ? `<button onclick="mortgageProp(${id})" ${canMortgage ? "" : "disabled"} style="background:${canMortgage ? "#d97706" : "rgba(255,255,255,.1)"};border:none;color:#fff;border-radius:5px;padding:.3rem .5rem;cursor:pointer;font-size:.75rem">Mortgage ${fmtCurrency(mortgageValue)}</button>`
@@ -1115,6 +1132,15 @@ function unmortgageProp(id) {
   const actorIsAi = shouldAutoActForAi(p);
   const sp = SPACES[id];
   const prop = G.properties[id];
+  if (!sp || !prop) return;
+  if (prop.owner !== p.id) {
+    toast("You do not own this property.", "danger");
+    return;
+  }
+  if (!prop.mortgaged) {
+    toast("This property is not mortgaged.", "danger");
+    return;
+  }
   const cost = Math.floor(mortgageValueForSpace(sp) * 1.1);
   if (p.money < cost) {
     toast("Not enough money!", "danger");
@@ -1381,7 +1407,7 @@ function renderTradeProps() {
       item.className =
         "trade-prop-item" + (selected && !blockReason ? " selected" : "");
       const c = sp.type === "property" ? COLOR[sp.color] : "#666";
-      item.innerHTML = `<div class="tprop-dot" style="background:${c}"></div>${sp.name}`;
+      item.innerHTML = `<div class="tprop-dot" style="background:${c}"></div>${escHtml(sp.name)}`;
       if (blockReason) {
         item.style.opacity = ".55";
         item.style.cursor = "not-allowed";
