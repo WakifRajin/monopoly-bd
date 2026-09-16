@@ -619,8 +619,17 @@ function canRunAiController(now = serverNow()) {
   return String(ONLINE.aiRunner?.uid || "") === String(ONLINE.localUid || "");
 }
 
+// Two different questions, previously conflated:
+//   shouldAutoActForAi - may THIS client compute the AI's move? (needs the lease)
+//   isAiSeat           - is this seat AI-controlled at all?      (lease-agnostic)
+// Every modal decision belongs to the second. Using the first meant a lease that
+// lapsed mid-turn popped the AI's buy/card/jail dialog onto a human's screen.
 function shouldAutoActForAi(player) {
   return !!player && isAiPlayer(player) && canRunAiController();
+}
+
+function isAiSeat(player) {
+  return isAiPlayer(player);
 }
 
 function isOfflineAiAuctionTurn() {
@@ -1092,6 +1101,11 @@ function aiTryBuildOne(player) {
       const cost = Number(sp.house) || 0;
       if (cost <= 0) return;
       if (player.money - cost < reserve) return;
+      // Respect the same rules the human is held to, or buildHouse rejects the
+      // pick and the AI retries the identical move forever.
+      if (!canBuildEvenly(id)) return;
+      if (prop.houses >= 4 ? hotelsAvailable() <= 0 : housesAvailable() <= 0)
+        return;
 
       const currentRent =
         prop.houses > 0 ? sp.rent[prop.houses] || 0 : sp.rent[0] || 0;
@@ -1800,15 +1814,6 @@ function updateActionButtons() {
     G.players.filter((x) => !x.bankrupt).length > 1;
   const canEnd = !debtPending && (G.phase === "action" || G.phase === "end");
   const inJail = p.inJail;
-  const runnerUid =
-    aiTurnActive && isOnlineGame() ? activeOnlineRunnerUid() : "";
-  const runnerName = runnerUid
-    ? indexedObjectToArray(lobbyPlayers).find(
-        (lp) => String(lp?.uid || "") === runnerUid,
-      )?.name || (runnerUid === ONLINE.hostUid ? "Host" : "another client")
-    : "another client";
-  const aiWaitingForRunner =
-    aiTurnActive && isOnlineGame() && !canRunAiController();
 
   if (G.gameOver) {
     [
@@ -1883,9 +1888,7 @@ function updateActionButtons() {
             ? `💀 Resolve debt / bankruptcy`
             : `💀 ${debtPayer?.name || "Player"} resolving debt`
           : aiTurnActive
-            ? aiWaitingForRunner
-              ? `🤖 ${p.name} (run by ${runnerName})`
-              : `🤖 ${p.name} is thinking...`
+            ? `🤖 ${p.name} is thinking...`
             : !turnOwnedByMe
               ? `⏳ ${p.name} is playing`
               : inJail && G.phase === "roll"
@@ -1915,9 +1918,7 @@ function updateActionButtons() {
         ? `💀 Debt alert: short by ${fmtCurrency(debtShortBy)}. Mortgage/sell or declare bankruptcy.`
         : `💀 ${debtPayer?.name || "Player"} is resolving debt (short ${fmtCurrency(debtShortBy)}).`;
     } else if (aiTurnActive)
-      cm.textContent = aiWaitingForRunner
-        ? `🤖 ${p.name} is being run by ${runnerName}`
-        : `🤖 ${p.name} is making a move`;
+      cm.textContent = `🤖 ${p.name} is making a move`;
     else if (!turnOwnedByMe) cm.textContent = `Watching ${p.name}'s turn`;
     else if (inJail && G.phase === "roll")
       cm.textContent = `Roll doubles or pay ${fmtCurrency(bailAmount)} bail`;
@@ -1942,9 +1943,7 @@ function updateActionButtons() {
         ? `💀 Debt short ${fmtCurrency(debtShortBy)} • mortgage/sell or bankrupt`
         : `💀 ${debtPayer?.name || "Player"} is resolving debt`;
     } else if (aiTurnActive)
-      mobileTurnLine.textContent = aiWaitingForRunner
-        ? `🤖 ${p.name} (run by ${runnerName})`
-        : `🤖 ${p.name} is thinking`;
+      mobileTurnLine.textContent = `🤖 ${p.name} is thinking`;
     else if (!turnOwnedByMe)
       mobileTurnLine.textContent = `⏳ Watching ${p.name}'s turn`;
     else if (inJail && G.phase === "roll")
