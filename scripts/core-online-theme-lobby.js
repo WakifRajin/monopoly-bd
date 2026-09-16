@@ -69,7 +69,6 @@ const ONLINE_MUTATION_FUNCS = [
   "startAuction",
   "placeBid",
   "passAuction",
-  "sendChat",
 ];
 
 const ROOM_SCHEMA_VERSION = 3;
@@ -81,6 +80,7 @@ const EMPTY_ROOM_STALE_MS = 1000 * 60 * 5;
 const ROOM_CLEANUP_INTERVAL_MS = 1000 * 60 * 2;
 const ROOM_CLEANUP_BATCH_LIMIT = 16;
 const ROOM_HEARTBEAT_INTERVAL_MS = 1000 * 20;
+const SYNC_MAX_ATTEMPTS = 3;
 const PRESENCE_PING_INTERVAL_MS = 1000 * 10;
 // How long a player's seat may go silent before another client may hand it to
 // the AI. Long enough to ride out a tunnel or a backgrounded phone tab.
@@ -156,6 +156,39 @@ async function generateUniqueRoomId(maxAttempts = 20) {
 
 // RTDB security rules cannot search an array, so membership is mirrored into a
 // uid -> true map that rules can index directly. Keep it in step with players[].
+// A small public summary of each room, so the lobby list does not have to pull
+// every room's full gameState (and every password hash) just to show room codes.
+function roomIndexEntryFor(roomData, roomId) {
+  const players = indexedObjectToArray(roomData?.players).filter(
+    (p) => p && p.uid,
+  );
+  return {
+    id: String(roomId || ""),
+    status: String(roomData?.status || "lobby"),
+    visibility: String(roomData?.visibility || "open"),
+    hasPassword: !!roomData?.hasPassword,
+    schemaVersion: Number(roomData?.schemaVersion) || 0,
+    playerCount: players.length,
+    hostName: sanitizeName(
+      players.find((p) => p.uid === roomData?.hostUid)?.name,
+      "Host",
+    ),
+    updatedAt: Number(roomData?.updatedAt) || Date.now(),
+  };
+}
+
+async function writeRoomIndexEntry(roomId, roomData) {
+  if (!FIREBASE.api || !roomId) return;
+  try {
+    await FIREBASE.api.set(
+      FIREBASE.api.ref(FIREBASE.db, `roomIndex/${roomId}`),
+      roomData ? roomIndexEntryFor(roomData, roomId) : null,
+    );
+  } catch (err) {
+    console.warn("Room index update failed.", err);
+  }
+}
+
 function membersMapFromPlayers(players) {
   const out = {};
   indexedObjectToArray(players).forEach((p) => {
@@ -390,7 +423,7 @@ async function cleanupAbandonedRooms(candidateRoomIds = null, force = false) {
       : null;
     if (!candidates) {
       const snap = await FIREBASE.api.get(
-        FIREBASE.api.ref(FIREBASE.db, "rooms"),
+        FIREBASE.api.ref(FIREBASE.db, "roomIndex"),
       );
       const rawRooms = snap.exists() ? snap.val() || {} : {};
       const scanNow = Date.now();
@@ -422,6 +455,7 @@ async function cleanupAbandonedRooms(candidateRoomIds = null, force = false) {
       });
       if (tx?.committed && tx?.snapshot && !tx.snapshot.exists()) {
         removed += 1;
+        await writeRoomIndexEntry(roomId, null);
       }
     }
     return removed;
@@ -445,7 +479,12 @@ async function refreshOpenRoomsList(force = false) {
     '<div class="online-room-empty">Loading open rooms...</div>';
 
   try {
-    const snap = await FIREBASE.api.get(FIREBASE.api.ref(FIREBASE.db, "rooms"));
+    // roomIndex holds only {status, visibility, playerCount, hostName,
+    // updatedAt} per room. Reading /rooms here meant every idle client pulled
+    // every active match's full gameState on a loop.
+    const snap = await FIREBASE.api.get(
+      FIREBASE.api.ref(FIREBASE.db, "roomIndex"),
+    );
     const rawRooms = snap.exists() ? snap.val() || {} : {};
     const now = Date.now();
     const rooms = [];
@@ -463,16 +502,14 @@ async function refreshOpenRoomsList(force = false) {
       if (Number(d.schemaVersion || 0) !== ROOM_SCHEMA_VERSION) return;
       const updatedAt = roomLastActivityAt(d);
       if (isRoomAbandoned(d, now)) return;
-      const players = indexedObjectToArray(d.players).filter(
-        (p) => p && typeof p === "object",
-      );
+      const playerCount = Math.max(0, Number(d.playerCount) || 0);
       if ((d.status || "lobby") !== "lobby") return;
       if ((d.visibility || "open") !== "open") return;
-      if (players.length < 8 && isValidRoomId(roomId)) {
+      if (playerCount < 8 && isValidRoomId(roomId)) {
         rooms.push({
           id: roomId,
-          players,
-          hostUid: d.hostUid,
+          playerCount,
+          hostName: sanitizeName(d.hostName, "Host"),
           updatedAt,
         });
       }
@@ -495,11 +532,10 @@ async function refreshOpenRoomsList(force = false) {
 
     listEl.innerHTML = visibleRooms
       .map((r) => {
-        const host = r.players.find((p) => p.uid === r.hostUid)?.name || "Host";
         return `<div class="online-open-room">
         <div class="online-open-room-meta">
-          <div class="online-open-room-code">${escHtml(r.id)} • ${r.players.length}/8</div>
-          <div class="online-open-room-host">Host: ${escHtml(host)}</div>
+          <div class="online-open-room-code">${escHtml(r.id)} • ${r.playerCount}/8</div>
+          <div class="online-open-room-host">Host: ${escHtml(r.hostName)}</div>
         </div>
         <button class="btn btn-sm online-open-room-btn" onclick="joinOpenRoom('${r.id}')">Join</button>
       </div>`;
@@ -611,6 +647,7 @@ async function bootstrapFirebase() {
       serverTimestamp: dbMod.serverTimestamp,
       onDisconnect: dbMod.onDisconnect,
       remove: dbMod.remove,
+      push: dbMod.push,
     };
     // Every deadline in online play (lease expiry, presence staleness, room
     // cleanup) is compared in server time, so a wrong device clock cannot
@@ -3475,6 +3512,10 @@ function safeGameStateForRoom() {
       return value;
     }),
   );
+  // Chat lives at rooms/<id>/chat as an append-only list. Carrying it inside
+  // gameState meant two people typing at once produced a revision conflict, and
+  // the loser's message was silently dropped when the retry re-pushed local G.
+  delete raw.chat;
   return raw;
 }
 
@@ -3599,6 +3640,25 @@ function hydrateRemoteGameState(raw) {
   }
   next.properties = props;
 
+  // G.properties is the ownership source of truth. Rebuilding each player's
+  // asset lists from it on every hydrate means the two can never disagree, which
+  // removes the drift that broke repairs cards and portfolio totals.
+  next.players.forEach((player) => {
+    player.properties = [];
+    player.railroads = [];
+    player.utilities = [];
+  });
+  for (let i = 0; i < SPACES.length; i++) {
+    const prop = props[i];
+    if (!prop || prop.owner === null || prop.owner === undefined) continue;
+    const owner = next.players[prop.owner];
+    if (!owner) continue;
+    const type = SPACES[i]?.type;
+    if (type === "property") owner.properties.push(i);
+    else if (type === "railroad") owner.railroads.push(i);
+    else if (type === "utility") owner.utilities.push(i);
+  }
+
   const curIdx = Number(next.currentPlayerIdx);
   next.currentPlayerIdx =
     Number.isInteger(curIdx) && curIdx >= 0 && curIdx < next.players.length
@@ -3625,12 +3685,23 @@ function hydrateRemoteGameState(raw) {
     .filter(Boolean);
   if (next.log.length > GAME_LOG_LIMIT)
     next.log = next.log.slice(-GAME_LOG_LIMIT);
-  next.chat = indexedObjectToArray(next.chat).filter(Boolean);
+  next.chat = Array.isArray(G?.chat) ? G.chat : [];
   next.chanceDeck = indexedObjectToArray(next.chanceDeck);
   next.communityDeck = indexedObjectToArray(next.communityDeck);
   next.bankAuctionQueue = indexedObjectToArray(next.bankAuctionQueue).filter(
     Number.isInteger,
   );
+  // Firebase strips null values, so `pendingBuy: null` is simply absent from the
+  // snapshot and comes back undefined. Every `G.pendingBuy !== null` test then
+  // reads true, which traps an AI player in the buy branch and stalls the match.
+  const pendingBuyRaw = Number(next.pendingBuy);
+  next.pendingBuy =
+    Number.isInteger(pendingBuyRaw) &&
+    pendingBuyRaw >= 0 &&
+    pendingBuyRaw < SPACES.length
+      ? pendingBuyRaw
+      : null;
+
   next.auctionEnabled = sanitizeAuctionEnabled(next.auctionEnabled, true);
   next.pendingCollections = indexedObjectToArray(next.pendingCollections)
     .map((entry) => {
@@ -3781,6 +3852,9 @@ function hydrateRemoteGameState(raw) {
         );
         G.auctionState.source =
           G.auctionState.source === "bank" ? "bank" : "market";
+        const rawSince = Number(G.auctionState.bidderSince);
+        G.auctionState.bidderSince =
+          Number.isFinite(rawSince) && rawSince > 0 ? rawSince : Date.now();
       }
     }
   }
@@ -3798,6 +3872,7 @@ async function syncRoomState(reason = "") {
 
   try {
     let currentReason = reason || "sync";
+    let attempts = 0;
     while (true) {
       const baseRevision = Number(ONLINE.revision) || 0;
       const nextRevision = baseRevision + 1;
@@ -3830,19 +3905,35 @@ async function syncRoomState(reason = "") {
 
       if (txResult?.committed) {
         ONLINE.revision = nextRevision;
+        attempts = 0;
         if (ONLINE.syncQueuedReason) {
           currentReason = ONLINE.syncQueuedReason;
           ONLINE.syncQueuedReason = null;
           continue;
         }
         break;
-      } else {
-        const snapData = txResult?.snapshot?.val ? txResult.snapshot.val() : null;
-        if (snapData) {
-          ONLINE.revision = Number(snapData.revision) || 0;
-        }
-        continue;
       }
+
+      // The server moved on while we were writing. Re-pushing our local G here
+      // is what used to silently overwrite the other client's move, so give the
+      // remote revision a bounded number of chances and then defer to it.
+      const snapData = txResult?.snapshot?.val ? txResult.snapshot.val() : null;
+      if (snapData) {
+        ONLINE.revision = Number(snapData.revision) || 0;
+      }
+
+      attempts += 1;
+      if (attempts >= SYNC_MAX_ATTEMPTS) {
+        console.warn(
+          `Sync "${currentReason}" conflicted ${attempts} times; keeping the server's state.`,
+        );
+        if (snapData) {
+          ONLINE.queuedSnapshot = snapData;
+          processQueuedRoomSnapshots();
+        }
+        break;
+      }
+      await waitMs(120 * attempts);
     }
   } catch (err) {
     console.error(err);
@@ -3897,6 +3988,30 @@ async function applyRoomSnapshot(data) {
         until: Number(aiRunnerRaw.until) || 0,
       }
     : null;
+
+  const rawChat =
+    data.chat && typeof data.chat === "object" ? data.chat : null;
+  if (rawChat) {
+    const entries = Array.isArray(rawChat)
+      ? rawChat.filter(Boolean)
+      : Object.keys(rawChat)
+          .sort()
+          .map((k) => rawChat[k])
+          .filter(Boolean);
+    const nextChat = entries
+      .map((m) => ({
+        uid: m?.uid || null,
+        name: sanitizeName(m?.name, "Player"),
+        token: sanitizeToken(m?.token, TOKENS[0]),
+        color: sanitizeColor(m?.color, "#ffffff"),
+        text: String(m?.text || "").slice(0, 300),
+        time: Number(m?.time) || 0,
+      }))
+      .filter((m) => m.text)
+      .sort((a, b) => a.time - b.time);
+    if (!G || typeof G !== "object") G = {};
+    G.chat = nextChat.slice(-120);
+  }
 
   const rawPresence =
     data.presence && typeof data.presence === "object" ? data.presence : {};
@@ -4017,6 +4132,12 @@ async function applyRoomSnapshot(data) {
   }
 
   updateOnlineLobbyUI();
+
+  // We already hold the room document; refreshing its index entry here costs one
+  // small write and keeps the lobby list accurate without anyone scanning.
+  if (ONLINE.isHost && ONLINE.roomId) {
+    writeRoomIndexEntry(ONLINE.roomId, data);
+  }
 }
 
 async function processQueuedRoomSnapshots() {
@@ -4249,6 +4370,15 @@ async function createOnlineRoom() {
   }
 
   lobbyPlayers = [me];
+  await writeRoomIndexEntry(createdRoomId, {
+    status: "lobby",
+    visibility,
+    hasPassword: visibility === "closed",
+    schemaVersion: ROOM_SCHEMA_VERSION,
+    players: [me],
+    hostUid: ONLINE.localUid,
+    updatedAt: Date.now(),
+  });
   attachRoomListener(createdRoomId);
   const codeEl = document.getElementById("join-room-code");
   if (codeEl) codeEl.value = createdRoomId;
