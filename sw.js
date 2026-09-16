@@ -40,6 +40,19 @@ self.addEventListener('activate', event => {
   );
 });
 
+// Code and markup must be network-first. The online rules are versioned against
+// the client build, so serving a stale script from cache locks the player out of
+// rooms entirely; the cache is only an offline fallback for these.
+function isCodeAsset(url) {
+  const path = url.pathname.toLowerCase();
+  return (
+    path.endsWith('.html') ||
+    path.endsWith('.css') ||
+    path.endsWith('.js') ||
+    path.endsWith('.json')
+  );
+}
+
 function isCacheableRuntimeAsset(url) {
   if (url.origin !== self.location.origin) return false;
   const path = url.pathname.toLowerCase();
@@ -76,6 +89,24 @@ async function handleNavigationRequest(request) {
   }
 }
 
+// Network-first: always try the deployed file, fall back to cache only offline.
+async function handleCodeAssetRequest(request) {
+  const runtimeCache = await caches.open(RUNTIME_CACHE);
+  try {
+    const networkResponse = await fetch(request);
+    if (networkResponse && networkResponse.ok) {
+      runtimeCache.put(request, networkResponse.clone());
+      return networkResponse;
+    }
+    const cachedResponse = await runtimeCache.match(request);
+    return cachedResponse || networkResponse;
+  } catch (error) {
+    const cachedResponse = await runtimeCache.match(request);
+    return cachedResponse || Response.error();
+  }
+}
+
+// Cache-first, for immutable media only.
 async function handleRuntimeAssetRequest(request) {
   const runtimeCache = await caches.open(RUNTIME_CACHE);
   const cachedResponse = await runtimeCache.match(request);
@@ -109,6 +140,11 @@ self.addEventListener('fetch', event => {
 
   const url = new URL(request.url);
   if (!isCacheableRuntimeAsset(url)) return;
+
+  if (isCodeAsset(url)) {
+    event.respondWith(handleCodeAssetRequest(request));
+    return;
+  }
 
   event.respondWith(handleRuntimeAssetRequest(request));
 });

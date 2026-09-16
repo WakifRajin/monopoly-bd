@@ -44,6 +44,12 @@ const ONLINE = {
   lastHeartbeatAt: 0,
   snapshotApplyInFlight: false,
   queuedSnapshot: null,
+  serverTimeOffset: 0,
+  presence: {},
+  presenceRef: null,
+  lastPresencePingAt: 0,
+  takeoverInFlight: false,
+  lastTakeoverKey: "",
 };
 
 const ONLINE_MUTATION_FUNCS = [
@@ -75,6 +81,10 @@ const EMPTY_ROOM_STALE_MS = 1000 * 60 * 5;
 const ROOM_CLEANUP_INTERVAL_MS = 1000 * 60 * 2;
 const ROOM_CLEANUP_BATCH_LIMIT = 16;
 const ROOM_HEARTBEAT_INTERVAL_MS = 1000 * 20;
+const PRESENCE_PING_INTERVAL_MS = 1000 * 10;
+// How long a player's seat may go silent before another client may hand it to
+// the AI. Long enough to ride out a tunnel or a backgrounded phone tab.
+const PRESENCE_GRACE_MS = 1000 * 60;
 const AUCTION_OPENING_MIN_PERCENT = 60;
 const AUCTION_OPENING_MAX_PERCENT = 80;
 const DEFAULT_RAILROAD_PRICE = 2000;
@@ -524,7 +534,16 @@ async function bootstrapFirebase() {
       onValue: dbMod.onValue,
       runTransaction: dbMod.runTransaction,
       serverTimestamp: dbMod.serverTimestamp,
+      onDisconnect: dbMod.onDisconnect,
+      remove: dbMod.remove,
     };
+    // Every deadline in online play (lease expiry, presence staleness, room
+    // cleanup) is compared in server time, so a wrong device clock cannot
+    // expire another player's turn or delete a live room.
+    dbMod.onValue(dbMod.ref(FIREBASE.db, ".info/serverTimeOffset"), (snap) => {
+      const offset = Number(snap.val());
+      if (Number.isFinite(offset)) ONLINE.serverTimeOffset = offset;
+    });
     ONLINE.ready = true;
     updateOnlineStatus("Online service ready. You can create or join a room.");
   } catch (err) {
@@ -565,6 +584,11 @@ function firebaseErrorMessage(err, fallback = "Online request failed.") {
     return "Network error while contacting RTDB. Check your internet connection.";
   }
   return fallback;
+}
+
+// Milliseconds since epoch, corrected to the database's clock.
+function serverNow() {
+  return Date.now() + (Number(ONLINE.serverTimeOffset) || 0);
 }
 
 function isOnlineGame() {
