@@ -268,6 +268,81 @@ function isRoomAbandoned(roomData, now = Date.now()) {
   return age > OPEN_ROOM_STALE_MS;
 }
 
+// ── Presence ──────────────────────────────────────────────────────────────
+// A closed tab, a dead network or a crashed browser never runs leaveOnlineRoom,
+// so without this a departed player holds their turn forever and the match
+// stops. onDisconnect is registered server-side and fires even if the client
+// vanishes without warning.
+async function setupPresence(roomId) {
+  if (!FIREBASE.api?.onDisconnect || !ONLINE.localUid) return;
+  try {
+    const ref = FIREBASE.api.ref(
+      FIREBASE.db,
+      `rooms/${roomId}/presence/${ONLINE.localUid}`,
+    );
+    ONLINE.presenceRef = ref;
+    await FIREBASE.api.onDisconnect(ref).set({
+      online: false,
+      at: FIREBASE.api.serverTimestamp(),
+    });
+    await FIREBASE.api.set(ref, {
+      online: true,
+      at: FIREBASE.api.serverTimestamp(),
+    });
+    ONLINE.lastPresencePingAt = Date.now();
+  } catch (err) {
+    console.warn("Presence registration failed.", err);
+  }
+}
+
+async function pulsePresence() {
+  if (!isOnlineGame() || !ONLINE.presenceRef) return;
+  const now = Date.now();
+  if (now - ONLINE.lastPresencePingAt < PRESENCE_PING_INTERVAL_MS) return;
+  ONLINE.lastPresencePingAt = now;
+  try {
+    await FIREBASE.api.set(ONLINE.presenceRef, {
+      online: true,
+      at: FIREBASE.api.serverTimestamp(),
+    });
+  } catch (err) {
+    console.warn("Presence ping failed.", err);
+  }
+}
+
+async function clearPresence() {
+  const ref = ONLINE.presenceRef;
+  ONLINE.presenceRef = null;
+  ONLINE.presence = {};
+  if (!ref || !FIREBASE.api) return;
+  try {
+    await FIREBASE.api.onDisconnect(ref).cancel();
+  } catch (err) {
+    /* the connection may already be gone */
+  }
+  try {
+    await FIREBASE.api.set(ref, null);
+  } catch (err) {
+    /* nothing useful to do if this fails */
+  }
+}
+
+// How long since we last heard from this uid, in server time.
+function presenceAgeMs(uid, now = serverNow()) {
+  const entry = ONLINE.presence?.[String(uid || "")];
+  if (!entry) return Number.POSITIVE_INFINITY;
+  if (entry.online === false) return Number.POSITIVE_INFINITY;
+  const at = Number(entry.at) || 0;
+  if (!at) return Number.POSITIVE_INFINITY;
+  return Math.max(0, now - at);
+}
+
+function isSeatAbsent(uid) {
+  const id = String(uid || "");
+  if (!id || id === ONLINE.localUid) return false;
+  return presenceAgeMs(id) > PRESENCE_GRACE_MS;
+}
+
 async function pulseRoomHeartbeat(force = false) {
   if (!isOnlineGame() || !FIREBASE.api) return;
   if (ONLINE.status !== "lobby" || !ONLINE.isHost) return;
@@ -3823,6 +3898,18 @@ async function applyRoomSnapshot(data) {
       }
     : null;
 
+  const rawPresence =
+    data.presence && typeof data.presence === "object" ? data.presence : {};
+  ONLINE.presence = Object.fromEntries(
+    Object.entries(rawPresence).map(([uid, v]) => [
+      String(uid),
+      {
+        online: v?.online !== false,
+        at: Number(v?.at) || 0,
+      },
+    ]),
+  );
+
   const roomPlayers = indexedObjectToArray(data.players).map((p, i) => ({
     uid: p.uid || null,
     name: sanitizeName(p.name, `Player ${i + 1}`),
@@ -3989,6 +4076,7 @@ function attachRoomListener(roomId) {
     },
   );
   pulseRoomHeartbeat(true);
+  setupPresence(roomId);
 }
 
 function updateOnlineLobbyUI() {
@@ -4663,6 +4751,69 @@ async function confirmLeaveOnlineGame(mode) {
   }
 }
 
+// Hand an absent player's seat to the AI so the match can continue. Runs on
+// whichever client notices first; the transaction makes the race harmless.
+async function takeOverAbsentSeat(uid, name) {
+  if (ONLINE.takeoverInFlight || !FIREBASE.api || !isOnlineGame()) return false;
+  ONLINE.takeoverInFlight = true;
+  try {
+    const result = await FIREBASE.api.runTransaction(getRoomRef(), (data) => {
+      if (!data || typeof data !== "object") return data;
+      if ((data.status || "lobby") !== "playing") return data;
+      const stillThere = indexedObjectToArray(data.players).some(
+        (p) => p && p.uid === uid,
+      );
+      if (!stillThere) return data;
+      return applyOnlineDepartureRuleToRoomData(data, uid, "ai");
+    });
+    if (result?.committed) {
+      addLog(`${name} lost connection. AI has taken over their seat.`, "important");
+      return true;
+    }
+  } catch (err) {
+    console.error("Seat takeover failed.", err);
+  } finally {
+    ONLINE.takeoverInFlight = false;
+  }
+  return false;
+}
+
+// Only intervene when an absent seat is actually blocking play: it is their
+// turn, their bid, or their trade to answer. A disconnected player who is not
+// holding anything up is left alone in case they come back.
+function maybeTakeOverAbsentSeat() {
+  if (!isOnlineGame() || ONLINE.status !== "playing") return;
+  if (ONLINE.isApplyingRemote || ONLINE.takeoverInFlight) return;
+  if (!G || !Array.isArray(G.players) || G.gameOver) return;
+
+  const blocking = [];
+  const cur = G.players[G.currentPlayerIdx];
+  if (cur && !cur.bankrupt && !isAiPlayer(cur)) blocking.push(cur);
+
+  if (G.auctionState) {
+    const bidderId = currentAuctionBidderId();
+    const bidder = Number.isInteger(bidderId) ? G.players[bidderId] : null;
+    if (bidder && !bidder.bankrupt && !isAiPlayer(bidder)) blocking.push(bidder);
+  }
+  if (G.pendingTrade) {
+    const to = G.players[Number(G.pendingTrade.toId)];
+    if (to && !to.bankrupt && !isAiPlayer(to)) blocking.push(to);
+  }
+  const debtPayer = DEBT_PROMPT.active ? G.players[DEBT_PROMPT.payerId] : null;
+  if (debtPayer && !debtPayer.bankrupt && !isAiPlayer(debtPayer))
+    blocking.push(debtPayer);
+
+  for (const player of blocking) {
+    if (!player?.uid || player.uid === ONLINE.localUid) continue;
+    if (!isSeatAbsent(player.uid)) continue;
+    const key = `${player.uid}:${G.currentPlayerIdx}`;
+    if (ONLINE.lastTakeoverKey === key) continue;
+    ONLINE.lastTakeoverKey = key;
+    takeOverAbsentSeat(player.uid, player.name);
+    return;
+  }
+}
+
 async function leaveOnlineRoom(
   showToast = true,
   mutateRoom = true,
@@ -4692,6 +4843,8 @@ async function leaveOnlineRoom(
   }
 
   const wasPlaying = ONLINE.status === "playing";
+
+  await clearPresence();
 
   const roomId = ONLINE.roomId;
   const roomRef = FIREBASE.api.ref(FIREBASE.db, `rooms/${roomId}`);
