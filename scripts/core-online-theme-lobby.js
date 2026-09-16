@@ -3781,6 +3781,12 @@ function hydrateRemoteGameState(raw) {
   }
 
   G = next;
+  // pendingCardResolutions is client-local, so a snapshot that lands before a
+  // card was resolved leaves it stranded above zero - and that counter gates
+  // every AI step and end-turn. The incoming state is authoritative, so any
+  // card UI it did not include is void.
+  ONLINE.pendingCardResolutions = 0;
+  closeOverlay("card-overlay");
   restoreDebtPromptFromGameState(G);
   if (G.auctionState) {
     const activePlayersRaw = indexedObjectToArray(G.auctionState.activePlayers)

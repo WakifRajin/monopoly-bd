@@ -455,8 +455,15 @@ function drawCard(type, p) {
     checkBankruptcy();
   };
 
-  if (shouldAutoActForAi(getLivePlayer(playerId) || p)) {
+  const cardActor = getLivePlayer(playerId) || p;
+  if (isAiSeat(cardActor)) {
+    // Never show an AI's card to a human. Only the client holding the lease
+    // resolves it; everyone else just waits for the resulting snapshot.
     closeOverlay("card-overlay");
+    if (!shouldAutoActForAi(cardActor)) {
+      finalizeCardResolution(false).catch((err) => console.error(err));
+      return;
+    }
     apply()
       .then(() => finalizeCardResolution(true))
       .catch((err) => {
@@ -505,7 +512,7 @@ function nearestRailroad(pos) {
 //  BUY / AUCTION
 // ═══════════════════════════════════════════════
 function promptBuy(p, sp) {
-  if (shouldAutoActForAi(p)) {
+  if (isAiSeat(p)) {
     closeOverlay("buy-overlay");
     return;
   }
@@ -1026,7 +1033,7 @@ function canSellEvenly(propId) {
 function buildHouse(propId) {
   if (!requireTurnControl()) return;
   const p = curPlayer();
-  const actorIsAi = shouldAutoActForAi(p);
+  const actorIsAi = isAiSeat(p);
   const sp = SPACES[propId];
   const prop = G.properties[propId];
   if (!sp || !prop || sp.type !== "property") return;
@@ -1102,7 +1109,7 @@ function buildHouse(propId) {
 function sellHouse(propId) {
   if (!requireTurnControl()) return;
   const p = curPlayer();
-  const actorIsAi = shouldAutoActForAi(p);
+  const actorIsAi = isAiSeat(p);
   const sp = SPACES[propId];
   const prop = G.properties[propId];
   if (!sp || !prop || sp.type !== "property") return;
@@ -1233,7 +1240,7 @@ function openMortgageModal() {
 function mortgageProp(id) {
   if (!requireTurnControl()) return;
   const p = curPlayer();
-  const actorIsAi = shouldAutoActForAi(p);
+  const actorIsAi = isAiSeat(p);
   const sp = SPACES[id];
   const prop = G.properties[id];
   if (!canMortgageAsset(p, id)) {
@@ -1257,7 +1264,7 @@ function mortgageProp(id) {
 function unmortgageProp(id) {
   if (!requireTurnControl()) return;
   const p = curPlayer();
-  const actorIsAi = shouldAutoActForAi(p);
+  const actorIsAi = isAiSeat(p);
   const sp = SPACES[id];
   const prop = G.properties[id];
   if (!sp || !prop) return;
@@ -1787,7 +1794,7 @@ function showJailPrompt(p, mode = "turn") {
   if (!iconEl || !titleEl || !descEl || !actionsEl || !p) return;
   const bailAmount = getThemeJailBail(G.boardThemeId || selectedThemeId);
 
-  if (shouldAutoActForAi(p)) {
+  if (isAiSeat(p)) {
     closeOverlay("jail-overlay");
     return;
   }
@@ -2075,6 +2082,11 @@ function showDebtPrompt(p, amount, recipient = null) {
     sellBtn.style.display = hasBuildings ? "" : "none";
   }
   syncDebtPromptToGameState();
+  // An AI settling a debt is not a decision any human needs to dismiss.
+  if (isAiSeat(p)) {
+    closeOverlay("bankrupt-overlay");
+    return;
+  }
   openOverlay("bankrupt-overlay");
 }
 
@@ -2147,7 +2159,7 @@ function chargeMoney(p, amount, recipient = null) {
   amount = due;
   if (!p || p.bankrupt) return false;
 
-  const actorIsAi = shouldAutoActForAi(p);
+  const actorIsAi = isAiSeat(p);
 
   if (p.money < amount && actorIsAi) {
     const raised = sellBuildingsForEmergencyCash(p);
@@ -2259,7 +2271,7 @@ function collectFromEveryPlayer(actor, amount) {
 }
 
 function showRentModal(payer, owner, propName, rent) {
-  if (shouldAutoActForAi(payer)) {
+  if (isAiSeat(payer)) {
     closeOverlay("rent-overlay");
     return;
   }
@@ -2423,7 +2435,7 @@ function declareBankruptcy(p, creditor = null, debtAmount = 0) {
   }
   processPendingCollections();
 
-  if (shouldAutoActForAi(p)) {
+  if (isAiSeat(p)) {
     closeOverlay("bankrupt-overlay");
     G.phase = "end";
     renderAll();

@@ -619,8 +619,17 @@ function canRunAiController(now = serverNow()) {
   return String(ONLINE.aiRunner?.uid || "") === String(ONLINE.localUid || "");
 }
 
+// Two different questions, previously conflated:
+//   shouldAutoActForAi - may THIS client compute the AI's move? (needs the lease)
+//   isAiSeat           - is this seat AI-controlled at all?      (lease-agnostic)
+// Every modal decision belongs to the second. Using the first meant a lease that
+// lapsed mid-turn popped the AI's buy/card/jail dialog onto a human's screen.
 function shouldAutoActForAi(player) {
   return !!player && isAiPlayer(player) && canRunAiController();
+}
+
+function isAiSeat(player) {
+  return isAiPlayer(player);
 }
 
 function isOfflineAiAuctionTurn() {
