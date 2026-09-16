@@ -1827,6 +1827,12 @@ body.route-leaving::after {
 
 /* ── BOARD ── */
 .board {
+  /* Everything inside the board sizes against the board itself, not the
+     viewport. With vmin, a fullscreen desktop pinned the text at its clamp
+     ceiling while the board kept growing (text far too small), and a medium
+     desktop shrank the board without shrinking the text (overlap). */
+  container-type: inline-size;
+  container-name: board;
   display: grid;
   grid-template-columns: 1.65fr repeat(9, 1fr) 1.65fr;
   grid-template-rows: 1.65fr repeat(9, 1fr) 1.65fr;
@@ -2202,50 +2208,6 @@ body[data-theme="classic"] .center-sub {
   height: 18%;
   min-height: 7px;
   writing-mode: horizontal-tb;
-}
-
-#sp11 .sp-name,
-#sp12 .sp-name,
-#sp13 .sp-name,
-#sp14 .sp-name,
-#sp15 .sp-name,
-#sp16 .sp-name,
-#sp17 .sp-name,
-#sp18 .sp-name,
-#sp19 .sp-name,
-#sp31 .sp-name,
-#sp32 .sp-name,
-#sp33 .sp-name,
-#sp34 .sp-name,
-#sp35 .sp-name,
-#sp36 .sp-name,
-#sp37 .sp-name,
-#sp38 .sp-name,
-#sp39 .sp-name {
-  font-size: 0.92em;
-  line-height: 1.05;
-  word-break: break-word;
-}
-
-#sp11 .sp-price,
-#sp12 .sp-price,
-#sp13 .sp-price,
-#sp14 .sp-price,
-#sp15 .sp-price,
-#sp16 .sp-price,
-#sp17 .sp-price,
-#sp18 .sp-price,
-#sp19 .sp-price,
-#sp31 .sp-price,
-#sp32 .sp-price,
-#sp33 .sp-price,
-#sp34 .sp-price,
-#sp35 .sp-price,
-#sp36 .sp-price,
-#sp37 .sp-price,
-#sp38 .sp-price,
-#sp39 .sp-price {
-  font-size: 0.74em;
 }
 
 .center-area {
@@ -3671,5 +3633,132 @@ body[data-theme="classic"] .space .sp-rent {
     flex: 0 0 auto;
     padding: 0.45rem 0.55rem;
     font-size: 0.72rem;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   BOARD-RELATIVE SCALING
+
+   The grid is `1.65fr repeat(9, 1fr) 1.65fr` = 12.3fr across, so with the
+   board as the container (100cqi wide):
+     · an edge square  = 100 / 12.3      ≈  8.1cqi
+     · a corner square = 1.65 * 100/12.3 ≈ 13.4cqi
+     · the centre area = 9 * 8.1         ≈ 73cqi
+   Sizes below are derived from those fractions, so every element keeps the
+   same proportion of a square at any board size.
+
+   The vmin rules above remain as the fallback for engines without container
+   query units; this block only applies where they are supported.
+   ══════════════════════════════════════════════════════════════════════════ */
+@supports (font-size: 1cqi) {
+  .space {
+    font-size: clamp(0.48rem, 1.55cqi, 1.3rem);
+  }
+  .space.corner {
+    font-size: clamp(0.48rem, 1.42cqi, 1.22rem);
+  }
+
+  /* A side square is 8.1cqi tall against an edge square's 13.4cqi, so the same
+     type scale overflows it. It gets its own, slightly tighter one. */
+  .space.side {
+    font-size: clamp(0.46rem, 1.3cqi, 1.1rem);
+    line-height: 1;
+  }
+  .space.side .sp-name {
+    font-size: 0.88em;
+    padding: 1px 0;
+  }
+  .space.side .sp-price {
+    font-size: 0.72em;
+  }
+
+  .center-title {
+    font-size: clamp(0.95rem, 4cqi, 2.6rem);
+  }
+  .center-sub {
+    font-size: clamp(0.5rem, 1.45cqi, 1rem);
+  }
+  #center-msg {
+    font-size: clamp(0.55rem, 1.35cqi, 0.95rem);
+  }
+
+  .die {
+    width: clamp(26px, 5cqi, 54px);
+    height: clamp(26px, 5cqi, 54px);
+  }
+  .dot {
+    width: clamp(4px, 0.95cqi, 9px);
+    height: clamp(4px, 0.95cqi, 9px);
+  }
+  #roll-btn {
+    font-size: clamp(0.7rem, 1.85cqi, 1.05rem);
+  }
+
+  .pmarker {
+    width: clamp(18px, 4cqi, 40px);
+    height: clamp(18px, 4cqi, 40px);
+    font-size: clamp(10px, 2.5cqi, 24px);
+  }
+
+  /* The ownership pill was fixed at 22x16px: oversized on a small board,
+     lost on a large one. */
+  .own-dot {
+    min-width: clamp(16px, 2.5cqi, 28px);
+    height: clamp(12px, 1.9cqi, 21px);
+    font-size: clamp(7px, 1.1cqi, 12px);
+    padding: 0 clamp(3px, 0.5cqi, 6px);
+  }
+
+  /* Rent is the first thing to go when a square gets tight — the name and
+     price have to stay legible. */
+  @container board (max-width: 640px) {
+    .space .sp-rent {
+      display: none;
+    }
+  }
+
+  /* Below this the font hits its readability floor and stops shrinking with
+     the square, so the square has to give up its spacing instead — otherwise
+     long names overflow into their neighbours. */
+  @container board (max-width: 560px) {
+    .space {
+      padding: 2px 1px;
+      line-height: 1.02;
+    }
+    .space .sp-name {
+      padding: 1px 0;
+      hyphens: auto;
+    }
+    .space .color-bar {
+      min-height: 5px;
+    }
+  }
+  @container board (max-width: 480px) {
+    .space .sp-price {
+      font-size: 0.7em;
+    }
+    .space .sp-icon {
+      font-size: 1.1em;
+    }
+  }
+
+  /* Phone-sized board. The price is a short number and must stay readable, so
+     the long place names take the reduction instead of being clipped. */
+  @container board (max-width: 440px) {
+    .space .sp-name {
+      font-size: 0.85em;
+      letter-spacing: -0.01em;
+    }
+  }
+  @container board (max-width: 400px) {
+    .space .sp-name {
+      font-size: 0.74em;
+    }
+    .space.side .sp-name {
+      font-size: 0.7em;
+    }
+    .space .sp-price {
+      font-size: 0.64em;
+    }
   }
 }
