@@ -1,4 +1,7 @@
-const SW_VERSION = '1.0.0';
+// Bump this on every deploy. Caches are keyed by it, and activate() deletes the
+// old ones — without a bump, returning players keep running cached scripts and
+// can end up on a mixed set of old and new files.
+const SW_VERSION = '1.1.0';
 const STATIC_CACHE = `monopoly-bd-static-${SW_VERSION}`;
 const RUNTIME_CACHE = `monopoly-bd-runtime-${SW_VERSION}`;
 

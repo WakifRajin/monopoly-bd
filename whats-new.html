@@ -345,6 +345,27 @@ body::before{
 
     <div class="section-label">Latest Update</div>
     <section class="log-card">
+      <h2 class="log-version">Update 0.0.9 - Security and Economy Fixes</h2>
+      <h3 class="log-subtitle">Closed exploits, protected online rooms, and money that adds up</h3>
+      <ul class="changes">
+        <li>Fixed an exploit where the sell-building action paid out money for properties you did not own, or that had nothing built on them. It now checks ownership and buildings before paying anything.</li>
+        <li>Buying and unmortgaging now confirm ownership first, so a stale action can no longer take over an owned property or charge you for someone else's mortgage.</li>
+        <li>Custom board seeds are now cleaned before use, so a shared or hosted board can no longer inject anything into another player's game.</li>
+        <li>Online rooms now enforce permissions on the server. Only players in a room can change it, only the host can change settings, and a room's turn counter can no longer be rewound.</li>
+        <li>Closed-room passwords are no longer stored anywhere other players can read them. They are now checked on the server instead of in the browser.</li>
+        <li>Abandoned rooms are now cleaned up using server time, so a device with a wrong clock can no longer delete rooms that are still in use.</li>
+        <li>Negative balances now show with a minus sign. Previously a player ৳500 in debt was displayed as if they held ৳500.</li>
+        <li>Birthday cards now collect from each player properly. Money is no longer paid to the card holder by players who cannot actually afford it.</li>
+        <li>When several players owe money at the same time, each debt is now settled in turn. Previously a second debt could quietly cancel the first.</li>
+        <li>A match where every remaining player goes bankrupt at once now ends properly and awards the win to whoever survived longest, instead of hanging with no winner.</li>
+        <li>Online rooms now require everyone to be on the same build, so mismatched versions can no longer share a room and corrupt each other's game state.</li>
+        <li>Added a diagnostic mode for testing: open the game with ?debug to have it continuously check the board and balances for inconsistencies.</li>
+      </ul>
+    </section>
+
+    <div class="section-label">Previous Updates</div>
+    <div class="stack">
+      <section class="log-card">
       <h2 class="log-version">Update 0.0.8 - UI Updates and Custom Board Editor</h2>
       <h3 class="log-subtitle">Homepage polish, board tools, audio, and reliability</h3>
       <ul class="changes">
@@ -358,10 +379,8 @@ body::before{
         <li>Refined the Report button so it stays compact and fully inside the viewport.</li>
         <li>Redesigned this Credits and Patch Logs page to match the new homepage visual language.</li>
       </ul>
-    </section>
+      </section>
 
-    <div class="section-label">Previous Updates</div>
-    <div class="stack">
       <section class="log-card">
         <h2 class="log-version">Update 0.0.7 - Classic Board and Stability Fixes</h2>
         <h3 class="log-subtitle">Rule parity and turn-flow reliability</h3>
