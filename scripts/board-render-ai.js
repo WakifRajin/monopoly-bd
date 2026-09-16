@@ -15,6 +15,11 @@ function buildBoard() {
   SPACES.forEach((s) => {
     const el = document.createElement("div");
     el.className = "space";
+    // The left and right columns are short and wide, the opposite of the top
+    // and bottom rows, so they need their own type scale.
+    if ((s.id > 10 && s.id < 20) || (s.id > 30 && s.id < 40)) {
+      el.classList.add("side");
+    }
     el.id = `sp${s.id}`;
     el.onclick = () => showSpaceInfo(s.id);
 
