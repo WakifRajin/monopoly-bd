@@ -1636,14 +1636,21 @@ function installOnlineMutationHooks() {
         await result;
       }
       auditGameState(name);
-      if (isOnlineGame() && !ONLINE.isApplyingRemote) {
+      if (isOnlineGame()) {
         if (
           name === "rollDice" &&
           (Number(ONLINE.pendingCardResolutions) || 0) > 0
         ) {
           return result;
         }
-        await syncRoomState(name);
+        if (ONLINE.isApplyingRemote) {
+          // A remote snapshot is mid-apply. Dropping the sync here lost the
+          // move outright - the next snapshot simply reverted it - so queue it
+          // and let the apply flush it when it finishes.
+          ONLINE.syncQueuedReason = name;
+        } else {
+          await syncRoomState(name);
+        }
       }
       return result;
     };

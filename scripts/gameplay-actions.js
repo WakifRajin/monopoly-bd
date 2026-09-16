@@ -224,7 +224,7 @@ function landOn(p, rolledDoubles, opts = null) {
   } else if (sp.type === "tax") {
     addLog(`${p.name} pays ${fmtCurrency(sp.amount)} tax.`, "danger");
     playSfx("tax");
-    chargeMoney(p, sp.amount, null, true);
+    chargeMoney(p, sp.amount, null);
     G.phase = "end";
   } else if (
     sp.type === "property" ||
@@ -405,7 +405,7 @@ function drawCard(type, p) {
         );
         toast(`+${fmtCurrency(card.value)}`, "gold");
       } else {
-        const paid = chargeMoney(actor, -card.value, null, true);
+        const paid = chargeMoney(actor, -card.value, null);
         if (paid)
           addLog(
             `${actor.name} paid ${fmtCurrency(-card.value)} due to a card effect.`,
@@ -432,7 +432,7 @@ function drawCard(type, p) {
         else cost += pr.houses * card.value.house;
       });
       if (cost > 0) {
-        chargeMoney(actor, cost, null, true);
+        chargeMoney(actor, cost, null);
         addLog(
           `${actor.name} paid ${fmtCurrency(cost)} for repairs.`,
           "danger",
@@ -938,11 +938,25 @@ function openBuildModal() {
         "display:flex;align-items:center;gap:.7rem;padding:.6rem;background:rgba(255,255,255,.06);border-radius:7px;margin-bottom:.4rem";
       const c = COLOR[sp.color];
       const houseCost = sp.house;
+      const evenBuild = canBuildEvenly(id);
+      const supplyOk =
+        prop.houses >= 4 ? hotelsAvailable() > 0 : housesAvailable() > 0;
       const canBuildMore =
-        !prop.hotel && prop.houses < 4 && p.money >= houseCost;
+        !prop.hotel &&
+        prop.houses < 4 &&
+        p.money >= houseCost &&
+        evenBuild &&
+        supplyOk;
       const canBuildHotel =
-        prop.houses === 4 && !prop.hotel && p.money >= houseCost;
-      const canSell = prop.houses > 0 || prop.hotel;
+        prop.houses === 4 &&
+        !prop.hotel &&
+        p.money >= houseCost &&
+        evenBuild &&
+        supplyOk;
+      const canSell =
+        (prop.houses > 0 || prop.hotel) &&
+        canSellEvenly(id) &&
+        (!prop.hotel || housesAvailable() >= 4);
       row.innerHTML = `
         <div style="width:10px;height:10px;border-radius:2px;background:${c};flex-shrink:0"></div>
         <div style="flex:1;color:#fff;font-size:.85rem;font-weight:600">${escHtml(sp.name)}</div>
@@ -954,6 +968,59 @@ function openBuildModal() {
     });
   });
   openOverlay("build-overlay");
+}
+
+// ── Building supply and the even-build rule ───────────────────────────────
+// The bank holds a finite 32 houses and 12 hotels. Rather than tracking that as
+// separate state that could drift, it is counted off the board each time.
+const BANK_HOUSE_SUPPLY = 32;
+const BANK_HOTEL_SUPPLY = 12;
+
+function countBuildingsOnBoard(state = G) {
+  let houses = 0;
+  let hotels = 0;
+  (state?.properties || []).forEach((prop) => {
+    if (!prop) return;
+    if (prop.hotel) hotels += 1;
+    else houses += Math.max(0, Number(prop.houses) || 0);
+  });
+  return { houses, hotels };
+}
+
+function housesAvailable(state = G) {
+  return BANK_HOUSE_SUPPLY - countBuildingsOnBoard(state).houses;
+}
+
+function hotelsAvailable(state = G) {
+  return BANK_HOTEL_SUPPLY - countBuildingsOnBoard(state).hotels;
+}
+
+function groupIdsFor(sp) {
+  if (!sp || sp.type !== "property") return [];
+  return SPACES.filter((s) => s.type === "property" && s.group === sp.group).map(
+    (s) => s.id,
+  );
+}
+
+// Buildings on a colour group must stay within one of each other.
+function buildingLevel(id) {
+  const prop = G.properties[id];
+  if (!prop) return 0;
+  return prop.hotel ? 5 : Math.max(0, Number(prop.houses) || 0);
+}
+
+function canBuildEvenly(propId) {
+  const groupIds = groupIdsFor(SPACES[propId]);
+  if (!groupIds.length) return true;
+  const levels = groupIds.map(buildingLevel);
+  return buildingLevel(propId) === Math.min(...levels);
+}
+
+function canSellEvenly(propId) {
+  const groupIds = groupIdsFor(SPACES[propId]);
+  if (!groupIds.length) return true;
+  const levels = groupIds.map(buildingLevel);
+  return buildingLevel(propId) === Math.max(...levels);
 }
 
 function buildHouse(propId) {
@@ -989,6 +1056,22 @@ function buildHouse(propId) {
     return;
   }
 
+  if (!canBuildEvenly(propId)) {
+    toast("Build evenly across the colour group.", "danger");
+    return;
+  }
+
+  const buildingHotel = prop.houses >= 4;
+  if (buildingHotel) {
+    if (hotelsAvailable() <= 0) {
+      toast("The bank has no hotels left.", "danger");
+      return;
+    }
+  } else if (housesAvailable() <= 0) {
+    toast("The bank has no houses left.", "danger");
+    return;
+  }
+
   const cost = sp.house;
   if (p.money < cost) {
     toast("Not enough money!", "danger");
@@ -996,7 +1079,7 @@ function buildHouse(propId) {
   }
   p.money -= cost;
   playSfx("build");
-  if (prop.houses >= 4) {
+  if (buildingHotel) {
     prop.hotel = true;
     prop.houses = 0;
     addLog(
@@ -1029,6 +1112,15 @@ function sellHouse(propId) {
   }
   if (!prop.hotel && prop.houses <= 0) {
     toast("There is nothing to sell on this property.", "danger");
+    return;
+  }
+  if (!canSellEvenly(propId)) {
+    toast("Sell evenly across the colour group.", "danger");
+    return;
+  }
+  // Breaking a hotel needs four houses back from the bank.
+  if (prop.hotel && housesAvailable() < 4) {
+    toast("The bank has too few houses to break this hotel.", "danger");
     return;
   }
   const refund = Math.floor(sp.house / 2);
@@ -1368,12 +1460,20 @@ function applyAcceptedTrade(trade) {
   const from = G.players[trade.fromId];
   const to = G.players[trade.toId];
 
+  // Taking on a mortgaged property costs the receiver 10% interest, the same as
+  // inheriting one through bankruptcy.
+  let fromInterest = 0;
+  let toInterest = 0;
+
   (trade.fromProps || []).forEach((id) => {
     const prop = G.properties[id];
     if (!prop) return;
     prop.owner = to.id;
     clearOwnedAsset(from, id);
     addOwnedAsset(to, id);
+    if (prop.mortgaged) {
+      toInterest += Math.ceil(mortgageValueForSpace(SPACES[id]) * 0.1);
+    }
   });
 
   (trade.toProps || []).forEach((id) => {
@@ -1382,12 +1482,30 @@ function applyAcceptedTrade(trade) {
     prop.owner = from.id;
     clearOwnedAsset(to, id);
     addOwnedAsset(from, id);
+    if (prop.mortgaged) {
+      fromInterest += Math.ceil(mortgageValueForSpace(SPACES[id]) * 0.1);
+    }
   });
 
   from.money = from.money - (trade.fromMoney || 0) + (trade.toMoney || 0);
   to.money = to.money - (trade.toMoney || 0) + (trade.fromMoney || 0);
 
   addLog(`${from.name} and ${to.name} completed a trade.`, "success");
+
+  if (fromInterest > 0) {
+    from.money -= fromInterest;
+    addLog(
+      `${from.name} paid ${fmtCurrency(fromInterest)} mortgage interest on properties received.`,
+      "danger",
+    );
+  }
+  if (toInterest > 0) {
+    to.money -= toInterest;
+    addLog(
+      `${to.name} paid ${fmtCurrency(toInterest)} mortgage interest on properties received.`,
+      "danger",
+    );
+  }
 }
 
 function openTradeModal() {
@@ -1735,7 +1853,7 @@ function payBailout() {
     addLog(`${p.name} used a Get Out of Jail Free card!`, "success");
     playSfx("bail");
   } else if (p.money >= bailAmount) {
-    chargeMoney(p, bailAmount, null, true);
+    chargeMoney(p, bailAmount, null);
     p.inJail = false;
     p.jailTurns = 0;
     addLog(
@@ -1833,7 +1951,6 @@ function syncDebtPromptToGameState() {
     payerId: Number.isInteger(payerIdRaw) ? payerIdRaw : null,
     amount: Math.max(0, Number(DEBT_PROMPT.amount) || 0),
     recipientId: Number.isInteger(recipientIdRaw) ? recipientIdRaw : null,
-    toParking: !!DEBT_PROMPT.toParking,
   };
 }
 
@@ -1877,7 +1994,6 @@ function restoreDebtPromptFromGameState(state = G) {
   DEBT_PROMPT.payerId = payerId;
   DEBT_PROMPT.amount = Math.max(0, Number(raw.amount) || 0);
   DEBT_PROMPT.recipientId = recipientId;
-  DEBT_PROMPT.toParking = !!raw.toParking;
 
   if (state === G) syncDebtPromptToGameState();
   return true;
@@ -1922,20 +2038,18 @@ function resetDebtPrompt(updateGameState = true) {
   DEBT_PROMPT.payerId = null;
   DEBT_PROMPT.amount = 0;
   DEBT_PROMPT.recipientId = null;
-  DEBT_PROMPT.toParking = false;
   if (updateGameState && G && typeof G === "object") {
     G.debtPrompt = null;
   }
 }
 
-function showDebtPrompt(p, amount, recipient = null, toParking = false) {
+function showDebtPrompt(p, amount, recipient = null) {
   if (!p) return;
   DEBT_PROMPT.active = true;
   DEBT_PROMPT.payerId = p.id;
   DEBT_PROMPT.amount = Math.max(0, Number(amount) || 0);
   DEBT_PROMPT.recipientId =
     recipient && !recipient.bankrupt ? recipient.id : null;
-  DEBT_PROMPT.toParking = !!toParking;
 
   const shortBy = Math.max(0, DEBT_PROMPT.amount - (Number(p.money) || 0));
   const creditorName =
@@ -2016,7 +2130,7 @@ function tryResolveDebtPrompt() {
   return true;
 }
 
-function chargeMoney(p, amount, recipient = null, toParking = false) {
+function chargeMoney(p, amount, recipient = null) {
   const due = Math.floor(Number(amount) || 0);
   if (due === 0) return true;
   // A negative charge is a payment TO p. It must still be debited from the
@@ -2072,22 +2186,12 @@ function chargeMoney(p, amount, recipient = null, toParking = false) {
   }
 
   if (!actorIsAi) {
-    showDebtPrompt(
-      p,
-      amount,
-      recipient && !recipient.bankrupt ? recipient : null,
-      toParking,
-    );
+    showDebtPrompt(p, amount, recipient && !recipient.bankrupt ? recipient : null);
     return false;
   }
 
   // Cannot cover debt even after liquidation.
-  declareBankruptcy(
-    p,
-    recipient && !recipient.bankrupt ? recipient : null,
-    amount,
-    toParking,
-  );
+  declareBankruptcy(p, recipient && !recipient.bankrupt ? recipient : null, amount);
   return false;
 }
 
@@ -2128,7 +2232,6 @@ function processPendingCollections() {
       payer,
       next.amount,
       recipient && !recipient.bankrupt ? recipient : null,
-      next.recipientId === null || next.recipientId === undefined,
     );
     if (!settled && DEBT_PROMPT.active) return false;
   }
@@ -2186,7 +2289,7 @@ function checkBankruptcy() {
   maybeShowWinnerFromState();
 }
 
-function declareBankruptcy(p, creditor = null, debtAmount = 0, toBank = false) {
+function declareBankruptcy(p, creditor = null, debtAmount = 0) {
   if (!p || p.bankrupt) return;
   playSfx("bankrupt");
   if (DEBT_PROMPT.active && DEBT_PROMPT.payerId === p.id) {
@@ -2341,14 +2444,12 @@ function confirmBankruptcy() {
         ? G.players[DEBT_PROMPT.recipientId]
         : null;
     const debt = Math.max(0, Number(DEBT_PROMPT.amount) || 0);
-    const toParking = !!DEBT_PROMPT.toParking;
     resetDebtPrompt();
     if (payer && !payer.bankrupt) {
       declareBankruptcy(
         payer,
         recipient && !recipient.bankrupt ? recipient : null,
         debt,
-        toParking,
       );
     }
     return;
@@ -2380,7 +2481,6 @@ function endTurn() {
       DEBT_PROMPT.recipientId !== null
         ? G.players[DEBT_PROMPT.recipientId]
         : null,
-      DEBT_PROMPT.toParking,
     );
     toast("Settle debt by mortgaging or declare bankruptcy.", "danger");
     return;

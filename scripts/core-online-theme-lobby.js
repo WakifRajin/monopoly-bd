@@ -47,6 +47,9 @@ const ONLINE = {
   serverTimeOffset: 0,
   presence: {},
   presenceRef: null,
+  unsubPresence: null,
+  lastSelfRevision: 0,
+  presenceReady: false,
   lastPresencePingAt: 0,
   takeoverInFlight: false,
   lastTakeoverKey: "",
@@ -81,6 +84,7 @@ const ROOM_CLEANUP_INTERVAL_MS = 1000 * 60 * 2;
 const ROOM_CLEANUP_BATCH_LIMIT = 16;
 const ROOM_HEARTBEAT_INTERVAL_MS = 1000 * 20;
 const SYNC_MAX_ATTEMPTS = 3;
+const MAX_STARTING_MONEY = 1000000;
 const PRESENCE_PING_INTERVAL_MS = 1000 * 10;
 // How long a player's seat may go silent before another client may hand it to
 // the AI. Long enough to ride out a tunnel or a backgrounded phone tab.
@@ -106,16 +110,6 @@ const BUG_REPORT_URL =
   "https://github.com/WakifRajin/monopoly-bd/issues/new?title=Bug%20Report&body=Describe%20the%20issue%20here&labels=bug";
 let LOBBY_CONTEXT = "offline";
 let ACTIVE_CUSTOM_BOARD_SEED = "";
-
-function ensureLocalUid() {
-  const key = "monopoly_online_uid";
-  let uid = localStorage.getItem(key);
-  if (!uid) {
-    uid = `u_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
-    localStorage.setItem(key, uid);
-  }
-  ONLINE.localUid = uid;
-}
 
 function roomCode() {
   return Math.random().toString(36).slice(2, 8).toUpperCase();
@@ -146,7 +140,9 @@ async function hashRoomPassword(roomId, plainPassword) {
     .join("");
 }
 
-async function generateUniqueRoomId(maxAttempts = 20) {
+// Generates a well-formed code. Uniqueness is enforced by the create
+// transaction, which refuses to overwrite an existing room.
+function generateRoomCandidateId(maxAttempts = 20) {
   for (let i = 0; i < maxAttempts; i++) {
     const id = roomCode();
     if (isValidRoomId(id)) return id;
@@ -309,9 +305,12 @@ function isRoomAbandoned(roomData, now = Date.now()) {
 async function setupPresence(roomId) {
   if (!FIREBASE.api?.onDisconnect || !ONLINE.localUid) return;
   try {
+    // Presence lives outside rooms/<id>. Writing it inside meant every 10s
+    // heartbeat produced a room snapshot, and each apply opened a window in
+    // which local moves were discarded.
     const ref = FIREBASE.api.ref(
       FIREBASE.db,
-      `rooms/${roomId}/presence/${ONLINE.localUid}`,
+      `roomPresence/${roomId}/${ONLINE.localUid}`,
     );
     ONLINE.presenceRef = ref;
     await FIREBASE.api.onDisconnect(ref).set({
@@ -344,9 +343,14 @@ async function pulsePresence() {
 }
 
 async function clearPresence() {
+  if (ONLINE.unsubPresence) {
+    ONLINE.unsubPresence();
+    ONLINE.unsubPresence = null;
+  }
   const ref = ONLINE.presenceRef;
   ONLINE.presenceRef = null;
   ONLINE.presence = {};
+  ONLINE.presenceReady = false;
   if (!ref || !FIREBASE.api) return;
   try {
     await FIREBASE.api.onDisconnect(ref).cancel();
@@ -373,6 +377,9 @@ function presenceAgeMs(uid, now = serverNow()) {
 function isSeatAbsent(uid) {
   const id = String(uid || "");
   if (!id || id === ONLINE.localUid) return false;
+  // Without a healthy presence feed we have no evidence either way, and
+  // guessing "absent" would quietly replace live players with the AI.
+  if (!ONLINE.presenceReady) return false;
   return presenceAgeMs(id) > PRESENCE_GRACE_MS;
 }
 
@@ -743,29 +750,11 @@ function getAuctionOpeningBid(price, openingPercent = null) {
   return Math.max(0, Math.floor((base * pct) / 100));
 }
 
+// Identity is the authenticated uid and nothing else. Matching on token or
+// display name let two players with the same name control each other's turn.
 function resolveLocalPlayerIndex() {
   if (!G.players || !G.players.length) return -1;
-
-  const byUid = G.players.findIndex((p) => p.uid && p.uid === ONLINE.localUid);
-  if (byUid >= 0) return byUid;
-
-  const lobbyMe = Array.isArray(lobbyPlayers)
-    ? lobbyPlayers.find((p) => p.uid === ONLINE.localUid)
-    : null;
-  if (lobbyMe?.token) {
-    const byToken = G.players.findIndex((p) => p.token === lobbyMe.token);
-    if (byToken >= 0) return byToken;
-  }
-
-  const targetName = sanitizeName(lobbyMe?.name || ONLINE.localName || "", "");
-  if (targetName) {
-    const byName = G.players.findIndex(
-      (p) => sanitizeName(p.name, "") === targetName,
-    );
-    if (byName >= 0) return byName;
-  }
-
-  return -1;
+  return G.players.findIndex((p) => p.uid && p.uid === ONLINE.localUid);
 }
 
 function canLocalControlTurn() {
@@ -996,7 +985,6 @@ function downloadActiveCustomBoardSeed() {
   setCustomBoardStatus(`Downloaded seed for ${themeName}.`);
 }
 
-ensureLocalUid();
 bootstrapFirebase();
 
 // ═══════════════════════════════════════════════
@@ -3302,7 +3290,6 @@ const DEBT_PROMPT = {
   payerId: null,
   amount: 0,
   recipientId: null,
-  toParking: false,
 };
 const MOVE_FX = {
   active: false,
@@ -3337,7 +3324,6 @@ function initGameState(players, startMoney, options = {}) {
   DEBT_PROMPT.payerId = null;
   DEBT_PROMPT.amount = 0;
   DEBT_PROMPT.recipientId = null;
-  DEBT_PROMPT.toParking = false;
   MOVE_FX.active = false;
   MOVE_FX.playerId = null;
   ONLINE.pendingCardResolutions = 0;
@@ -3381,7 +3367,6 @@ function initGameState(players, startMoney, options = {}) {
     chanceDeck: shuffledChance,
     communityDeck: shuffledComm,
     gameStartedAt,
-    parkingPot: 0,
     log: [],
     chat: [],
     pendingBuy: null,
@@ -3749,7 +3734,6 @@ function hydrateRemoteGameState(raw) {
             payerId,
             amount: Math.max(0, Number(debtPromptRaw.amount) || 0),
             recipientId,
-            toParking: !!debtPromptRaw.toParking,
           }
         : null;
   } else {
@@ -3861,7 +3845,11 @@ function hydrateRemoteGameState(raw) {
 }
 
 async function syncRoomState(reason = "") {
-  if (!isOnlineGame() || ONLINE.isApplyingRemote || !FIREBASE.api) return;
+  if (!isOnlineGame() || !FIREBASE.api) return;
+  if (ONLINE.isApplyingRemote) {
+    ONLINE.syncQueuedReason = reason || ONLINE.syncQueuedReason || "sync";
+    return;
+  }
 
   if (ONLINE.syncInFlight) {
     ONLINE.syncQueuedReason = reason || ONLINE.syncQueuedReason || "sync";
@@ -3905,6 +3893,7 @@ async function syncRoomState(reason = "") {
 
       if (txResult?.committed) {
         ONLINE.revision = nextRevision;
+        ONLINE.lastSelfRevision = nextRevision;
         attempts = 0;
         if (ONLINE.syncQueuedReason) {
           currentReason = ONLINE.syncQueuedReason;
@@ -4013,18 +4002,6 @@ async function applyRoomSnapshot(data) {
     G.chat = nextChat.slice(-120);
   }
 
-  const rawPresence =
-    data.presence && typeof data.presence === "object" ? data.presence : {};
-  ONLINE.presence = Object.fromEntries(
-    Object.entries(rawPresence).map(([uid, v]) => [
-      String(uid),
-      {
-        online: v?.online !== false,
-        at: Number(v?.at) || 0,
-      },
-    ]),
-  );
-
   const roomPlayers = indexedObjectToArray(data.players).map((p, i) => ({
     uid: p.uid || null,
     name: sanitizeName(p.name, `Player ${i + 1}`),
@@ -4080,7 +4057,14 @@ async function applyRoomSnapshot(data) {
   }
   refreshCustomBoardPanel();
 
-  if (ONLINE.status === "playing" && data.gameState) {
+  // Firebase echoes our own writes straight back. Re-hydrating from them threw
+  // away whatever the local player (or the AI we are running) had done since,
+  // so the move was reverted and then replayed, over and over.
+  const isOwnEcho =
+    Number(data.revision) === Number(ONLINE.lastSelfRevision) &&
+    Number(ONLINE.lastSelfRevision) > 0;
+
+  if (ONLINE.status === "playing" && data.gameState && !isOwnEcho) {
     ONLINE.isApplyingRemote = true;
     try {
       hydrateRemoteGameState(data.gameState);
@@ -4110,6 +4094,12 @@ async function applyRoomSnapshot(data) {
       }
     } finally {
       ONLINE.isApplyingRemote = false;
+      // Any local action that landed mid-apply parked its sync; send it now.
+      if (ONLINE.syncQueuedReason) {
+        const queued = ONLINE.syncQueuedReason;
+        ONLINE.syncQueuedReason = null;
+        syncRoomState(queued).catch((err) => console.error(err));
+      }
       // If the current player is an AI (e.g. after AI takeover), eagerly try to claim
       // the runner lease before the polling interval fires, so the turn isn't stuck.
       const currentAfterHydrate =
@@ -4124,6 +4114,9 @@ async function applyRoomSnapshot(data) {
         maybeScheduleOfflineAiTurn();
       }
     }
+  } else if (ONLINE.status === "playing" && isOwnEcho) {
+    updateActionButtons();
+    maybeScheduleOfflineAiTurn();
   } else if (ONLINE.status === "lobby") {
     openOnlineRoomPage();
     if (departureMessage) {
@@ -4198,6 +4191,25 @@ function attachRoomListener(roomId) {
   );
   pulseRoomHeartbeat(true);
   setupPresence(roomId);
+
+  if (ONLINE.unsubPresence) ONLINE.unsubPresence();
+  ONLINE.unsubPresence = FIREBASE.api.onValue(
+    FIREBASE.api.ref(FIREBASE.db, `roomPresence/${roomId}`),
+    (snap) => {
+      const raw = snap.val() || {};
+      ONLINE.presence = Object.fromEntries(
+        Object.entries(raw).map(([uid, v]) => [
+          String(uid),
+          { online: v?.online !== false, at: Number(v?.at) || 0 },
+        ]),
+      );
+      ONLINE.presenceReady = true;
+    },
+    (err) => {
+      ONLINE.presenceReady = false;
+      console.warn("Presence subscription failed; AI takeover disabled.", err);
+    },
+  );
 }
 
 function updateOnlineLobbyUI() {
@@ -4278,7 +4290,7 @@ async function createOnlineRoom() {
   let createdRoomId = null;
   let me = null;
   for (let attempt = 0; attempt < 5; attempt++) {
-    const candidateRoomId = await generateUniqueRoomId();
+    const candidateRoomId = generateRoomCandidateId();
     if (!candidateRoomId) break;
 
     let passwordHash = "";
@@ -5279,7 +5291,7 @@ async function startGame() {
   );
   const startMoney =
     Number.isFinite(parsedStartMoney) && parsedStartMoney > 0
-      ? parsedStartMoney
+      ? Math.min(MAX_STARTING_MONEY, Math.floor(parsedStartMoney))
       : getThemeStartMoneyDefault(selectedThemeId);
   TIMER.duration = parseInt(document.getElementById("lobby-timer").value) || 0;
   const auctionEnabled = sanitizeAuctionEnabled(
