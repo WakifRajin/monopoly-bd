@@ -3553,3 +3553,123 @@ body[data-theme="classic"] .center-sub {
     opacity: 0;
   }
 }
+
+/* ── Text badges replacing the old inline emoji ─────────────────────────── */
+.ptag {
+  display: inline-block;
+  margin-left: 0.35rem;
+  padding: 0.05rem 0.3rem;
+  border-radius: 3px;
+  font-size: 0.62em;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  vertical-align: 1px;
+  background: rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.72);
+}
+.ptag.out {
+  background: rgba(192, 57, 43, 0.28);
+  color: #ffb3ae;
+}
+
+/* Toolbar buttons now carry words, so let them size to their label. */
+.topbar-tool-btn {
+  min-width: auto;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+}
+
+/* ── Board clarity ──────────────────────────────────────────────────────── */
+/* Rent, shown under the price so a player can judge a landing without
+   opening the space. */
+.space .sp-rent {
+  font-size: 0.62em;
+  line-height: 1.1;
+  color: rgba(0, 0, 0, 0.55);
+  font-variant-numeric: tabular-nums;
+}
+body[data-theme="classic"] .space .sp-rent {
+  color: rgba(0, 0, 0, 0.5);
+}
+
+/* Spaces you own read differently from spaces someone else owns. */
+.space.owned-by-me {
+  box-shadow: inset 0 0 0 2px var(--own-mine, #2ecc71);
+}
+.space.owned-by-other {
+  box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.22);
+}
+.space.is-mortgaged .sp-name,
+.space.is-mortgaged .sp-price,
+.space.is-mortgaged .sp-rent {
+  opacity: 0.45;
+  text-decoration: line-through;
+}
+
+/* ── Player info ────────────────────────────────────────────────────────── */
+.pcard .pworth {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.45);
+  font-variant-numeric: tabular-nums;
+  margin-top: 0.1rem;
+}
+.pcard .pgroups {
+  display: flex;
+  gap: 3px;
+  margin-top: 0.3rem;
+  flex-wrap: wrap;
+}
+.pgroup-pip {
+  height: 4px;
+  width: 14px;
+  border-radius: 2px;
+  opacity: 0.35;
+}
+.pgroup-pip.complete {
+  opacity: 1;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.5);
+}
+
+/* ── Mobile: bigger targets, less reaching ──────────────────────────────── */
+@media (max-width: 899px) {
+  .topbar-tool-btn {
+    padding: 0.45rem 0.6rem;
+    min-height: 2.25rem;
+  }
+  .mobile-action-bar button,
+  .mobile-actions button {
+    min-height: 2.75rem;
+  }
+  .modal .btn {
+    min-height: 2.6rem;
+  }
+  .trade-prop-item,
+  .online-open-room-btn {
+    min-height: 2.5rem;
+  }
+}
+
+/* .turn-badge is a flex row with a gap, so the possessive was being pushed off
+   the name ("Player 1 's turn"). Cancel the gap for this one item. */
+.game-topbar .turn-badge .tb-turn-suffix {
+  margin-left: -0.5rem;
+}
+
+/* Six worded tool buttons do not fit a phone, so let the row scroll rather
+   than clipping the last one. */
+@media (max-width: 899px) {
+  .topbar-tools {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    flex-wrap: nowrap;
+  }
+  .topbar-tools::-webkit-scrollbar {
+    display: none;
+  }
+  .topbar-tool-btn {
+    flex: 0 0 auto;
+    padding: 0.45rem 0.55rem;
+    font-size: 0.72rem;
+  }
+}

@@ -23,9 +23,10 @@ function buildBoard() {
       const c = COLOR[s.color];
       inner = `<div class="color-bar" style="background:${c};height:18%"></div>
                <div class="sp-name">${escHtml(s.name)}</div>
-               <div class="sp-price">${fmtCurrency(s.price)}</div>`;
+               <div class="sp-price">${fmtCurrency(s.price)}</div>
+               <div class="sp-rent">Rent ${fmtCurrency(s.rent?.[0] || 0)}</div>`;
     } else if (s.type === "railroad") {
-      inner = `<div class="sp-icon">🚂</div><div class="sp-name">${escHtml(s.name)}</div><div class="sp-price">${fmtCurrency(s.price)}</div>`;
+      inner = `<div class="sp-icon">🚂</div><div class="sp-name">${escHtml(s.name)}</div><div class="sp-price">${fmtCurrency(s.price)}</div><div class="sp-rent">Rent ${fmtCurrency(s.rent?.[0] || 0)}</div>`;
     } else if (s.type === "utility") {
       inner = `<div class="sp-icon">${escHtml(s.icon)}</div><div class="sp-name">${escHtml(s.name)}</div><div class="sp-price">${fmtCurrency(s.price)}</div>`;
     } else if (s.type === "go") {
@@ -58,7 +59,7 @@ function buildBoard() {
       <div class="die" id="die1" data-v="${die1Value}">${'<span class="dot"></span>'.repeat(7)}</div>
       <div class="die" id="die2" data-v="${die2Value}">${'<span class="dot"></span>'.repeat(7)}</div>
     </div>
-    <button id="roll-btn" onclick="rollDice()">🎲 Roll Dice</button>
+    <button id="roll-btn" onclick="rollDice()">Roll dice</button>
     <div id="center-msg" style="font-size:clamp(.6rem,1.2vmin,.8rem);color:#1a5c1a;margin-top:.3rem;font-weight:700;font-family:'Times New Roman',Georgia,serif"></div>
   `;
   board.appendChild(center);
@@ -141,6 +142,52 @@ function renderChatLog() {
   el.scrollTop = el.scrollHeight;
 }
 
+// An unowned space stores owner === null, and Number(null) is 0 - which would
+// silently match player 0. Ownership must be established before comparing.
+function isOwnedBy(prop, playerId) {
+  if (!prop || prop.owner === null || prop.owner === undefined) return false;
+  return Number(prop.owner) === Number(playerId);
+}
+
+// Cash plus what everything would fetch if liquidated right now: list price for
+// clear title, mortgage value for mortgaged title, half cost back on buildings.
+function playerNetWorth(player) {
+  if (!player) return 0;
+  let total = Number(player.money) || 0;
+  (G.properties || []).forEach((prop, id) => {
+    if (!prop || !isOwnedBy(prop, player.id)) return;
+    const sp = SPACES[id];
+    if (!sp) return;
+    total += prop.mortgaged
+      ? mortgageValueForSpace(sp)
+      : Number(sp.price) || 0;
+    const houses = prop.hotel ? 5 : Math.max(0, Number(prop.houses) || 0);
+    total += Math.floor((Number(sp.house) || 0) / 2) * houses;
+  });
+  return total;
+}
+
+// One pip per colour group the player has a stake in; filled when the set is
+// complete and therefore buildable.
+function playerGroupProgress(player) {
+  if (!player) return [];
+  const byGroup = new Map();
+  SPACES.forEach((sp, id) => {
+    if (!sp || sp.type !== "property") return;
+    const g = sp.group;
+    if (!byGroup.has(g)) byGroup.set(g, { owned: 0, total: 0, color: sp.color });
+    const entry = byGroup.get(g);
+    entry.total += 1;
+    if (isOwnedBy(G.properties[id], player.id)) entry.owned += 1;
+  });
+  return [...byGroup.values()]
+    .filter((e) => e.owned > 0)
+    .map((e) => ({
+      color: COLOR[e.color] || "#666",
+      complete: e.owned === e.total,
+    }));
+}
+
 function renderPlayerCards() {
   const el = document.getElementById("player-cards");
   const mobileEl = document.getElementById("mobile-player-strip");
@@ -164,7 +211,8 @@ function renderPlayerCards() {
             `<div class="pprop-dot" style="background:#333" title="Railroad"></div>`,
         )
         .join("");
-    const location = p.inJail ? "In Jail" : SPACES[p.pos]?.name || "On board";
+    const location = p.inJail ? "In jail" : SPACES[p.pos]?.name || "On board";
+    const groupPips = playerGroupProgress(p);
 
     if (el) {
       const div = document.createElement("div");
@@ -172,10 +220,21 @@ function renderPlayerCards() {
       div.innerHTML = `
         <div class="prow1">
           <div class="ptoken" style="color:${sanitizeColor(p.color)}">${escHtml(p.token)}</div>
-          <div class="pname">${escHtml(p.name)}${isAiPlayer(p) ? " 🤖" : ""}${p.bankrupt ? " 💀" : ""}</div>
+          <div class="pname">${escHtml(p.name)}${isAiPlayer(p) ? '<span class="ptag">AI</span>' : ""}${p.bankrupt ? '<span class="ptag out">OUT</span>' : ""}</div>
           <div class="pmoney">${fmtCurrency(p.money)}</div>
         </div>
-        <div class="ppos">${p.inJail ? "⛓️ In Jail" : `📍 ${escHtml(SPACES[p.pos]?.name || "On board")}`}</div>
+        <div class="ppos">${p.inJail ? "In jail" : escHtml(SPACES[p.pos]?.name || "On board")}</div>
+        <div class="pworth">Net worth ${fmtCurrency(playerNetWorth(p))}</div>
+        ${
+          groupPips.length
+            ? `<div class="pgroups">${groupPips
+                .map(
+                  (g) =>
+                    `<div class="pgroup-pip${g.complete ? " complete" : ""}" style="background:${g.color}"></div>`,
+                )
+                .join("")}</div>`
+            : ""
+        }
         ${propDots ? `<div class="pprops">${propDots}</div>` : ""}
       `;
       div.title = `Tap to view ${p.name}'s portfolio and money log`;
@@ -190,9 +249,9 @@ function renderPlayerCards() {
       chip.innerHTML = `
         <div class="mobile-player-main">
           <span class="mobile-player-token" style="color:${sanitizeColor(p.color)}">${escHtml(p.token)}</span>
-          <span class="mobile-player-name">${escHtml(p.name)}${isAiPlayer(p) ? " 🤖" : ""}${p.bankrupt ? " 💀" : ""}</span>
+          <span class="mobile-player-name">${escHtml(p.name)}${isAiPlayer(p) ? '<span class="ptag">AI</span>' : ""}${p.bankrupt ? '<span class="ptag out">OUT</span>' : ""}</span>
         </div>
-        <div class="mobile-player-meta">${fmtCurrency(p.money)} • ${escHtml(location)}</div>
+        <div class="mobile-player-meta">${fmtCurrency(p.money)} • net ${fmtCurrency(playerNetWorth(p))}</div>
       `;
       chip.title = `Tap to view ${p.name}'s portfolio and money log`;
       chip.onclick = () => showPlayerPortfolio(i);
@@ -409,7 +468,7 @@ async function animatePlayerStepMovement(player, steps, options = {}) {
         i === steps - 1 ? "step-arrive" : "step-trail",
         i === steps - 1 ? 340 : 240,
       );
-      await waitMs(180);
+      await waitMs(Math.round(180 * (MOVE_SPEED?.factor || 1)));
       if (!canContinue()) return false;
     }
   } finally {
@@ -424,12 +483,25 @@ async function animatePlayerStepMovement(player, steps, options = {}) {
 function renderBoardOwnership() {
   // Clear old dots
   document.querySelectorAll(".own-dot,.bldg-badge").forEach((e) => e.remove());
+  document
+    .querySelectorAll(".space.owned-by-me,.space.owned-by-other,.space.is-mortgaged")
+    .forEach((el) =>
+      el.classList.remove("owned-by-me", "owned-by-other", "is-mortgaged"),
+    );
+  const myIdx = isOnlineGame() ? resolveLocalPlayerIndex() : G.currentPlayerIdx;
   G.properties.forEach((prop, id) => {
     if (!prop || prop.owner === null) return;
     const spEl = document.getElementById(`sp${id}`);
     if (!spEl) return;
     const owner = G.players[prop.owner];
     if (!owner) return;
+    // A glance should answer "is this mine, theirs, or dead weight".
+    spEl.classList.add(
+      Number(prop.owner) === Number(myIdx) ? "owned-by-me" : "owned-by-other",
+    );
+    if (prop.mortgaged) spEl.classList.add("is-mortgaged");
+    spEl.style.setProperty("--own-mine", owner.color || "#2ecc71");
+
     const dot = document.createElement("div");
     dot.className = "own-dot";
     if (prop.mortgaged) dot.classList.add("mortgaged");
@@ -450,7 +522,7 @@ function updateTopBar() {
   const p = curPlayer();
   document.getElementById("tb-token").textContent = p.token;
   document.getElementById("tb-name").textContent =
-    `${p.name}${isAiPlayer(p) ? " 🤖" : ""}`;
+    `${p.name}${isAiPlayer(p) ? " (AI)" : ""}`;
   document.getElementById("tb-money").textContent = fmtCurrency(p.money);
   const jailTag = document.getElementById("tb-jail-tag");
   jailTag.style.display = p.inJail ? "" : "none";
@@ -1840,16 +1912,16 @@ function updateActionButtons() {
     const rollBtn = document.getElementById("roll-btn");
     if (rollBtn) {
       rollBtn.disabled = true;
-      rollBtn.textContent = "🏆 Game Over";
+      rollBtn.textContent = "Game over";
     }
 
     const cm = document.getElementById("center-msg");
     if (cm)
       cm.textContent =
-        "🏆 Match finished. Use Winner actions to view board or start a new game.";
+        "Match finished. Use the winner screen to review the board or start a new game.";
 
     const mobileTurnLine = document.getElementById("mobile-turnline");
-    if (mobileTurnLine) mobileTurnLine.textContent = "🏆 Match finished";
+    if (mobileTurnLine) mobileTurnLine.textContent = "Match finished";
 
     stopTimer();
     return;
@@ -1880,20 +1952,20 @@ function updateActionButtons() {
   if (rollBtn) {
     rollBtn.disabled = debtPromptActive || G.phase !== "roll" || !canHumanAct;
     rollBtn.textContent = movementLocked
-      ? `🏃 ${p.name} is moving...`
+      ? `${p.name} is moving…`
       : cardFxPending
-        ? `🃏 Resolving card effect...`
+        ? "Resolving card effect…"
         : debtPromptActive
           ? debtPending && turnOwnedByMe
-            ? `💀 Resolve debt / bankruptcy`
-            : `💀 ${debtPayer?.name || "Player"} resolving debt`
+            ? "Settle debt or declare bankruptcy"
+            : `${debtPayer?.name || "Player"} is settling a debt`
           : aiTurnActive
-            ? `🤖 ${p.name} is thinking...`
+            ? `${p.name} is thinking…`
             : !turnOwnedByMe
-              ? `⏳ ${p.name} is playing`
+              ? `${p.name} is playing`
               : inJail && G.phase === "roll"
-                ? "🎲 Roll for Doubles"
-                : "🎲 Roll Dice";
+                ? "Roll for doubles"
+                : "Roll dice";
   }
 
   // Jail bail button
@@ -1904,21 +1976,21 @@ function updateActionButtons() {
     const el = document.getElementById(id);
     if (!el) return;
     el.style.display = bailVis ? "" : "none";
-    el.textContent = `💳 Pay ${fmtCurrency(bailAmount)} Bail`;
+    el.textContent = `Pay ${fmtCurrency(bailAmount)} bail`;
   });
 
   // Center message
   const cm = document.getElementById("center-msg");
   if (cm) {
     if (movementLocked)
-      cm.textContent = `${p.name} is hopping across the board...`;
-    else if (cardFxPending) cm.textContent = `Resolving card effect...`;
+      cm.textContent = `${p.name} is moving…`;
+    else if (cardFxPending) cm.textContent = "Resolving card effect…";
     else if (debtPromptActive) {
       cm.textContent = debtPending
-        ? `💀 Debt alert: short by ${fmtCurrency(debtShortBy)}. Mortgage/sell or declare bankruptcy.`
-        : `💀 ${debtPayer?.name || "Player"} is resolving debt (short ${fmtCurrency(debtShortBy)}).`;
+        ? `Short by ${fmtCurrency(debtShortBy)}. Mortgage, sell buildings, or declare bankruptcy.`
+        : `${debtPayer?.name || "Player"} is settling a debt (short ${fmtCurrency(debtShortBy)}).`;
     } else if (aiTurnActive)
-      cm.textContent = `🤖 ${p.name} is making a move`;
+      cm.textContent = `${p.name} is making a move`;
     else if (!turnOwnedByMe) cm.textContent = `Watching ${p.name}'s turn`;
     else if (inJail && G.phase === "roll")
       cm.textContent = `Roll doubles or pay ${fmtCurrency(bailAmount)} bail`;
@@ -1935,28 +2007,28 @@ function updateActionButtons() {
   const mobileTurnLine = document.getElementById("mobile-turnline");
   if (mobileTurnLine) {
     if (movementLocked)
-      mobileTurnLine.textContent = `🏃 ${p.name} is moving...`;
+      mobileTurnLine.textContent = `${p.name} is moving…`;
     else if (cardFxPending)
-      mobileTurnLine.textContent = "🃏 Resolving card effect...";
+      mobileTurnLine.textContent = "Resolving card effect…";
     else if (debtPromptActive) {
       mobileTurnLine.textContent = debtPending
-        ? `💀 Debt short ${fmtCurrency(debtShortBy)} • mortgage/sell or bankrupt`
-        : `💀 ${debtPayer?.name || "Player"} is resolving debt`;
+        ? `Short ${fmtCurrency(debtShortBy)} — mortgage, sell, or bankrupt`
+        : `${debtPayer?.name || "Player"} is settling a debt`;
     } else if (aiTurnActive)
-      mobileTurnLine.textContent = `🤖 ${p.name} is thinking`;
+      mobileTurnLine.textContent = `${p.name} is thinking…`;
     else if (!turnOwnedByMe)
-      mobileTurnLine.textContent = `⏳ Watching ${p.name}'s turn`;
+      mobileTurnLine.textContent = `Watching ${p.name}'s turn`;
     else if (inJail && G.phase === "roll")
-      mobileTurnLine.textContent = `⛓️ Roll doubles or pay ${fmtCurrency(bailAmount)} bail`;
+      mobileTurnLine.textContent = `In jail — roll doubles or pay ${fmtCurrency(bailAmount)}`;
     else if (G.phase === "roll")
-      mobileTurnLine.textContent = "🎲 Roll dice or manage assets";
+      mobileTurnLine.textContent = "Roll dice, or manage assets first";
     else if (G.phase === "action")
-      mobileTurnLine.textContent = `📍 ${sp.name} • choose an action`;
+      mobileTurnLine.textContent = `${sp.name} — choose an action`;
     else
       mobileTurnLine.textContent =
         TIMER.duration > 0
-          ? `⏱ Auto-end: ${TIMER.duration}s after move`
-          : "✅ End your turn when ready";
+          ? `Auto-end in ${TIMER.duration}s`
+          : "End your turn when ready";
   }
 
   // Prompt jailed player with clear choices at the start of their roll phase.

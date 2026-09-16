@@ -71,14 +71,14 @@ function showWinner(p) {
   closeAllOverlays();
   closeDrawer();
   document.getElementById("winner-trophy").textContent = p.token;
-  document.getElementById("winner-name").textContent = p.name + " Wins!";
+  document.getElementById("winner-name").textContent = p.name + " wins";
   document.getElementById("winner-sub").textContent =
-    `${p.name} is the ${(window.ACTIVE_THEME || BOARD_THEMES.dhaka).name} Monopoly champion with ${fmtCurrency(p.money)}!`;
+    `${p.name} finished with ${fmtCurrency(p.money)} on the ${(window.ACTIVE_THEME || BOARD_THEMES.dhaka).name} board.`;
   renderWinnerLeaderboard(p.id);
   // Confetti
   const cont = document.getElementById("confetti-container");
   cont.innerHTML = "";
-  const emojis = ["🎉", "🎊", "🏆", "⭐", "🌟", "💰", "🎲"];
+  const emojis = ["✦", "✧", "◆"];
   for (let i = 0; i < 20; i++) {
     const span = document.createElement("div");
     span.className = "confetti";
@@ -377,7 +377,7 @@ function openDrawer(type) {
   const content = document.getElementById("drawer-content");
   if (type === "players") {
     content.innerHTML = `
-      <h3 style="color:#fff;margin-bottom:.75rem;font-family:var(--font-display)">👥 Players</h3>
+      <h3 style="color:#fff;margin-bottom:.75rem;font-family:var(--font-display)">Players</h3>
       ${(G.players || [])
         .map((p, i) => {
           const active = i === G.currentPlayerIdx;
@@ -390,7 +390,7 @@ function openDrawer(type) {
           return `<div onclick="showPlayerPortfolio(${i});closeDrawer()" style="display:flex;align-items:center;gap:.55rem;padding:.5rem .55rem;border:1px solid ${border};border-radius:8px;background:${bg};margin-bottom:.38rem;cursor:pointer">
           <div style="font-size:1.15rem;color:${color}">${escHtml(p.token)}</div>
           <div style="min-width:0;flex:1">
-            <div style="color:#fff;font-weight:700;font-size:.86rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(p.name)}${p.bankrupt ? " 💀" : ""}</div>
+            <div style="color:#fff;font-weight:700;font-size:.86rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(p.name)}${p.bankrupt ? " (out)" : ""}</div>
             <div style="color:rgba(255,255,255,.5);font-size:.74rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(where)}</div>
           </div>
           <div style="font-size:.82rem;color:var(--gold-light);font-weight:700">${fmtCurrency(p.money)}</div>
@@ -401,7 +401,7 @@ function openDrawer(type) {
     `;
   } else if (type === "log") {
     content.innerHTML =
-      '<h3 style="color:#fff;margin-bottom:.75rem;font-family:var(--font-display)">📋 Game Log</h3>' +
+      '<h3 style="color:#fff;margin-bottom:.75rem;font-family:var(--font-display)">Game log</h3>' +
       G.log
         .slice(-30)
         .map(
@@ -411,7 +411,7 @@ function openDrawer(type) {
         .join("");
   } else if (type === "chat") {
     content.innerHTML = `
-      <h3 style="color:#fff;margin-bottom:.75rem;font-family:var(--font-display)">💬 Chat</h3>
+      <h3 style="color:#fff;margin-bottom:.75rem;font-family:var(--font-display)">Chat</h3>
       <div id="drawer-chat" style="max-height:300px;overflow-y:auto"></div>
       <div style="display:flex;gap:.5rem;margin-top:.75rem">
         <input id="drawer-chat-input" type="text" placeholder="Message..." style="flex:1;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:6px;padding:.4rem .6rem;color:#fff;font-family:var(--font-body)">
@@ -433,7 +433,7 @@ function openDrawer(type) {
          <button onclick="closeDrawer();openLeaveGameModal()" style="width:100%;padding:.6rem .9rem;border:none;border-radius:8px;background:linear-gradient(135deg,#7f1d1d,#c0392b);color:#fff;font-weight:700;cursor:pointer">🚪 Leave Game</button>`
       : "";
     content.innerHTML = `
-      <h3 style="color:#fff;margin-bottom:1rem;font-family:var(--font-display)">⚙️ Timer & Sound Settings</h3>
+      <h3 style="color:#fff;margin-bottom:1rem;font-family:var(--font-display)">Timer and sound</h3>
       <div style="margin-bottom:1rem;padding:.75rem;border:1px solid rgba(255,255,255,.14);border-radius:10px;background:rgba(255,255,255,.05)">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:.6rem;margin-bottom:.65rem">
           <div>
@@ -465,6 +465,29 @@ function openDrawer(type) {
         </div>
       </div>
       <p style="color:rgba(255,255,255,.4);font-size:.78rem">Timer only runs during the "end turn" phase (after rolling & landing). It pauses while modals are open.</p>
+      <div style="margin:1rem 0">
+        <label style="color:rgba(255,255,255,.7);font-size:.85rem;display:block;margin-bottom:.4rem">Movement speed</label>
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+          ${[["Fast", 0.4], ["Normal", 1], ["Slow", 1.8]]
+            .map(([label, v]) => {
+              const on = Math.abs((MOVE_SPEED.factor || 1) - v) < 0.05;
+              return `<button onclick="setMoveSpeed(${v})" style="padding:.5rem .9rem;border:1px solid ${on ? "var(--gold-light)" : "rgba(255,255,255,.2)"};background:${on ? "rgba(201,151,28,.25)" : "rgba(255,255,255,.07)"};color:${on ? "var(--gold-light)" : "rgba(255,255,255,.7)"};border-radius:7px;cursor:pointer;font-family:var(--font-body);font-size:.85rem;font-weight:600">${label}</button>`;
+            })
+            .join("")}
+        </div>
+      </div>
+      <div style="margin-bottom:1rem;padding:.7rem .8rem;border:1px solid rgba(255,255,255,.12);border-radius:10px;background:rgba(255,255,255,.04)">
+        <div style="color:#fff;font-size:.85rem;font-weight:700;margin-bottom:.4rem">Keyboard</div>
+        <div style="color:rgba(255,255,255,.55);font-size:.78rem;line-height:1.7">
+          <b style="color:rgba(255,255,255,.8)">Space</b> roll, or end turn ·
+          <b style="color:rgba(255,255,255,.8)">Enter</b> confirm dialog ·
+          <b style="color:rgba(255,255,255,.8)">Esc</b> close ·
+          <b style="color:rgba(255,255,255,.8)">B</b> buy ·
+          <b style="color:rgba(255,255,255,.8)">H</b> build ·
+          <b style="color:rgba(255,255,255,.8)">M</b> mortgage ·
+          <b style="color:rgba(255,255,255,.8)">T</b> trade
+        </div>
+      </div>
       ${leaveBlock}
     `;
   }
@@ -694,7 +717,7 @@ function setSfxEnabled(enabled, notify = true) {
   ensureSfxEngine();
   updateSfxMasterGain();
   if (notify)
-    toast(SFX.enabled ? "🔊 Sound enabled" : "🔇 Sound muted", "gold");
+    toast(SFX.enabled ? "Sound on" : "Sound muted", "gold");
 }
 
 function toggleSfxEnabled() {
@@ -707,7 +730,7 @@ function setBgmEnabled(enabled, notify = true) {
   persistSfxPreferences();
   syncBgmForScreen();
   if (notify)
-    toast(SFX.bgmEnabled ? "🎵 Music enabled" : "🎵 Music muted", "gold");
+    toast(SFX.bgmEnabled ? "Music on" : "Music muted", "gold");
 }
 
 function toggleBgmEnabled() {
@@ -720,7 +743,7 @@ function setSfxVolume(volume, notify = false) {
   persistSfxPreferences();
   ensureSfxEngine();
   updateSfxMasterGain();
-  if (notify) toast(`🔉 SFX volume ${Math.round(SFX.volume * 100)}%`, "gold");
+  if (notify) toast(`Volume ${Math.round(SFX.volume * 100)}%`, "gold");
 }
 
 function ensureSfxNoiseBuffer(ctx) {
@@ -1174,10 +1197,10 @@ function showPlayerPortfolio(playerIdx, tab = "") {
   });
 
   const statusIcon = p.bankrupt
-    ? "💀 BANKRUPT"
+    ? "Bankrupt"
     : p.inJail
-      ? "⛓️ In Jail"
-      : `📍 ${SPACES[p.pos].name}`;
+      ? "In jail"
+      : SPACES[p.pos].name;
 
   const logHistory = getPlayerActivityHistory(playerIdx);
   const totalCredit = logHistory
@@ -1267,7 +1290,7 @@ function showPlayerPortfolio(playerIdx, tab = "") {
     <div style="display:flex;align-items:center;gap:.8rem;margin-bottom:1rem">
       <div style="font-size:2rem;color:${sanitizeColor(p.color)}">${escHtml(p.token)}</div>
       <div>
-        <div style="font-family:var(--font-display);font-size:1.3rem;color:#fff;font-weight:700">${escHtml(p.name)}${p.bankrupt ? " 💀" : ""}</div>
+        <div style="font-family:var(--font-display);font-size:1.3rem;color:#fff;font-weight:700">${escHtml(p.name)}${p.bankrupt ? " (out)" : ""}</div>
         <div style="font-size:.8rem;color:rgba(255,255,255,.5);margin-top:.15rem">${statusIcon}</div>
       </div>
       <div style="margin-left:auto;text-align:right">
@@ -1464,7 +1487,7 @@ function setTimerDuration(secs) {
   }
   // Re-open settings with updated state
   openDrawer("settings");
-  toast(next === 0 ? "⏱ Timer disabled" : `⏱ Timer set to ${next}s`, "gold");
+  toast(next === 0 ? "Turn timer off" : `Turn timer set to ${next}s`, "gold");
   syncLobbySettingsToRoom().catch((err) => {
     console.error(err);
     toast("Failed to sync timer setting online.", "danger");
@@ -1705,18 +1728,21 @@ function installLobbyEvents() {
 
   if (startMoney) {
     startMoney.addEventListener("change", () => {
+      saveLobbyPrefs();
       syncLobbySettingsToRoom();
     });
   }
 
   if (timerSelect) {
     timerSelect.addEventListener("change", () => {
+      saveLobbyPrefs();
       syncLobbySettingsToRoom();
     });
   }
 
   if (auctionSelect) {
     auctionSelect.addEventListener("change", () => {
+      saveLobbyPrefs();
       syncLobbySettingsToRoom();
     });
   }
@@ -1780,8 +1806,152 @@ function installLobbyEvents() {
   }, 1400);
 }
 
+// ═══════════════════════════════════════════════
+//  KEYBOARD SHORTCUTS
+// ═══════════════════════════════════════════════
+// Space rolls, Enter confirms the open dialog, Escape closes a dismissable one.
+// Every shortcut routes through the same handler the button uses, so turn
+// ownership and every guard still apply.
+function isTypingTarget(el) {
+  if (!el) return false;
+  const tag = String(el.tagName || "").toLowerCase();
+  return tag === "input" || tag === "textarea" || tag === "select" || el.isContentEditable;
+}
+
+function primaryButtonIn(overlayId) {
+  const o = document.getElementById(overlayId);
+  if (!o || !o.classList.contains("show")) return null;
+  return o.querySelector(".btn-primary:not([disabled]), .btn:not([disabled])");
+}
+
+function installKeyboardShortcuts() {
+  document.addEventListener("keydown", (e) => {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (isTypingTarget(document.activeElement)) return;
+    const gameScreen = document.getElementById("game-screen");
+    if (!gameScreen || gameScreen.classList.contains("hidden")) return;
+
+    const openOverlay = document.querySelector(".overlay.show");
+
+    if (e.key === "Escape") {
+      // Only dialogs that are safe to walk away from.
+      for (const id of ["prop-overlay", "jail-overlay", "rent-overlay", "card-overlay"]) {
+        const el = document.getElementById(id);
+        if (el?.classList.contains("show")) {
+          e.preventDefault();
+          closeOverlay(id);
+          return;
+        }
+      }
+      return;
+    }
+
+    if (e.key === "Enter" && openOverlay) {
+      const btn = primaryButtonIn(openOverlay.id);
+      if (btn) {
+        e.preventDefault();
+        btn.click();
+      }
+      return;
+    }
+
+    if (openOverlay) return;
+
+    if (e.code === "Space" || e.key === " ") {
+      const roll = document.getElementById("roll-btn");
+      const end = document.getElementById("btn-end");
+      e.preventDefault();
+      if (roll && !roll.disabled) roll.click();
+      else if (end && !end.disabled) end.click();
+      return;
+    }
+    if (e.key === "b" || e.key === "B") document.getElementById("btn-buy")?.click();
+    else if (e.key === "t" || e.key === "T") document.getElementById("btn-trade")?.click();
+    else if (e.key === "m" || e.key === "M") document.getElementById("btn-mortgage")?.click();
+    else if (e.key === "h" || e.key === "H") document.getElementById("btn-build")?.click();
+  });
+}
+
+// ═══════════════════════════════════════════════
+//  REMEMBERED LOBBY SETTINGS
+// ═══════════════════════════════════════════════
+const LOBBY_PREFS_KEY = "monopoly_lobby_prefs";
+
+function saveLobbyPrefs() {
+  try {
+    const prefs = {
+      startMoney: document.getElementById("starting-money")?.value,
+      timer: document.getElementById("lobby-timer")?.value,
+      auction: document.getElementById("auction-enabled")?.value,
+      theme: selectedThemeId,
+      speed: MOVE_SPEED.factor,
+    };
+    localStorage.setItem(LOBBY_PREFS_KEY, JSON.stringify(prefs));
+  } catch (err) {
+    /* storage can be unavailable; preferences are a convenience only */
+  }
+}
+
+function loadLobbyPrefs() {
+  let prefs = null;
+  try {
+    prefs = JSON.parse(localStorage.getItem(LOBBY_PREFS_KEY) || "null");
+  } catch (err) {
+    prefs = null;
+  }
+  if (!prefs || typeof prefs !== "object") return;
+  const speed = Number(prefs.speed);
+  if (Number.isFinite(speed) && speed > 0) MOVE_SPEED.factor = Math.min(3, Math.max(0.25, speed));
+  const timer = document.getElementById("lobby-timer");
+  if (timer && prefs.timer != null) {
+    timer.value = prefs.timer;
+    TIMER.duration = Number(prefs.timer) || 0;
+  }
+  const auction = document.getElementById("auction-enabled");
+  if (auction && prefs.auction != null) auction.value = prefs.auction;
+  if (prefs.theme && BOARD_THEMES[prefs.theme]) {
+    applyThemeById(prefs.theme);
+    refreshStartingMoneyUi(prefs.theme, false);
+  }
+  const money = document.getElementById("starting-money");
+  if (money && prefs.startMoney != null) money.value = prefs.startMoney;
+}
+
+// ═══════════════════════════════════════════════
+//  ANIMATION SPEED
+// ═══════════════════════════════════════════════
+// 1 = default. Lower is faster. Applied to every per-step movement wait.
+const MOVE_SPEED = { factor: 1 };
+
+function setMoveSpeed(factor) {
+  const next = Math.min(3, Math.max(0.25, Number(factor) || 1));
+  MOVE_SPEED.factor = next;
+  saveLobbyPrefs();
+  toast(
+    next <= 0.5 ? "Animation: fast" : next >= 1.5 ? "Animation: slow" : "Animation: normal",
+    "gold",
+  );
+  if (document.getElementById("drawer-settings")) openDrawer("settings");
+}
+
 function registerServiceWorker() {
   if (!("serviceWorker" in navigator)) return;
+  // ?nosw unregisters and stays off, so a local build can be reloaded without
+  // fighting a cached one. Never triggered in normal play.
+  try {
+    if (new URLSearchParams(window.location.search).has("nosw")) {
+      navigator.serviceWorker
+        .getRegistrations()
+        .then((rs) => rs.forEach((r) => r.unregister()))
+        .catch(() => {});
+      if (window.caches?.keys) {
+        caches.keys().then((ks) => ks.forEach((k) => caches.delete(k))).catch(() => {});
+      }
+      return;
+    }
+  } catch (err) {
+    /* URL parsing is not worth failing a boot over */
+  }
   window.addEventListener("load", () => {
     navigator.serviceWorker.register("./sw.js").catch((err) => {
       console.warn("Service worker registration failed:", err);

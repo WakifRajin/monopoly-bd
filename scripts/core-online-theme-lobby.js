@@ -1883,6 +1883,264 @@ const BOARD_THEMES = {
     taxNames: ["Income Tax", "Luxury Tax"],
     taxAmounts: [200, 100],
   },
+  cities: {
+    id: "cities",
+    name: "ধনী হবার মজার খেলা",
+    flag: "🌆",
+    desc: "Sylhet, Mymensingh, Chittagong and Dhaka",
+    currency: "৳",
+    locale: "en-BD",
+    goSalary: 200,
+    startMoneyDefault: 1500,
+    jailBail: 50,
+    railroadPrice: 200,
+    railroadRent: [25, 50, 100, 200],
+    railroadMortgage: 100,
+    utilityPrice: 150,
+    utilityMortgage: 75,
+    utilityRentOneMultiplier: 4,
+    utilityRentBothMultiplier: 10,
+    stations: [
+      "সিলেট স্টেশন",
+      "ময়মনসিংহ স্টেশন",
+      "চট্টগ্রাম স্টেশন",
+      "ঢাকা স্টেশন",
+    ],
+    utilities: [
+      { name: "বিদ্যুৎ সুবিধা", icon: "⚡" },
+      { name: "পানি সুবিধা", icon: "💧" },
+    ],
+    taxNames: ["আয়কর", "সম্পদ কর"],
+    taxAmounts: [200, 100],
+    spaces: [
+      {
+        name: "লামা বাজার",
+        color: "PINK",
+        price: 60,
+        rent: [2, 10, 30, 90, 160, 250],
+        house: 50,
+        mortgage: 30,
+        group: 0,
+      },
+      {
+        name: "মীরা বাজার",
+        color: "PINK",
+        price: 60,
+        rent: [4, 20, 60, 180, 320, 450],
+        house: 50,
+        mortgage: 30,
+        group: 0,
+      },
+      {
+        name: "আম্বার খানা",
+        color: "YELLOW",
+        price: 100,
+        rent: [6, 30, 90, 270, 400, 550],
+        house: 50,
+        mortgage: 50,
+        group: 1,
+      },
+      {
+        name: "জিন্দা বাজার",
+        color: "YELLOW",
+        price: 100,
+        rent: [6, 30, 90, 270, 400, 550],
+        house: 50,
+        mortgage: 50,
+        group: 1,
+      },
+      {
+        name: "বন্দর বাজার",
+        color: "YELLOW",
+        price: 120,
+        rent: [8, 40, 100, 300, 450, 600],
+        house: 50,
+        mortgage: 60,
+        group: 1,
+      },
+      {
+        name: "আকুয়া",
+        color: "RED",
+        price: 140,
+        rent: [10, 50, 150, 450, 625, 750],
+        house: 100,
+        mortgage: 70,
+        group: 2,
+      },
+      {
+        name: "নন্দী বাড়ী",
+        color: "RED",
+        price: 140,
+        rent: [10, 50, 150, 450, 625, 750],
+        house: 100,
+        mortgage: 70,
+        group: 2,
+      },
+      {
+        name: "কলেজ রোড",
+        color: "RED",
+        price: 160,
+        rent: [12, 60, 180, 500, 700, 900],
+        house: 100,
+        mortgage: 80,
+        group: 2,
+      },
+      {
+        name: "পণ্ডিত পাড়া",
+        color: "LBLUE",
+        price: 180,
+        rent: [14, 70, 200, 550, 750, 950],
+        house: 100,
+        mortgage: 90,
+        group: 3,
+      },
+      {
+        name: "কেওয়াটখালী",
+        color: "LBLUE",
+        price: 180,
+        rent: [14, 70, 200, 550, 750, 950],
+        house: 100,
+        mortgage: 90,
+        group: 3,
+      },
+      {
+        name: "বড় বাজার",
+        color: "LBLUE",
+        price: 200,
+        rent: [16, 80, 220, 600, 800, 1000],
+        house: 100,
+        mortgage: 100,
+        group: 3,
+      },
+      {
+        name: "বাটালী হিল",
+        color: "GREEN",
+        price: 220,
+        rent: [18, 90, 250, 700, 875, 1050],
+        house: 150,
+        mortgage: 110,
+        group: 4,
+      },
+      {
+        name: "পাথর ঘাটা",
+        color: "GREEN",
+        price: 220,
+        rent: [18, 90, 250, 700, 875, 1050],
+        house: 150,
+        mortgage: 110,
+        group: 4,
+      },
+      {
+        name: "মেহেদী বাগ",
+        color: "GREEN",
+        price: 240,
+        rent: [20, 100, 300, 750, 925, 1100],
+        house: 150,
+        mortgage: 120,
+        group: 4,
+      },
+      {
+        name: "লালদিঘীর ময়দান",
+        color: "ORANGE",
+        price: 260,
+        rent: [22, 110, 330, 800, 975, 1150],
+        house: 150,
+        mortgage: 130,
+        group: 5,
+      },
+      {
+        name: "আগ্রাবাদ",
+        color: "ORANGE",
+        price: 260,
+        rent: [22, 110, 330, 800, 975, 1150],
+        house: 150,
+        mortgage: 130,
+        group: 5,
+      },
+      {
+        name: "কুলশী",
+        color: "ORANGE",
+        price: 280,
+        rent: [24, 120, 360, 850, 1025, 1200],
+        house: 150,
+        mortgage: 140,
+        group: 5,
+      },
+      {
+        name: "ওয়ারী",
+        color: "BROWN",
+        price: 300,
+        rent: [26, 130, 390, 900, 1100, 1275],
+        house: 200,
+        mortgage: 150,
+        group: 6,
+      },
+      {
+        name: "মতিঝিল",
+        color: "BROWN",
+        price: 300,
+        rent: [26, 130, 390, 900, 1100, 1275],
+        house: 200,
+        mortgage: 150,
+        group: 6,
+      },
+      {
+        name: "ধানমণ্ডি",
+        color: "BROWN",
+        price: 320,
+        rent: [28, 150, 450, 1000, 1200, 1400],
+        house: 200,
+        mortgage: 160,
+        group: 6,
+      },
+      {
+        name: "বনানী",
+        color: "DBLUE",
+        price: 350,
+        rent: [35, 175, 500, 1100, 1300, 1500],
+        house: 200,
+        mortgage: 175,
+        group: 7,
+      },
+      {
+        name: "গুলশান",
+        color: "DBLUE",
+        price: 400,
+        rent: [50, 200, 600, 1400, 1700, 2000],
+        house: 200,
+        mortgage: 200,
+        group: 7,
+      },
+    ],
+    chanceCards: [
+      { text: "যাত্রা শুরুতে যাও. ২০০৳ সংগ্রহ করুন", action: "goto", value: 0 },
+      { text: "মেহেদী বাগে যান", action: "goto", value: 24 },
+      { text: "আকুয়ায় যান", action: "goto", value: 11 },
+      { text: "সিলেট স্টেশনে যাত্রা করুন", action: "goto", value: 5 },
+      { text: "গুলশানে যান", action: "goto", value: 39 },
+      { text: "নিকটতম স্টেশনে এগিয়ে যান", action: "nearest", value: "railroad" },
+      { text: "ব্যাংক আপনাকে ৫০৳ লভ্যাংশ দিচ্ছে", action: "money", value: 50 },
+      { text: "বিল্ডিং লোনের মেয়াদ পূর্ণ হয়েছে। ১৫০৳ সংগ্রহ করুন", action: "money", value: 150 },
+      { text: "১৫৳ দরিদ্র ভাতা প্রদান করুন", action: "money", value: -15 },
+      { text: "জেলে যান। ২০০৳ সংগ্রহ করবেন না", action: "jail", value: 0 },
+      { text: "জেলমুক্তি কার্ড", action: "jailcard", value: 0 },
+      { text: "সাধারণ মেরামত: প্রতি বাড়ির জন্য ২৫৳ এবং প্রতি হোটেলের জন্য ১০০৳ দিন", action: "repairs", value: {"hotel":100,"house":25} },
+    ],
+    communityCards: [
+      { text: "যাত্রা শুরুতে যান। ২০০৳ সংগ্রহ করুন", action: "goto", value: 0 },
+      { text: "ব্যাংকের ভুলে আপনার লাভ। ২০০৳ সংগ্রহ করুন", action: "money", value: 200 },
+      { text: "ডাক্তারের ফি। ৫০৳ প্রদান করুন", action: "money", value: -50 },
+      { text: "শেয়ার বিক্রি থেকে আপনি ৫০৳ পেয়েছেন।", action: "money", value: 50 },
+      { text: "পরামর্শ ফি বাবদ ২৫৳ গ্রহণ করুন", action: "money", value: 25 },
+      { text: "জেলমুক্তি কার্ড", action: "jailcard", value: 0 },
+      { text: "জেলে যান। ২০০৳ সংগ্রহ করবেন না", action: "jail", value: 0 },
+      { text: "জীবন বীমার মেয়াদ পূর্ণ হয়েছে। ১০০৳ সংগ্রহ করুন", action: "money", value: 100 },
+      { text: "হাসপাতালের ফি ১০০৳ প্রদান করুন", action: "money", value: -100 },
+      { text: "স্কুলের ফি ৫০৳ প্রদান করুন", action: "money", value: -50 },
+      { text: "আয়কর রিফান্ড। ২০৳ সংগ্রহ করুন", action: "money", value: 20 },
+      { text: "আজ আপনার জন্মদিন। প্রত্যেক খেলোয়াড়ের কাছ থেকে ১০৳ করে নিন", action: "birthday", value: 10 },
+    ],
+  },
   ancient: {
     id: "ancient",
     name: "Ancient Wonders",
@@ -4249,7 +4507,7 @@ function updateOnlineLobbyUI() {
   if (readyBtn) {
     const me = lobbyPlayers.find((p) => p.uid === ONLINE.localUid);
     readyBtn.disabled = !ONLINE.connected || !me || ONLINE.status !== "lobby";
-    readyBtn.textContent = me?.ready ? "❌ Unready" : "✅ Ready";
+    readyBtn.textContent = me?.ready ? "Not ready" : "Ready";
     readyBtn.style.background = me?.ready
       ? "linear-gradient(135deg,#7f1d1d,#c0392b)"
       : "linear-gradient(135deg,#92610e,var(--gold))";
@@ -5043,8 +5301,8 @@ function renderLobby() {
   const taglineEl = document.getElementById("lobby-context-tagline");
   if (taglineEl)
     taglineEl.textContent = showOnlinePanel
-      ? "✦ Online Room Lobby ✦"
-      : "✦ Local Multiplayer ✦";
+      ? "Online room"
+      : "Local multiplayer";
 
   lobbyPlayers.forEach((p, i) => {
     const kind = normalizePlayerKind(p.kind);
@@ -5066,8 +5324,8 @@ function renderLobby() {
         : "";
     const typeSelect = !online
       ? `<select class="type-select" title="Player type" onchange="onLobbyTypeChange(${i}, this.value)">
-           <option value="human" ${kind === "human" ? "selected" : ""}>🙂 Human</option>
-           <option value="ai" ${kind === "ai" ? "selected" : ""}>🤖 AI</option>
+           <option value="human" ${kind === "human" ? "selected" : ""}>Human</option>
+           <option value="ai" ${kind === "ai" ? "selected" : ""}>AI</option>
          </select>`
       : "";
     const tokenControls =
@@ -5113,12 +5371,12 @@ function renderLobby() {
     if (online) {
       startBtn.textContent = ONLINE.isHost
         ? allReady
-          ? "🚀 Launch Game"
-          : "⏳ Waiting for Ready"
-        : "⏳ Waiting for Host";
+          ? "Launch game"
+          : "Waiting for players"
+        : "Waiting for host";
       startBtn.disabled = !ONLINE.isHost || !allReady;
     } else {
-      startBtn.textContent = "🎮 Start Game";
+      startBtn.textContent = "Start game";
       startBtn.disabled = lobbyPlayers.length < 2;
     }
   }
@@ -5134,7 +5392,7 @@ function renderLobby() {
           const mine = p.uid === ONLINE.localUid;
           const host = p.uid === ONLINE.hostUid;
           return `<div class="online-connected-player">
-          <div class="online-connected-name">${escHtml(p.token || "🎲")} ${escHtml(p.name)}${host ? " (Host)" : ""}${mine ? " (You)" : ""}</div>
+          <div class="online-connected-name">${escHtml(p.token || "●")} ${escHtml(p.name)}${host ? " (Host)" : ""}${mine ? " (You)" : ""}</div>
           <div class="online-connected-ready ${p.ready ? "is-ready" : "is-not-ready"}">${p.ready ? "READY" : "NOT READY"}</div>
         </div>`;
         })
@@ -5314,22 +5572,22 @@ async function startGame() {
   renderAll();
   showScreen("game-screen");
   addLog(
-    `Game started with ${G.players.length} players! ${t.currency}${fmt(startMoney)} starting money. Board: ${t.flag} ${t.name}`,
+    `Game started — ${G.players.length} players, ${t.currency}${fmt(startMoney)} each, ${t.name} board.`,
     "important",
   );
   if (auctionEnabled) {
     addLog(
-      `🔨 Auctions enabled. Opening bid starts around ${AUCTION_OPENING_MIN_PERCENT}%–${AUCTION_OPENING_MAX_PERCENT}% of base property price.`,
+      `Auctions enabled. Opening bid is ${AUCTION_OPENING_MIN_PERCENT}–${AUCTION_OPENING_MAX_PERCENT}% of the list price.`,
       "important",
     );
   } else {
     addLog(
-      "🔕 Auctions disabled. Unpurchased properties remain unsold.",
+      "Auctions disabled. Unpurchased properties stay unsold.",
       "important",
     );
   }
   if (TIMER.duration > 0)
-    addLog(`⏱ Auto-advance timer: ${TIMER.duration}s`, "important");
+    addLog(`Auto-advance timer: ${TIMER.duration}s`, "important");
   updateActionButtons();
 
   if (isOnlineGame()) {

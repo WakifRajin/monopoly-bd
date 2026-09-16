@@ -30,7 +30,7 @@ async function rollDice() {
   }, 200);
 
   addLog(
-    `${p.name} rolled ${d1}+${d2}=${d1 + d2}${doubles ? " (DOUBLES! 🎲🎲)" : ""}`,
+    `${p.name} rolled ${d1}+${d2}=${d1 + d2}${doubles ? " (doubles)" : ""}`,
   );
 
   if (p.inJail) {
@@ -41,7 +41,7 @@ async function rollDice() {
   if (doubles) {
     p.doublesCount++;
     if (p.doublesCount >= 3) {
-      addLog(`${p.name} rolled 3 doubles in a row — Go to Jail!`, "danger");
+      addLog(`${p.name} rolled three doubles in a row and goes to jail.`, "danger");
       sendToJail(p);
       G.phase = "action";
       renderAll();
@@ -419,7 +419,7 @@ function drawCard(type, p) {
       sendToJail(actor);
     } else if (card.action === "jailcard") {
       actor.jailFreeCards++;
-      addLog(`${actor.name} got a Get Out of Jail Free card!`, "success");
+      addLog(`${actor.name} received a Get Out of Jail Free card.`, "success");
     } else if (card.action === "nearest") {
       const nearest = nearestRailroad(actor.pos);
       await movePlayerTo(actor.id, nearest);
@@ -444,7 +444,7 @@ function drawCard(type, p) {
       const collected = actor.money - before;
       addLog(
         collected > 0
-          ? `${actor.name} collected ${fmtCurrency(collected)} from the other players for their birthday!`
+          ? `${actor.name} collected ${fmtCurrency(collected)} from the other players.`
           : `${actor.name} has a birthday, but no one could pay yet.`,
         collected > 0 ? "success" : "important",
       );
@@ -574,11 +574,11 @@ function actionBuy() {
   addOwnedAsset(p, id);
   G.pendingBuy = null;
   addLog(
-    `${p.name} bought ${sp.name} for ${fmtCurrency(sp.price)}!`,
+    `${p.name} bought ${sp.name} for ${fmtCurrency(sp.price)}.`,
     "success",
   );
   playSfx("buy");
-  toast(`🏠 Bought ${sp.name}!`, "gold");
+  toast(`Bought ${sp.name}`, "gold");
   G.phase = "end";
   renderAll();
   animatePropertyPurchase(id);
@@ -751,7 +751,7 @@ function finalizeAuction(a) {
       addOwnedAsset(winner, a.propId);
       awardedPropId = a.propId;
       addLog(
-        `${winner.name} wins auction for ${sp.name} at ${fmtCurrency(a.currentBid)}!`,
+        `${winner.name} won the auction for ${sp.name} at ${fmtCurrency(a.currentBid)}.`,
         "success",
       );
       playSfx("auction-win");
@@ -1336,7 +1336,7 @@ function renderTradeReviewModal() {
   if (!modal) return;
   if (!trade) {
     modal.innerHTML =
-      '<h2>🤝 Trade</h2><p style="color:rgba(255,255,255,.6)">No pending trade proposal.</p>';
+      '<h2>Trade</h2><p style="color:rgba(255,255,255,.6)">No pending trade proposal.</p>';
     return;
   }
 
@@ -1344,7 +1344,7 @@ function renderTradeReviewModal() {
   const to = G.players[trade.toId];
   if (!from || !to) {
     modal.innerHTML =
-      '<h2>🤝 Trade</h2><p style="color:#ff9ca1">This trade is no longer valid.</p>';
+      '<h2>Trade</h2><p style="color:#ff9ca1">This trade is no longer valid.</p>';
     return;
   }
 
@@ -1353,14 +1353,14 @@ function renderTradeReviewModal() {
   const canCancel = role === "proposer" || role === "offline";
   const statusLabel =
     role === "recipient"
-      ? "📨 Your response is needed"
+      ? "Your response is needed"
       : role === "proposer"
-        ? `⏳ Waiting for ${to.name}`
+        ? `Waiting for ${to.name}`
         : role === "ai-recipient"
-          ? `🤖 ${to.name} is reviewing this trade`
+          ? `${to.name} is reviewing this trade`
           : role === "offline"
-            ? "🧪 Local trade review mode"
-            : "ℹ️ Trade in progress";
+            ? "Local trade review"
+            : "Trade in progress";
   const statusStyle =
     role === "recipient"
       ? "background:rgba(22,163,74,.2);border:1px solid rgba(74,222,128,.45);color:#b7f7cb;"
@@ -1383,7 +1383,7 @@ function renderTradeReviewModal() {
             : "Trade in progress.";
 
   modal.innerHTML = `
-    <h2>🤝 Trade Proposal</h2>
+    <h2>Trade proposal</h2>
     <div style="display:inline-flex;align-items:center;padding:.28rem .62rem;border-radius:999px;font-size:.74rem;font-weight:700;letter-spacing:.02em;margin-bottom:.55rem;${statusStyle}">${escHtml(statusLabel)}</div>
     <p style="color:rgba(255,255,255,.62);font-size:.82rem;margin-bottom:.75rem">${escHtml(roleText)}</p>
     <div class="trade-sides">
@@ -1399,8 +1399,8 @@ function renderTradeReviewModal() {
       </div>
     </div>
     <div class="modal-actions">
-      <button class="btn btn-primary" onclick="respondTrade(true)" ${canRespond ? "" : "disabled"}>✅ Accept</button>
-      <button class="btn btn-danger" onclick="respondTrade(false)" ${canRespond ? "" : "disabled"}>❌ Decline</button>
+      <button class="btn btn-primary" onclick="respondTrade(true)" ${canRespond ? "" : "disabled"}>Accept</button>
+      <button class="btn btn-danger" onclick="respondTrade(false)" ${canRespond ? "" : "disabled"}>Decline</button>
       <button class="btn" style="background:rgba(255,255,255,.1);color:#fff" onclick="cancelTradeProposal()" ${canCancel ? "" : "disabled"}>Cancel Proposal</button>
     </div>
   `;
@@ -1751,7 +1751,7 @@ function respondTrade(acceptTrade) {
   renderAll();
   updateActionButtons();
   checkBankruptcy();
-  toast("Trade completed! 🤝", "gold");
+  toast("Trade completed", "gold");
 }
 
 function cancelTradeProposal() {
@@ -1816,8 +1816,8 @@ function showJailPrompt(p, mode = "turn") {
   const canPay = p.jailFreeCards > 0 || p.money >= bailAmount;
   const bailLabel =
     p.jailFreeCards > 0
-      ? `🎟 Use Card${p.jailFreeCards > 1 ? ` (${p.jailFreeCards})` : ""}`
-      : `💳 Pay ${fmtCurrency(bailAmount)} Bail`;
+      ? `Use card${p.jailFreeCards > 1 ? ` (${p.jailFreeCards})` : ""}`
+      : `Pay ${fmtCurrency(bailAmount)} bail`;
 
   iconEl.textContent = "⛓️";
   titleEl.textContent = `${p.name} is in Jail`;
@@ -1832,7 +1832,7 @@ function showJailPrompt(p, mode = "turn") {
 
   descEl.textContent = `Choose now: roll for doubles or ${p.jailFreeCards > 0 ? "use a card to leave jail" : `pay ${fmtCurrency(bailAmount)} bail`}.`;
   actionsEl.innerHTML = `
-    <button class="btn btn-primary" onclick="closeOverlay('jail-overlay'); rollDice();">🎲 Roll Dice</button>
+    <button class="btn btn-primary" onclick="closeOverlay('jail-overlay'); rollDice();">Roll dice</button>
     <button class="btn ${canPay ? "btn-gold" : ""}" ${canPay ? "" : "disabled"} style="${canPay ? "" : "background:rgba(255,255,255,.12);color:rgba(255,255,255,.45)"}" onclick="closeOverlay('jail-overlay'); payBailout();">${bailLabel}</button>
   `;
   openOverlay("jail-overlay");
@@ -1843,7 +1843,7 @@ function sendToJail(p) {
   p.jailTurns = 0;
   p.pos = 10;
   p.doublesCount = 0;
-  addLog(`${p.name} goes to jail! ⛓️`, "danger");
+  addLog(`${p.name} goes to jail.`, "danger");
   playSfx("jail");
   showJailPrompt(p, "sent");
 }
@@ -1857,14 +1857,14 @@ function payBailout() {
     p.jailFreeCards--;
     p.inJail = false;
     p.jailTurns = 0;
-    addLog(`${p.name} used a Get Out of Jail Free card!`, "success");
+    addLog(`${p.name} used a Get Out of Jail Free card.`, "success");
     playSfx("bail");
   } else if (p.money >= bailAmount) {
     chargeMoney(p, bailAmount, null);
     p.inJail = false;
     p.jailTurns = 0;
     addLog(
-      `${p.name} paid ${fmtCurrency(bailAmount)} bail and is free!`,
+      `${p.name} paid ${fmtCurrency(bailAmount)} bail.`,
       "success",
     );
     playSfx("bail");
@@ -2293,7 +2293,7 @@ function checkBankruptcy() {
         `This is a bug: the creditor is unknown, so the estate goes to the bank.`,
     );
     addLog(
-      `⚠ ${p.name} ended up with a negative balance and is bankrupt to the Bank.`,
+      `${p.name} ended with a negative balance and is bankrupt to the bank.`,
       "danger",
     );
     declareBankruptcy(p, null, Math.abs(p.money), true);
@@ -2333,7 +2333,7 @@ function declareBankruptcy(p, creditor = null, debtAmount = 0) {
 
   if (creditor && !creditor.bankrupt && creditor.id !== p.id) {
     addLog(
-      `${p.name} is BANKRUPT to ${creditor.name}! Assets transferred.`,
+      `${p.name} is bankrupt to ${creditor.name}. Assets transferred.`,
       "danger",
     );
     if (p.money > 0) creditor.money += p.money;
@@ -2369,7 +2369,7 @@ function declareBankruptcy(p, creditor = null, debtAmount = 0) {
     }
 
     document.getElementById("bankrupt-name").textContent =
-      `${p.name} is Bankrupt!`;
+      `${p.name} is bankrupt`;
     document.getElementById("bankrupt-desc").textContent =
       `${p.name} could not pay ${creditor.name} and turned over all assets.`;
   } else {
@@ -2408,7 +2408,7 @@ function declareBankruptcy(p, creditor = null, debtAmount = 0) {
     }
 
     document.getElementById("bankrupt-name").textContent =
-      `${p.name} is Bankrupt!`;
+      `${p.name} is bankrupt`;
     document.getElementById("bankrupt-desc").textContent = auctionsEnabled
       ? `${p.name} could not pay the Bank. Their properties are queued for auction.`
       : `${p.name} could not pay the Bank. Their properties returned to the bank without auction.`;

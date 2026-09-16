@@ -345,6 +345,29 @@ body::before{
 
     <div class="section-label">Latest Update</div>
     <section class="log-card">
+      <h2 class="log-version">Update 0.1.0 - New Board, Clearer Table</h2>
+      <h3 class="log-subtitle">A Bangladesh cities board, information where you need it, and a lot less decoration</h3>
+      <ul class="changes">
+        <li>Added <b>&#2471;&#2472;&#2496; &#2489;&#2476;&#2494;&#2480; &#2478;&#2460;&#2494;&#2480; &#2454;&#2503;&#2482;&#2494;</b> as a permanent board, picked from the theme list like any other. No seed to paste.</li>
+        <li>It runs from Sylhet through Mymensingh and Chittagong to Dhaka: &#2482;&#2494;&#2478;&#2494; &#2476;&#2494;&#2460;&#2494;&#2480; and &#2460;&#2495;&#2472;&#2509;&#2470;&#2494; &#2476;&#2494;&#2460;&#2494;&#2480; at the cheap end, &#2476;&#2472;&#2494;&#2472;&#2496; and &#2455;&#2497;&#2482;&#2486;&#2494;&#2472; at the top, four city stations, and power and water utilities.</li>
+        <li>Classic-scale economy for that board: &#2547;200 for passing GO, &#2547;1500 starting cash, &#2547;50 bail, and its own Bengali Chance and Community Chest decks.</li>
+        <li>Every property and station now shows its base rent on the board itself, so you can judge a landing without opening the space.</li>
+        <li>Properties you own are outlined in your colour; properties owned by someone else are outlined dark. Mortgaged spaces are dimmed and struck through.</li>
+        <li>Player cards now show net worth, not just cash. It counts property at list price, mortgaged property at mortgage value, and buildings at what the bank would pay back.</li>
+        <li>Each player card carries a row of colour pips showing which sets they have a stake in, filled in when a set is complete and ready to build on.</li>
+        <li>Keyboard shortcuts: Space rolls or ends your turn, Enter confirms the open dialog, Escape closes it, and B, H, M and T open buy, build, mortgage and trade.</li>
+        <li>Starting money, timer, auction setting and board choice are remembered between games.</li>
+        <li>Movement speed is now adjustable in settings, with fast, normal and slow options.</li>
+        <li>Stripped most decorative emoji out of the interface. Board symbols, player tokens and house markers stay; button labels, status lines and log entries are now plain words.</li>
+        <li>Rewrote interface copy to drop the exclamation marks and title case, so messages read as statements rather than announcements.</li>
+        <li>Bigger tap targets on phones, and the game toolbar now scrolls instead of clipping its last button.</li>
+        <li>Fixed a crowded top bar reading "Player 1 &#39;s Turn" with a stray space.</li>
+      </ul>
+    </section>
+
+    <div class="section-label">Previous Updates</div>
+    <div class="stack">
+      <section class="log-card">
       <h2 class="log-version">Update 0.0.9 - Security and Economy Fixes</h2>
       <h3 class="log-subtitle">Closed exploits, protected online rooms, and money that adds up</h3>
       <ul class="changes">
@@ -360,11 +383,11 @@ body::before{
         <li>A match where every remaining player goes bankrupt at once now ends properly and awards the win to whoever survived longest, instead of hanging with no winner.</li>
         <li>Online rooms now require everyone to be on the same build, so mismatched versions can no longer share a room and corrupt each other's game state.</li>
         <li>Added a diagnostic mode for testing: open the game with ?debug to have it continuously check the board and balances for inconsistencies.</li>
+        <li>Fixed AI players freezing in online matches. A card counter could get stuck, and moves were being discarded while the board was syncing.</li>
+        <li>AI turns no longer open dialogs on a human player&#39;s screen, and no longer show which player&#39;s device is running them.</li>
       </ul>
-    </section>
+      </section>
 
-    <div class="section-label">Previous Updates</div>
-    <div class="stack">
       <section class="log-card">
       <h2 class="log-version">Update 0.0.8 - UI Updates and Custom Board Editor</h2>
       <h3 class="log-subtitle">Homepage polish, board tools, audio, and reliability</h3>
