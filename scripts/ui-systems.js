@@ -168,10 +168,31 @@ function renderWinnerLeaderboard(winnerId) {
 function maybeShowWinnerFromState() {
   if (!G || !Array.isArray(G.players) || !G.players.length) return false;
   const active = G.players.filter((player) => !player.bankrupt);
-  if (active.length !== 1) return false;
+  if (active.length > 1) return false;
+
   const winnerScreen = document.getElementById("winner-screen");
   if (winnerScreen && !winnerScreen.classList.contains("hidden")) return true;
-  showWinner(active[0]);
+
+  if (active.length === 1) {
+    showWinner(active[0]);
+    return true;
+  }
+
+  // Everyone is bankrupt — a cascade can take the last two out together.
+  // Award it to whoever survived longest rather than leaving the match hung.
+  const lastStanding = G.players.reduce((best, player) => {
+    const order = Number(player.bankruptOrder);
+    if (!Number.isInteger(order) || order <= 0) return best;
+    const bestOrder = Number(best?.bankruptOrder) || 0;
+    return order > bestOrder ? player : best;
+  }, null);
+  const winner = lastStanding || G.players[0];
+  if (!winner) return false;
+  addLog(
+    `All players are bankrupt. ${winner.name} survived longest and takes the match.`,
+    "important",
+  );
+  showWinner(winner);
   return true;
 }
 
@@ -1449,6 +1470,106 @@ function updateViewportHeightVar() {
   );
 }
 
+// ═══════════════════════════════════════════════
+//  DEBUG: STATE AUDIT
+// ═══════════════════════════════════════════════
+// Enabled with ?debug in the URL. The project has no test suite, so this is the
+// cheapest available guard against the bug class where a transfer credits one
+// side without debiting the other, or an asset list drifts from G.properties.
+const STATE_AUDIT = {
+  enabled: (() => {
+    try {
+      return new URLSearchParams(window.location.search).has("debug");
+    } catch (err) {
+      return false;
+    }
+  })(),
+  lastTotalCash: null,
+};
+
+function totalPlayerCash(state = G) {
+  return (state?.players || []).reduce(
+    (sum, p) => sum + (Number(p?.money) || 0),
+    0,
+  );
+}
+
+function auditGameState(label = "") {
+  if (!STATE_AUDIT.enabled) return [];
+  if (!G || !Array.isArray(G.players) || !G.players.length) return [];
+  const problems = [];
+
+  G.players.forEach((p) => {
+    if (!p) return;
+    if (!p.bankrupt && Number(p.money) < 0 && !DEBT_PROMPT.active) {
+      problems.push(`${p.name} holds ${p.money} with no debt prompt open`);
+    }
+    const owned = [
+      ...(p.properties || []),
+      ...(p.railroads || []),
+      ...(p.utilities || []),
+    ];
+    const seen = new Set();
+    owned.forEach((id) => {
+      if (seen.has(id)) problems.push(`${p.name} lists space ${id} twice`);
+      seen.add(id);
+      const prop = G.properties?.[id];
+      if (!prop) {
+        problems.push(`${p.name} lists space ${id}, which is not ownable`);
+      } else if (prop.owner !== p.id) {
+        problems.push(
+          `${p.name} lists space ${id}, but G.properties says owner ${prop.owner}`,
+        );
+      }
+    });
+  });
+
+  (G.properties || []).forEach((prop, id) => {
+    if (!prop) return;
+    if (prop.owner !== null && prop.owner !== undefined) {
+      const owner = G.players[prop.owner];
+      if (!owner) {
+        problems.push(`Space ${id} is owned by missing player ${prop.owner}`);
+      } else {
+        const owned = [
+          ...(owner.properties || []),
+          ...(owner.railroads || []),
+          ...(owner.utilities || []),
+        ];
+        if (!owned.includes(id)) {
+          problems.push(
+            `Space ${id} is owned by ${owner.name}, who does not list it`,
+          );
+        }
+      }
+    }
+    const houses = Number(prop.houses) || 0;
+    if (houses < 0 || houses > 4) {
+      problems.push(`Space ${id} has ${houses} houses (must be 0-4)`);
+    }
+    if (prop.hotel && houses !== 0) {
+      problems.push(`Space ${id} has a hotel and ${houses} houses`);
+    }
+  });
+
+  const cash = totalPlayerCash();
+  const delta =
+    STATE_AUDIT.lastTotalCash === null ? 0 : cash - STATE_AUDIT.lastTotalCash;
+  STATE_AUDIT.lastTotalCash = cash;
+
+  if (problems.length) {
+    console.error(
+      `[audit${label ? " after " + label : ""}] ${problems.length} problem(s); total cash ${cash} (${delta >= 0 ? "+" : ""}${delta})`,
+    );
+    problems.forEach((msg) => console.error("  •", msg));
+  } else {
+    console.debug(
+      `[audit${label ? " after " + label : ""}] ok; total cash ${cash} (${delta >= 0 ? "+" : ""}${delta})`,
+    );
+  }
+  return problems;
+}
+
 function installOnlineMutationHooks() {
   ONLINE_MUTATION_FUNCS.forEach((name) => {
     const fn = window[name];
@@ -1458,6 +1579,7 @@ function installOnlineMutationHooks() {
       if (result && typeof result.then === "function") {
         await result;
       }
+      auditGameState(name);
       if (isOnlineGame() && !ONLINE.isApplyingRemote) {
         if (
           name === "rollDice" &&

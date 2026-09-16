@@ -439,15 +439,14 @@ function drawCard(type, p) {
         );
       }
     } else if (card.action === "birthday") {
-      G.players.forEach((op, oi) => {
-        if (oi !== actor.id && !op.bankrupt) {
-          op.money -= card.value;
-          actor.money += card.value;
-        }
-      });
+      const before = actor.money;
+      collectFromEveryPlayer(actor, card.value);
+      const collected = actor.money - before;
       addLog(
-        `${actor.name} collected ${fmtCurrency(card.value)} from each player for birthday!`,
-        "success",
+        collected > 0
+          ? `${actor.name} collected ${fmtCurrency(collected)} from the other players for their birthday!`
+          : `${actor.name} has a birthday, but no one could pay yet.`,
+        collected > 0 ? "success" : "important",
       );
     }
     G.phase = rolledDoublesThisTurn() ? "roll" : "end";
@@ -1974,16 +1973,27 @@ function tryResolveDebtPrompt() {
   resetDebtPrompt();
   closeOverlay("bankrupt-overlay");
   closeOverlay("mortgage-overlay");
+  processPendingCollections();
   renderAll();
   updateActionButtons();
   return true;
 }
 
 function chargeMoney(p, amount, recipient = null, toParking = false) {
-  if (amount <= 0) {
-    if (recipient) recipient.money += Math.abs(amount);
+  const due = Math.floor(Number(amount) || 0);
+  if (due === 0) return true;
+  // A negative charge is a payment TO p. It must still be debited from the
+  // other side, or the transfer creates money out of nothing.
+  if (due < 0) {
+    const credit = -due;
+    if (recipient && !recipient.bankrupt) {
+      if (recipient.money < credit) return false;
+      recipient.money -= credit;
+    }
+    if (p && !p.bankrupt) p.money += credit;
     return true;
   }
+  amount = due;
   if (!p || p.bankrupt) return false;
 
   const actorIsAi = shouldAutoActForAi(p);
@@ -2044,6 +2054,70 @@ function chargeMoney(p, amount, recipient = null, toParking = false) {
   return false;
 }
 
+// ── Multi-player collections ──────────────────────────────────────────────
+// DEBT_PROMPT holds one debt at a time, so a card that collects from everyone
+// cannot simply charge each player in a loop: the second prompt would replace
+// the first and quietly forgive it. Charges are applied one at a time and any
+// that stall behind a prompt are queued here, then drained when it resolves.
+function queuePendingCollection(payerId, recipientId, amount) {
+  if (!Array.isArray(G.pendingCollections)) G.pendingCollections = [];
+  const due = Math.max(0, Math.floor(Number(amount) || 0));
+  if (!due) return;
+  G.pendingCollections.push({
+    payerId: Number(payerId),
+    recipientId:
+      recipientId === null || recipientId === undefined
+        ? null
+        : Number(recipientId),
+    amount: due,
+  });
+}
+
+function processPendingCollections() {
+  if (!Array.isArray(G.pendingCollections)) {
+    G.pendingCollections = [];
+    return true;
+  }
+  while (G.pendingCollections.length) {
+    if (DEBT_PROMPT.active) return false;
+    const next = G.pendingCollections.shift();
+    const payer = G.players[Number(next?.payerId)];
+    const recipient =
+      next?.recipientId === null || next?.recipientId === undefined
+        ? null
+        : G.players[Number(next.recipientId)];
+    if (!payer || payer.bankrupt) continue;
+    const settled = chargeMoney(
+      payer,
+      next.amount,
+      recipient && !recipient.bankrupt ? recipient : null,
+      next.recipientId === null || next.recipientId === undefined,
+    );
+    if (!settled && DEBT_PROMPT.active) return false;
+  }
+  return true;
+}
+
+// Collect `amount` from every other solvent player and pay it to `actor`.
+function collectFromEveryPlayer(actor, amount) {
+  const due = Math.max(0, Math.floor(Number(amount) || 0));
+  if (!actor || !due) return;
+  const opponents = G.players.filter(
+    (op) => op.id !== actor.id && !op.bankrupt,
+  );
+  for (let i = 0; i < opponents.length; i++) {
+    const op = opponents[i];
+    if (DEBT_PROMPT.active) {
+      // A prior opponent is still settling; everyone after them waits.
+      queuePendingCollection(op.id, actor.id, due);
+      continue;
+    }
+    const live = getLivePlayer(op.id);
+    if (!live || live.bankrupt) continue;
+    chargeMoney(live, due, actor, false);
+  }
+}
+
 function showRentModal(payer, owner, propName, rent) {
   if (shouldAutoActForAi(payer)) {
     closeOverlay("rent-overlay");
@@ -2055,9 +2129,21 @@ function showRentModal(payer, owner, propName, rent) {
   openOverlay("rent-overlay");
 }
 
+// Safety net, not a routine path. Every charge goes through chargeMoney, which
+// either settles the debt, prompts for it, or declares bankruptcy against the
+// real creditor. A negative balance reaching here means a transfer leaked past
+// that, so it is reported loudly rather than quietly swept to the bank.
 function checkBankruptcy() {
   G.players.forEach((p) => {
     if (p.bankrupt || p.money >= 0) return;
+    console.error(
+      `[money] ${p.name} (id ${p.id}) reached ${p.money} without going through chargeMoney. ` +
+        `This is a bug: the creditor is unknown, so the estate goes to the bank.`,
+    );
+    addLog(
+      `⚠ ${p.name} ended up with a negative balance and is bankrupt to the Bank.`,
+      "danger",
+    );
     declareBankruptcy(p, null, Math.abs(p.money), true);
   });
   maybeShowWinnerFromState();
@@ -2187,6 +2273,15 @@ function declareBankruptcy(p, creditor = null, debtAmount = 0, toBank = false) {
   p.railroads = [];
   p.utilities = [];
   p.bankrupt = true;
+
+  // A bankruptcy can unblock collections that were waiting behind this debt,
+  // and drops any this player still owed.
+  if (Array.isArray(G.pendingCollections)) {
+    G.pendingCollections = G.pendingCollections.filter(
+      (entry) => Number(entry?.payerId) !== p.id,
+    );
+  }
+  processPendingCollections();
 
   if (shouldAutoActForAi(p)) {
     closeOverlay("bankrupt-overlay");

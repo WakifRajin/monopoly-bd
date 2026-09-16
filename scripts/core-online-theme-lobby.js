@@ -3250,6 +3250,7 @@ function initGameState(players, startMoney, options = {}) {
     chat: [],
     pendingBuy: null,
     debtPrompt: null,
+    pendingCollections: [],
     auctionState: null,
     bankAuctionQueue: [],
     bankruptcySeq: 0,
@@ -3532,6 +3533,28 @@ function hydrateRemoteGameState(raw) {
     Number.isInteger,
   );
   next.auctionEnabled = sanitizeAuctionEnabled(next.auctionEnabled, true);
+  next.pendingCollections = indexedObjectToArray(next.pendingCollections)
+    .map((entry) => {
+      if (!entry || typeof entry !== "object") return null;
+      const payerId = Number(entry.payerId);
+      const amount = Math.max(0, Math.floor(Number(entry.amount) || 0));
+      if (
+        !Number.isInteger(payerId) ||
+        payerId < 0 ||
+        payerId >= next.players.length ||
+        !amount
+      )
+        return null;
+      const recipientRaw = Number(entry.recipientId);
+      const recipientId =
+        Number.isInteger(recipientRaw) &&
+        recipientRaw >= 0 &&
+        recipientRaw < next.players.length
+          ? recipientRaw
+          : null;
+      return { payerId, recipientId, amount };
+    })
+    .filter(Boolean);
   const debtPromptRaw =
     next.debtPrompt && typeof next.debtPrompt === "object"
       ? next.debtPrompt
