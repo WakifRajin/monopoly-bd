@@ -1072,7 +1072,7 @@ function aiTryBuildOne(player) {
   if (
     !player ||
     player.bankrupt ||
-    G.pendingBuy !== null ||
+    hasPendingBuy() ||
     G.auctionState ||
     G.pendingTrade
   )
@@ -1118,7 +1118,7 @@ function aiTryProposeTrade(player) {
     isOnlineGame() ||
     G.pendingTrade ||
     G.auctionState ||
-    G.pendingBuy !== null
+    hasPendingBuy()
   )
     return false;
 
@@ -1670,7 +1670,7 @@ function runOfflineAiStep() {
     return;
   }
 
-  if (G.pendingBuy !== null) {
+  if (hasPendingBuy()) {
     const spaceId = G.pendingBuy;
     const sp = SPACES[spaceId];
     const price = Number(sp?.price) || 0;

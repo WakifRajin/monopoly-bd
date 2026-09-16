@@ -545,8 +545,8 @@ function actionBuy() {
   if (!requireTurnControl()) return;
   if (MOVE_FX.active) return;
   const p = curPlayer();
-  if (G.pendingBuy === null) return;
-  const id = G.pendingBuy;
+  if (!hasPendingBuy()) return;
+  const id = Number(G.pendingBuy);
   const sp = SPACES[id];
   const prop = G.properties[id];
   if (!sp || !prop) {
@@ -581,9 +581,9 @@ function actionBuy() {
 function startAuction() {
   if (!requireTurnControl()) return;
   closeOverlay("buy-overlay");
-  const id = G.pendingBuy;
+  const id = hasPendingBuy() ? Number(G.pendingBuy) : null;
   G.pendingBuy = null;
-  const sp = SPACES[id];
+  const sp = id === null ? null : SPACES[id];
   if (!isAuctionSystemEnabled()) {
     if (sp) {
       addLog(`Auction is disabled. ${sp.name} remains unsold.`, "important");

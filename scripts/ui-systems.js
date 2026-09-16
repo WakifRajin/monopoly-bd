@@ -332,7 +332,7 @@ function showChatPreview(msg) {
 
 function sendChat() {
   const inp = document.getElementById("chat-input");
-  const text = inp.value.trim();
+  const text = inp.value.trim().slice(0, 300);
   if (!text) return;
   inp.value = "";
   if (!G.chat) G.chat = [];
@@ -340,14 +340,29 @@ function sendChat() {
     ? (G.players || []).find((x) => x.uid === ONLINE.localUid)
     : curPlayer();
   if (!p) return;
-  G.chat.push({
+
+  const message = {
     uid: p.uid || null,
     name: p.name,
     token: p.token,
     color: p.color,
     text,
     time: Date.now(),
-  });
+  };
+
+  if (isOnlineGame() && FIREBASE.api?.push) {
+    // Append-only: two people typing at the same moment each get their own key,
+    // so neither message can overwrite the other.
+    FIREBASE.api
+      .push(FIREBASE.api.ref(FIREBASE.db, `rooms/${ONLINE.roomId}/chat`), message)
+      .catch((err) => {
+        console.error(err);
+        toast("Message could not be sent.", "danger");
+      });
+    return;
+  }
+
+  G.chat.push(message);
   if (G.chat.length > 120) G.chat = G.chat.slice(-120);
   showChatPreview(getLastChatMessage());
   renderChatLog();
@@ -924,6 +939,16 @@ function toast(msg, type = "") {
 // ═══════════════════════════════════════════════
 //  UTILITIES
 // ═══════════════════════════════════════════════
+// Treat a missing pendingBuy the same as an explicit null: Firebase does not
+// round-trip nulls, so both spellings reach us for "nothing to buy".
+function hasPendingBuy(state = G) {
+  const raw = state?.pendingBuy;
+  // Number(null) is 0, so null must be rejected before any numeric coercion.
+  if (raw === null || raw === undefined || raw === "") return false;
+  const id = Number(raw);
+  return Number.isInteger(id) && id >= 0 && id < SPACES.length;
+}
+
 function curPlayer() {
   return G.players[G.currentPlayerIdx];
 }
