@@ -1,7 +1,7 @@
 // Bump this on every deploy. Caches are keyed by it, and activate() deletes the
 // old ones — without a bump, returning players keep running cached scripts and
 // can end up on a mixed set of old and new files.
-const SW_VERSION = '1.1.0';
+const SW_VERSION = '1.2.0';
 const STATIC_CACHE = `monopoly-bd-static-${SW_VERSION}`;
 const RUNTIME_CACHE = `monopoly-bd-runtime-${SW_VERSION}`;
 
@@ -76,7 +76,7 @@ function isCacheableRuntimeAsset(url) {
 async function handleNavigationRequest(request) {
   const runtimeCache = await caches.open(RUNTIME_CACHE);
   try {
-    const networkResponse = await fetch(request);
+    const networkResponse = await fetch(request, { cache: 'no-cache' });
     if (networkResponse && networkResponse.ok) {
       runtimeCache.put(request, networkResponse.clone());
     }
@@ -90,10 +90,12 @@ async function handleNavigationRequest(request) {
 }
 
 // Network-first: always try the deployed file, fall back to cache only offline.
+// `cache: 'no-cache'` matters - a plain fetch() is served by the browser's HTTP
+// cache, which would make "network-first" fetch a stale file and defeat itself.
 async function handleCodeAssetRequest(request) {
   const runtimeCache = await caches.open(RUNTIME_CACHE);
   try {
-    const networkResponse = await fetch(request);
+    const networkResponse = await fetch(request.url, { cache: 'no-cache' });
     if (networkResponse && networkResponse.ok) {
       runtimeCache.put(request, networkResponse.clone());
       return networkResponse;

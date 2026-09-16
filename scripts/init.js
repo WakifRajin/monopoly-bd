@@ -14,8 +14,10 @@ installSfxUnlockListeners();
 
 installOnlineMutationHooks();
 installLobbyEvents();
+installKeyboardShortcuts();
 registerServiceWorker();
 initializeCustomBoardFromStorage();
+loadLobbyPrefs();
 refreshStartingMoneyUi(selectedThemeId, false);
 renderLobby();
 updateOnlineLobbyUI();

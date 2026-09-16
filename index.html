@@ -64,7 +64,7 @@
           <span class="dot-sep"></span>
           <span>Online</span>
         </div>
-        <div class="home-edition-badge">✦ Classic Board Game ✦</div>
+        <div class="home-edition-badge">Classic board game</div>
       </div>
 
       <div class="home-menu-body">
@@ -74,8 +74,7 @@
           <div class="home-play-title">Choose your game mode</div>
           <button class="home-btn-primary" onclick="openOfflineSetupPage()">
             <div class="hbtn-left">
-              <span class="hbtn-icon">🎮</span>
-              <div class="hbtn-text">
+                            <div class="hbtn-text">
                 <span class="hbtn-label">Play Offline</span>
                 <span class="hbtn-sub">Local &amp; Pass &amp; Play</span>
               </div>
@@ -87,8 +86,7 @@
             onclick="openOnlineSetupPage('host')"
           >
             <div class="hbtn-left">
-              <span class="hbtn-icon">🌐</span>
-              <div class="hbtn-text">
+                            <div class="hbtn-text">
                 <span class="hbtn-label">Play Online</span>
                 <span class="hbtn-sub">Host or join a room</span>
               </div>
@@ -105,13 +103,11 @@
             id="credits-logs-btn"
             onclick="openWhatsNewPage()"
           >
-            <span class="hmi-icon">🏅</span>
-            <span class="hmi-label">Credits &amp; Logs</span>
+                        <span class="hmi-label">Credits &amp; Logs</span>
             <span class="hmi-sub">Patch notes</span>
           </button>
           <button class="home-menu-item" onclick="showScreen('how-to-screen')">
-            <span class="hmi-icon">📘</span>
-            <span class="hmi-label">How to Play</span>
+                        <span class="hmi-label">How to Play</span>
             <span class="hmi-sub">Rules &amp; guide</span>
           </button>
         </div>
@@ -120,10 +116,10 @@
 
         <div class="home-dev-card">
           <button class="home-dev-btn" onclick="openTestLabPage()">
-            ⚗️ Test Lab
+            Test Lab
           </button>
           <button class="home-dev-btn" onclick="openBoardEditorPage()">
-            🗺️ Board Editor
+            Board Editor
           </button>
         </div>
 
@@ -137,7 +133,7 @@
         onclick="openBugReport()"
         title="Report bugs"
       >
-        🐞 Report
+        Report
       </button>
     </div>
 
@@ -296,7 +292,7 @@
           <span>Rules</span>
         </div>
         <div class="setup-badge" id="lobby-context-tagline">
-          ✦ Local Multiplayer ✦
+          Local multiplayer
         </div>
       </div>
 
@@ -332,7 +328,7 @@
               onclick="toggleReadyState()"
               disabled
             >
-              ✅ Ready
+              Ready
             </button>
             <button
               class="btn btn-danger btn-sm"
@@ -430,7 +426,7 @@
             </div>
           </div>
           <div class="input-group">
-            <label>⏱ Auto-advance timer (after move)</label>
+            <label>Auto-advance timer (after move)</label>
             <select id="lobby-timer">
               <option value="0">Off — manual End Turn only</option>
               <option value="10">10 seconds</option>
@@ -441,7 +437,7 @@
             </select>
           </div>
           <div class="input-group">
-            <label>🔨 Auction System</label>
+            <label>Auctions</label>
             <select id="auction-enabled">
               <option value="on" selected>On</option>
               <option value="off">Off</option>
@@ -466,7 +462,7 @@
           onclick="startGame()"
           id="start-btn"
         >
-          🎮 Start Game
+          Start game
         </button>
       </div>
     </div>
@@ -804,7 +800,7 @@
       <div class="game-topbar">
         <div class="turn-badge">
           <span class="token" id="tb-token">🎩</span>
-          <span id="tb-name">Player 1</span>'s Turn
+          <span id="tb-name">Player 1</span><span class="tb-turn-suffix">'s turn</span>
           <span
             id="tb-jail-tag"
             style="
@@ -840,35 +836,35 @@
             onclick="openDrawer('players')"
             title="Players"
           >
-            👥
+            Players
           </button>
           <button
             class="btn btn-sm topbar-tool-btn"
             onclick="openDrawer('log')"
             title="Game log"
           >
-            📋
+            Log
           </button>
           <button
             class="btn btn-sm topbar-tool-btn"
             onclick="openDrawer('chat')"
             title="Chat"
           >
-            💬
+            Chat
           </button>
           <button
             class="btn btn-sm topbar-tool-btn"
             onclick="openBugReport()"
             title="Report bug"
           >
-            🐞
+            Bug
           </button>
           <button
             class="btn btn-sm topbar-tool-btn"
             onclick="openDrawer('settings')"
             title="Timer settings"
           >
-            ⚙️
+            Settings
           </button>
           <button
             class="btn btn-sm topbar-tool-btn"
@@ -877,7 +873,7 @@
             title="Leave game"
             style="display: none; background: rgba(192, 57, 43, 0.35)"
           >
-            🚪
+            Leave
           </button>
         </div>
       </div>
@@ -888,7 +884,7 @@
         <div class="left-panel">
           <div class="panel">
             <div class="panel-header">
-              👥 Players
+              Players
               <span
                 style="
                   font-size: 0.7rem;
@@ -902,7 +898,7 @@
             <div class="panel-body" id="player-cards"></div>
           </div>
           <div class="panel grow">
-            <div class="panel-header">🎮 Actions</div>
+            <div class="panel-header">Actions</div>
             <div class="action-grid" id="action-grid">
               <button
                 class="act-btn act-buy"
@@ -910,7 +906,7 @@
                 onclick="actionBuy()"
                 disabled
               >
-                🏠 Buy
+                Buy
               </button>
               <button
                 class="act-btn act-build"
@@ -918,7 +914,7 @@
                 onclick="openBuildModal()"
                 disabled
               >
-                🏗 Build
+                Build
               </button>
               <button
                 class="act-btn act-mortgage"
@@ -926,7 +922,7 @@
                 onclick="openMortgageModal()"
                 disabled
               >
-                💰 Mortgage
+                Mortgage
               </button>
               <button
                 class="act-btn act-trade"
@@ -934,7 +930,7 @@
                 onclick="openTradeModal()"
                 disabled
               >
-                🤝 Trade
+                Trade
               </button>
               <button
                 class="act-btn act-jail"
@@ -942,7 +938,7 @@
                 onclick="payBailout()"
                 style="display: none"
               >
-                💳 Pay Bail
+                Pay bail
               </button>
               <button
                 class="act-btn act-end"
@@ -950,7 +946,7 @@
                 onclick="endTurn()"
                 disabled
               >
-                ⏩ End Turn
+                End turn
               </button>
             </div>
           </div>
@@ -964,11 +960,11 @@
         <!-- Right panel (desktop) -->
         <div class="right-panel">
           <div class="panel" style="flex: 0 0 auto; max-height: 45%">
-            <div class="panel-header">📋 Game Log</div>
+            <div class="panel-header">Game log</div>
             <div class="panel-body" id="game-log"></div>
           </div>
           <div class="panel grow" style="display: flex; flex-direction: column">
-            <div class="panel-header">💬 Chat</div>
+            <div class="panel-header">Chat</div>
             <div class="panel-body" id="chat-log" style="flex: 1"></div>
             <div class="chat-input-row">
               <input
@@ -987,7 +983,7 @@
       <!-- Bottom bar mobile -->
       <div class="game-bottombar">
         <div class="mobile-turnline" id="mobile-turnline">
-          🎲 Roll dice to begin
+          Roll dice to begin
         </div>
         <div class="mobile-player-strip" id="mobile-player-strip"></div>
         <div class="mobile-actions-grid">
@@ -997,7 +993,7 @@
             onclick="actionBuy()"
             disabled
           >
-            🏠 Buy
+            Buy
           </button>
           <button
             class="act-btn act-build"
@@ -1005,7 +1001,7 @@
             onclick="openBuildModal()"
             disabled
           >
-            🏗 Build
+            Build
           </button>
           <button
             class="act-btn act-mortgage"
@@ -1013,7 +1009,7 @@
             onclick="openMortgageModal()"
             disabled
           >
-            💰 Mortgage
+            Mortgage
           </button>
           <button
             class="act-btn act-trade"
@@ -1021,7 +1017,7 @@
             onclick="openTradeModal()"
             disabled
           >
-            🤝 Trade
+            Trade
           </button>
           <button
             class="act-btn act-jail"
@@ -1029,7 +1025,7 @@
             onclick="payBailout()"
             style="display: none"
           >
-            💳 Pay Bail
+            Pay bail
           </button>
           <button
             class="act-btn act-end"
@@ -1037,7 +1033,7 @@
             onclick="endTurn()"
             disabled
           >
-            ⏩ End Turn
+            End turn
           </button>
         </div>
       </div>
@@ -1055,10 +1051,10 @@
       </div>
       <div class="winner-actions">
         <button class="btn btn-secondary btn-lg" onclick="viewBoardAfterWin()">
-          👀 View Board
+          View board
         </button>
         <button class="btn btn-primary btn-lg" onclick="restartGame()">
-          🔄 Play Again
+          Play again
         </button>
       </div>
     </div>
@@ -1080,13 +1076,13 @@
         <h2 id="buy-title">Buy Property?</h2>
         <p id="buy-desc"></p>
         <div class="modal-actions">
-          <button class="btn btn-primary" onclick="confirmBuy()">✅ Buy</button>
+          <button class="btn btn-primary" onclick="confirmBuy()">Buy</button>
           <button
             class="btn btn-gold"
             id="buy-auction-btn"
             onclick="startAuction()"
           >
-            🔨 Auction
+            Auction
           </button>
           <button
             class="btn"
@@ -1102,7 +1098,7 @@
     <!-- Auction modal -->
     <div class="overlay" id="auction-overlay">
       <div class="modal">
-        <h2>🔨 Property Auction</h2>
+        <h2>Property auction</h2>
         <div class="auction-display">
           <div class="auction-prop" id="auc-prop-name"></div>
           <div class="auction-base">
@@ -1168,13 +1164,13 @@
             class="btn btn-secondary"
             onclick="confirmLeaveOnlineGame('ai')"
           >
-            🤖 AI Takeover
+            AI takeover
           </button>
           <button
             class="btn btn-gold"
             onclick="confirmLeaveOnlineGame('liquidation')"
           >
-            🏦 Liquidate & Auction
+            Liquidate and auction
           </button>
           <button
             class="btn"
@@ -1190,8 +1186,7 @@
     <!-- Rent notification -->
     <div class="overlay" id="rent-overlay">
       <div class="modal" style="text-align: center">
-        <div style="font-size: 2.5rem; margin-bottom: 0.5rem">💸</div>
-        <h2 id="rent-title">Rent Due!</h2>
+                <h2 id="rent-title">Rent due</h2>
         <p id="rent-desc"></p>
         <button
           class="btn btn-primary btn-full"
@@ -1236,7 +1231,7 @@
       onclick="if(event.target===this)closeOverlay('trade-overlay')"
     >
       <div class="modal">
-        <h2>🤝 Trade</h2>
+        <h2>Trade</h2>
         <div style="margin-bottom: 0.75rem">
           <label
             style="
@@ -1317,7 +1312,7 @@
         </div>
         <div class="modal-actions">
           <button class="btn btn-primary" onclick="confirmTrade()">
-            ✅ Propose Trade
+            Propose trade
           </button>
           <button
             class="btn"
@@ -1346,7 +1341,7 @@
       onclick="if(event.target===this)closeOverlay('build-overlay')"
     >
       <div class="modal">
-        <h2>🏗 Build Houses / Hotels</h2>
+        <h2>Build Houses / Hotels</h2>
         <div id="build-list"></div>
         <button
           class="btn"
@@ -1369,7 +1364,7 @@
       onclick="if(event.target===this)closeOverlay('mortgage-overlay')"
     >
       <div class="modal">
-        <h2>💰 Mortgage Properties</h2>
+        <h2>Mortgage Properties</h2>
         <p style="color: rgba(255, 255, 255, 0.5); font-size: 0.82rem">
           Mortgage to raise cash. Unmortgage to use property again (costs 10%
           interest).
@@ -1392,8 +1387,7 @@
     <!-- Bankruptcy modal -->
     <div class="overlay" id="bankrupt-overlay">
       <div class="modal" style="text-align: center">
-        <div style="font-size: 3rem; margin-bottom: 0.5rem">💀</div>
-        <h2 id="bankrupt-name">Player is Bankrupt!</h2>
+                <h2 id="bankrupt-name">Player is bankrupt</h2>
         <p id="bankrupt-desc"></p>
         <div class="modal-actions" style="justify-content: center">
           <button
@@ -1402,7 +1396,7 @@
             style="display: none"
             onclick="openBuildForDebt()"
           >
-            🏠 Sell Buildings
+            Sell buildings
           </button>
           <button
             class="btn btn-gold"
@@ -1410,7 +1404,7 @@
             style="display: none"
             onclick="openMortgageForDebt()"
           >
-            💰 Mortgage Properties
+            Mortgage Properties
           </button>
           <button
             class="btn btn-danger"
