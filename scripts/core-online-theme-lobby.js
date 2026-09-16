@@ -3781,6 +3781,9 @@ function hydrateRemoteGameState(raw) {
         );
         G.auctionState.source =
           G.auctionState.source === "bank" ? "bank" : "market";
+        const rawSince = Number(G.auctionState.bidderSince);
+        G.auctionState.bidderSince =
+          Number.isFinite(rawSince) && rawSince > 0 ? rawSince : Date.now();
       }
     }
   }

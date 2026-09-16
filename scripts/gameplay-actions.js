@@ -628,6 +628,7 @@ function beginAuction(propId, { source = "market", bidderStartIdx = 0 } = {}) {
     bidderIdx: startPos,
     activePlayers,
     source,
+    bidderSince: Date.now(),
   };
   addLog(
     `Auction opened for ${sp.name} at ${fmtCurrency(openingBid)} (${openingPercent}% opening bid).`,
@@ -779,6 +780,40 @@ function finalizeAuction(a) {
   updateActionButtons();
 }
 
+// An auction has no turn timer of its own, so a bidder who walks away (or
+// disconnects) used to stall the match permanently. After this long their turn
+// is passed automatically.
+const AUCTION_BIDDER_TIMEOUT_MS = 45000;
+const TRADE_PROPOSAL_TIMEOUT_MS = 90000;
+
+function enforceAuctionBidderTimeout() {
+  const a = G?.auctionState;
+  if (!a || G.gameOver) return false;
+  const since = Number(a.bidderSince) || 0;
+  if (!since || Date.now() - since < AUCTION_BIDDER_TIMEOUT_MS) return false;
+  const bidderId = currentAuctionBidderId();
+  const bidder = Number.isInteger(bidderId) ? G.players[bidderId] : null;
+  if (!bidder) return false;
+  // Only the client that owns the decision retires it, so it happens once.
+  if (!canLocalControlAuctionAction()) return false;
+  addLog(`${bidder.name} took too long and passes the auction.`, "danger");
+  passAuction();
+  return true;
+}
+
+function enforcePendingTradeTimeout() {
+  const trade = G?.pendingTrade;
+  if (!trade || G.gameOver) return false;
+  const created = Number(trade.createdAt) || 0;
+  if (!created || Date.now() - created < TRADE_PROPOSAL_TIMEOUT_MS) return false;
+  const role = getPendingTradeRole();
+  if (role !== "recipient" && role !== "offline" && role !== "ai-recipient")
+    return false;
+  addLog("Trade proposal expired with no response.", "danger");
+  respondTrade(false);
+  return true;
+}
+
 function placeBid(amount) {
   if (!requireAuctionControl()) return;
   const a = G.auctionState;
@@ -818,6 +853,7 @@ function placeBid(amount) {
     return;
   }
   a.bidderIdx = nextIdx;
+  a.bidderSince = Date.now();
   renderAuction();
   maybeScheduleOfflineAiTurn();
 }
@@ -857,6 +893,7 @@ function passAuction() {
     return;
   }
   a.bidderIdx = nextIdx;
+  a.bidderSince = Date.now();
   renderAuction();
   maybeScheduleOfflineAiTurn();
 }

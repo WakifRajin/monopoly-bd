@@ -1388,7 +1388,35 @@ const TIMER = {
   remaining: 0,
   intervalId: null,
   paused: false,
+  turnKey: "",
 };
+
+// Identifies one player's turn. The timer restarts when this changes and not
+// before, so a render, a chat message or a remote snapshot cannot keep pushing
+// the deadline back.
+function currentTurnKey() {
+  if (!G || !Array.isArray(G.players)) return "";
+  return `${G.gameStartedAt || 0}:${G.currentPlayerIdx}:${G.players[G.currentPlayerIdx]?.bankruptOrder || 0}`;
+}
+
+// Only modal decisions should hold the clock. An informational overlay left
+// open used to pause it indefinitely.
+const TIMER_BLOCKING_OVERLAYS = [
+  "buy-overlay",
+  "auction-overlay",
+  "trade-overlay",
+  "trade-review-overlay",
+  "bankrupt-overlay",
+  "card-overlay",
+  "mortgage-overlay",
+  "build-overlay",
+];
+
+function timerIsBlocked() {
+  return TIMER_BLOCKING_OVERLAYS.some((id) =>
+    document.getElementById(id)?.classList.contains("show"),
+  );
+}
 
 function setTimerDuration(secs) {
   if (isOnlineGame() && !ONLINE.isHost) {
@@ -1407,7 +1435,7 @@ function setTimerDuration(secs) {
     G.phase === "end" &&
     canLocalControlTurn()
   ) {
-    startTimer();
+    startTimer(true);
   }
   // Re-open settings with updated state
   openDrawer("settings");
@@ -1418,18 +1446,20 @@ function setTimerDuration(secs) {
   });
 }
 
-function startTimer() {
+function startTimer(force = false) {
   if (TIMER.duration === 0) return;
+  const key = currentTurnKey();
+  // Already counting down for this same turn - leave it running.
+  if (!force && TIMER.intervalId && TIMER.turnKey === key) return;
   stopTimer();
+  TIMER.turnKey = key;
   TIMER.remaining = TIMER.duration;
   TIMER.paused = false;
   updateTimerUI();
   document.getElementById("timer-wrap").classList.remove("hidden");
   TIMER.intervalId = setInterval(() => {
     if (TIMER.paused) return;
-    // Pause if any overlay is open
-    const anyOpen = document.querySelector(".overlay.show");
-    if (anyOpen) return;
+    if (timerIsBlocked()) return;
     TIMER.remaining--;
     updateTimerUI();
     if (TIMER.remaining <= 0) {
@@ -1442,6 +1472,7 @@ function startTimer() {
 function stopTimer() {
   clearInterval(TIMER.intervalId);
   TIMER.intervalId = null;
+  TIMER.turnKey = "";
   document.getElementById("timer-wrap").classList.add("hidden");
 }
 
@@ -1694,6 +1725,8 @@ function installLobbyEvents() {
     if (!ONLINE.ready) return;
     if (isOnlineGame()) {
       pulseRoomHeartbeat();
+      pulsePresence();
+      maybeTakeOverAbsentSeat();
       return;
     }
     if (ONLINE.mode === "join") {
@@ -1709,6 +1742,8 @@ function installLobbyEvents() {
     const gameScreen = document.getElementById("game-screen");
     if (!gameScreen || gameScreen.classList.contains("hidden")) return;
     if (!G || G.gameOver) return;
+    if (enforceAuctionBidderTimeout()) return;
+    if (enforcePendingTradeTimeout()) return;
     maybeScheduleOfflineAiTurn();
   }, 1400);
 }

@@ -475,7 +475,7 @@ function uniqueConnectedRoomUids() {
   return [...new Set(uids)].sort();
 }
 
-function activeOnlineRunnerUid(now = Date.now()) {
+function activeOnlineRunnerUid(now = serverNow()) {
   if (!isOnlineGame()) return String(ONLINE.localUid || "");
 
   const lease =
@@ -497,7 +497,7 @@ function activeOnlineRunnerUid(now = Date.now()) {
   return connectedUids[0] || String(ONLINE.localUid || "");
 }
 
-function hasValidAiRunnerLease(now = Date.now()) {
+function hasValidAiRunnerLease(now = serverNow()) {
   if (!isOnlineGame()) return true;
   const lease =
     ONLINE.aiRunner && typeof ONLINE.aiRunner === "object"
@@ -512,7 +512,7 @@ async function ensureAiRunnerLease(force = false) {
   if (!isOnlineGame() || !FIREBASE.api || !ONLINE.connected || !ONLINE.localUid)
     return false;
 
-  const now = Date.now();
+  const now = serverNow();
   // Use a longer debounce (half of lease duration) to prevent rapid steal attempts
   const debounceMs = force ? 150 : Math.floor(AI_RUNNER_LEASE_MS / 2);
   if (
@@ -608,11 +608,11 @@ async function ensureAiRunnerLease(force = false) {
     !!lease &&
     String(lease.uid || "") === String(ONLINE.localUid || "") &&
     String(lease.turnKey || "") === turnKey &&
-    (Number(lease.until) || 0) > Date.now()
+    (Number(lease.until) || 0) > serverNow()
   );
 }
 
-function canRunAiController(now = Date.now()) {
+function canRunAiController(now = serverNow()) {
   if (!isOnlineGame()) return true;
   if (!ONLINE.localUid) return false;
   if (!hasValidAiRunnerLease(now)) return false;
@@ -1392,7 +1392,7 @@ function maybeScheduleOfflineAiTurn() {
   }
 
   const stateKey = offlineAiStateKey();
-  const now = Date.now();
+  const now = serverNow();
   if (isOnlineGame()) {
     if (!canRunAiController(now)) {
       const runnerUid = activeOnlineRunnerUid(now) || "none";
