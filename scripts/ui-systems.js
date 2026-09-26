@@ -1426,6 +1426,91 @@ function showScreen(id) {
     .forEach((s) => s.classList.add("hidden"));
   document.getElementById(id).classList.remove("hidden");
   syncBgmForScreen(id);
+  if (id === "game-screen") armExitGuard();
+  else disarmExitGuard();
+}
+
+// ═══════════════════════════════════════════════
+//  EXIT GUARD
+// ═══════════════════════════════════════════════
+// On a phone the back button — and worse, the edge-swipe gesture, which is easy
+// to trigger by accident while tapping near the screen edge — navigates away and
+// takes the match with it. A history entry is pushed when the board opens; the
+// gesture pops that entry instead of leaving, and we immediately push it back
+// and ask what the player actually wanted.
+const EXIT_GUARD = { armed: false, prompting: false };
+
+function matchInProgress() {
+  return !!(
+    G &&
+    Array.isArray(G.players) &&
+    G.players.length &&
+    !G.gameOver &&
+    !document.getElementById("game-screen")?.classList.contains("hidden")
+  );
+}
+
+function onExitGuardPop() {
+  if (!EXIT_GUARD.armed) return;
+  if (!matchInProgress()) {
+    disarmExitGuard();
+    openHomePage();
+    return;
+  }
+  // Put the guard entry back so the browser stays on the board, then ask.
+  history.pushState({ mbdExitGuard: true }, "");
+  if (EXIT_GUARD.prompting) return;
+  EXIT_GUARD.prompting = true;
+  closeDrawer();
+  openOverlay("exit-guard-overlay");
+}
+
+function onExitGuardBeforeUnload(e) {
+  if (!matchInProgress()) return;
+  e.preventDefault();
+  e.returnValue = "";
+  return "";
+}
+
+function armExitGuard() {
+  if (EXIT_GUARD.armed) return;
+  EXIT_GUARD.armed = true;
+  try {
+    history.pushState({ mbdExitGuard: true }, "");
+  } catch (err) {
+    /* history can be unavailable in some embedded contexts */
+  }
+  window.addEventListener("popstate", onExitGuardPop);
+  window.addEventListener("beforeunload", onExitGuardBeforeUnload);
+}
+
+function disarmExitGuard() {
+  if (!EXIT_GUARD.armed) return;
+  EXIT_GUARD.armed = false;
+  EXIT_GUARD.prompting = false;
+  window.removeEventListener("popstate", onExitGuardPop);
+  window.removeEventListener("beforeunload", onExitGuardBeforeUnload);
+  closeOverlay("exit-guard-overlay");
+}
+
+// "Keep playing" is the default action, and the only one a stray swipe can reach.
+function dismissExitGuard() {
+  EXIT_GUARD.prompting = false;
+  closeOverlay("exit-guard-overlay");
+}
+
+function confirmExitMatch() {
+  EXIT_GUARD.prompting = false;
+  closeOverlay("exit-guard-overlay");
+  if (isOnlineGame() && ONLINE.status === "playing") {
+    // Online has its own choice of how to hand over the seat.
+    openLeaveGameModal();
+    return;
+  }
+  disarmExitGuard();
+  stopTimer();
+  clearOfflineAiTimer(true);
+  openHomePage();
 }
 
 // ═══════════════════════════════════════════════

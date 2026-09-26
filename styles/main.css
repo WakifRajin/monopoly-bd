@@ -3154,11 +3154,23 @@ body[data-theme="classic"] .center-sub {
   }
   .left-panel .panel {
     flex: 0 0 auto;
+    min-height: 0;
   }
   .left-panel .panel.grow,
   .right-panel .panel.grow {
     flex: 1;
     min-height: 0;
+  }
+  /* The action grid is a fixed set of buttons, so the player list is what has
+     to give when there are eight of them. Without min-height:0 a flex item
+     refuses to shrink below its content and the list was clipped with no way
+     to reach the players at the bottom. */
+  .left-panel .players-panel {
+    flex: 1 1 0;
+    min-height: 6.5rem;
+  }
+  .left-panel .panel.grow {
+    flex: 0 0 auto;
   }
   .mobile-action-bar {
     display: none !important;
