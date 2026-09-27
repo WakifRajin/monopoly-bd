@@ -2440,7 +2440,7 @@ function getThemeUtilityRentMultipliers(themeId = selectedThemeId) {
 function refreshStartingMoneyUi(themeId = selectedThemeId, forceValue = false) {
   const theme = getThemeById(themeId);
   const label = document.getElementById("starting-money-label");
-  if (label) label.textContent = `Starting Money (${theme.currency})`;
+  if (label) label.textContent = `Starting money (${theme.currency})`;
 
   const input = document.getElementById("starting-money");
   if (!input) return;
@@ -2623,9 +2623,9 @@ function renderBoardThemeSelector() {
     const btn = document.createElement("div");
     const active = t.id === selectedThemeId;
     btn.style.cssText = `padding:.75rem;border-radius:9px;cursor:${hostCanEditTheme ? "pointer" : "not-allowed"};border:2px solid ${active ? "var(--gold-light)" : "rgba(255,255,255,.15)"};background:${active ? "rgba(201,151,28,.2)" : "rgba(255,255,255,.06)"};transition:all .2s;${hostCanEditTheme ? "" : "opacity:.65"}`;
-    btn.innerHTML = `<div style="font-size:1.5rem;margin-bottom:.3rem">${escHtml(t.flag)}</div>
-      <div style="font-weight:700;color:#fff;font-size:.9rem">${escHtml(t.name)}</div>
-      <div style="font-size:.75rem;color:rgba(255,255,255,.5);margin-top:.15rem">${escHtml(t.desc)}</div>`;
+    btn.innerHTML = `<div style="font-size:var(--fs-2xl);margin-bottom:.3rem">${escHtml(t.flag)}</div>
+      <div style="font-weight:700;color:#fff;font-size:var(--fs-md)">${escHtml(t.name)}</div>
+      <div style="font-size:var(--fs-xs);color:rgba(255,255,255,.5);margin-top:.15rem">${escHtml(t.desc)}</div>`;
     btn.onclick = async () => {
       if (!hostCanEditTheme) return;
       applyThemeById(t.id);
@@ -5173,7 +5173,7 @@ async function takeOverAbsentSeat(uid, name) {
       return applyOnlineDepartureRuleToRoomData(data, uid, "ai");
     });
     if (result?.committed) {
-      addLog(`${name} lost connection. AI has taken over their seat.`, "important");
+      addLog(`${name} lost connection. The AI is playing their seat.`, "important");
       return true;
     }
   } catch (err) {
@@ -5320,7 +5320,7 @@ function renderLobby() {
     const safeName = escAttr(p.name);
     const readyBadge =
       online && p.uid
-        ? `<span style="margin-left:.3rem;font-size:.72rem;padding:.1rem .35rem;border-radius:10px;background:${p.ready ? "rgba(45,160,90,.3)" : "rgba(127,29,29,.3)"};color:${p.ready ? "#86efac" : "#fca5a5"}">${p.ready ? "READY" : "NOT READY"}</span>`
+        ? `<span style="margin-left:.3rem;font-size:var(--fs-2xs);padding:.1rem .35rem;border-radius:10px;background:${p.ready ? "rgba(45,160,90,.3)" : "rgba(127,29,29,.3)"};color:${p.ready ? "#86efac" : "#fca5a5"}">${p.ready ? "READY" : "NOT READY"}</span>`
         : "";
     const typeSelect = !online
       ? `<select class="type-select" title="Player type" onchange="onLobbyTypeChange(${i}, this.value)">
@@ -5582,12 +5582,12 @@ async function startGame() {
     );
   } else {
     addLog(
-      "Auctions disabled. Unpurchased properties stay unsold.",
+      "Auctions off. Unbought properties stay unsold.",
       "important",
     );
   }
   if (TIMER.duration > 0)
-    addLog(`Auto-advance timer: ${TIMER.duration}s`, "important");
+    addLog(`Turn timer: ${TIMER.duration}s per turn.`, "important");
   updateActionButtons();
 
   if (isOnlineGame()) {

@@ -26,7 +26,7 @@
     <link rel="prefetch" href="test-lab.html" />
     <link rel="prefetch" href="boardeditor.html" />
     <link
-      href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600..900&family=DM+Sans:opsz,wght@9..40,400..800&display=swap"
       rel="stylesheet"
     />
     <!-- Google tag (gtag.js) -->
@@ -75,7 +75,7 @@
           <button class="home-btn-primary" onclick="openOfflineSetupPage()">
             <div class="hbtn-left">
                             <div class="hbtn-text">
-                <span class="hbtn-label">Play Offline</span>
+                <span class="hbtn-label">Play offline</span>
                 <span class="hbtn-sub">Local &amp; Pass &amp; Play</span>
               </div>
             </div>
@@ -87,7 +87,7 @@
           >
             <div class="hbtn-left">
                             <div class="hbtn-text">
-                <span class="hbtn-label">Play Online</span>
+                <span class="hbtn-label">Play online</span>
                 <span class="hbtn-sub">Host or join a room</span>
               </div>
             </div>
@@ -103,11 +103,11 @@
             id="credits-logs-btn"
             onclick="openWhatsNewPage()"
           >
-                        <span class="hmi-label">Credits &amp; Logs</span>
+                        <span class="hmi-label">Credits &amp; logs</span>
             <span class="hmi-sub">Patch notes</span>
           </button>
           <button class="home-menu-item" onclick="showScreen('how-to-screen')">
-                        <span class="hmi-label">How to Play</span>
+                        <span class="hmi-label">How to play</span>
             <span class="hmi-sub">Rules &amp; guide</span>
           </button>
         </div>
@@ -167,9 +167,9 @@
       <div class="online-body">
         <div class="online-section-label">Room Entry</div>
         <div class="card online-room-card">
-          <h2>Online Rooms</h2>
+          <h2>Online rooms</h2>
           <div class="input-group">
-            <label>Your Online Name</label>
+            <label>Your online name</label>
             <input
               type="text"
               id="online-player-name"
@@ -196,17 +196,17 @@
           </div>
 
           <div id="host-options" class="online-pane">
-            <div class="online-pane-title">Host a Room</div>
+            <div class="online-pane-title">Host a room</div>
             <div class="two-col">
               <div class="input-group">
-                <label>Room Visibility</label>
+                <label>Room visibility</label>
                 <select id="room-visibility">
                   <option value="open" selected>Open</option>
                   <option value="closed">Closed</option>
                 </select>
               </div>
               <div class="input-group">
-                <label>Room Password (closed only)</label>
+                <label>Room password (closed only)</label>
                 <input
                   type="password"
                   id="host-room-password"
@@ -225,9 +225,9 @@
           </div>
 
           <div id="join-options" class="online-pane" style="display: none">
-            <div class="online-pane-title">Join a Room</div>
+            <div class="online-pane-title">Join a room</div>
             <div class="input-group">
-              <label>Room Code</label>
+              <label>Room code</label>
               <input
                 type="text"
                 id="join-room-code"
@@ -253,7 +253,7 @@
               Join by Code
             </button>
             <div class="online-list-head">
-              <label>Open Rooms</label>
+              <label>Open rooms</label>
               <button
                 class="btn btn-sm online-refresh-btn"
                 onclick="refreshOpenRoomsList(true)"
@@ -276,7 +276,7 @@
       </div>
 
       <div class="setup-hero">
-        <div class="setup-ornament">Match Configuration</div>
+        <div class="setup-ornament">Match configuration</div>
         <div class="setup-logo-mark">
           <img src="logo.svg" alt="Monopoly logo" />
         </div>
@@ -297,9 +297,9 @@
       </div>
 
       <div class="setup-body">
-        <div class="setup-section-label">Lobby Settings</div>
+        <div class="setup-section-label">Lobby settings</div>
         <div class="card">
-          <h2>Setup Players</h2>
+          <h2>Set up players</h2>
           <div id="player-slots"></div>
           <div class="setup-player-actions">
             <button
@@ -320,7 +320,7 @@
         </div>
 
         <div class="card" id="online-room-panel" style="display: none">
-          <h2>Online Room</h2>
+          <h2>Online room</h2>
           <div class="two-col setup-online-actions">
             <button
               class="btn btn-gold btn-sm"
@@ -344,17 +344,17 @@
         </div>
 
         <div class="card">
-          <h2>Choose Board Theme</h2>
+          <h2>Choose a board</h2>
           <div id="board-theme-grid"></div>
         </div>
         <div class="card" id="custom-board-card">
-          <h3>Custom Board Seed</h3>
+          <h3>Custom board seed</h3>
           <div class="setup-note" style="margin-bottom: 0.5rem">
             Load a board seed from Board Editor to use it in this match. In
             online rooms, the host selection is synced for everyone.
           </div>
           <div class="input-group">
-            <label for="custom-board-seed">Seed Code (MBD1...)</label>
+            <label for="custom-board-seed">Seed code (MBD1...)</label>
             <textarea
               id="custom-board-seed"
               rows="4"
@@ -404,10 +404,10 @@
           </div>
         </div>
         <div class="card">
-          <h3>Game Settings</h3>
+          <h3>Game settings</h3>
           <div class="two-col">
             <div class="input-group">
-              <label id="starting-money-label">Starting Money</label>
+              <label id="starting-money-label">Starting money</label>
               <input
                 type="number"
                 id="starting-money"
@@ -448,7 +448,7 @@
           </div>
         </div>
         <div class="card">
-          <h3>How to Play</h3>
+          <h3>How to play</h3>
           <ul class="how-to">
             <li>Roll dice to move around the board</li>
             <li>Buy properties and collect rent from rivals</li>
@@ -483,11 +483,11 @@
       </div>
       <div class="credits-body">
         <div class="card">
-          <h2>Made By</h2>
+          <h2>Made by</h2>
           <p
             style="
               color: rgba(255, 255, 255, 0.75);
-              font-size: 1rem;
+              font-size: var(--fs-base);
               line-height: 1.7;
             "
           >
@@ -807,7 +807,7 @@
               display: none;
               background: #c0392b;
               color: #fff;
-              font-size: 0.7rem;
+              font-size: var(--fs-2xs);
               padding: 0.1rem 0.4rem;
               border-radius: 4px;
               margin-left: 0.3rem;
@@ -828,52 +828,26 @@
             </svg>
             <div class="timer-num" id="timer-num">30</div>
           </div>
-          <span id="tb-money" style="color: var(--gold-light); font-weight: 700"
+          <span id="tb-money" class="tb-money" style="color: var(--gold-light); font-weight: 700"
             >৳15,000</span
           >
-          <button
-            class="btn btn-sm topbar-tool-btn"
-            onclick="openDrawer('players')"
-            title="Players"
-          >
-            Players
+          <button class="btn btn-sm topbar-tool-btn desktop-only" onclick="openDrawer('players')" title="Players" aria-label="Players">
+            <svg class="tb-ico" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.4"/><path d="M2.6 20c0-3.5 2.9-6.3 6.4-6.3s6.4 2.8 6.4 6.3"/><path d="M16 4.6a3.4 3.4 0 0 1 0 6.8"/><path d="M18 14.1c2 .7 3.4 2.9 3.4 5.9"/></svg><span class="tb-label">Players</span>
           </button>
-          <button
-            class="btn btn-sm topbar-tool-btn"
-            onclick="openDrawer('log')"
-            title="Game log"
-          >
-            Log
+          <button class="btn btn-sm topbar-tool-btn" onclick="openDrawer('log')" title="Game log" aria-label="Game log">
+            <svg class="tb-ico" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8.5 6h12M8.5 12h12M8.5 18h12"/><path d="M3.6 6h.01M3.6 12h.01M3.6 18h.01"/></svg><span class="tb-label">Log</span>
           </button>
-          <button
-            class="btn btn-sm topbar-tool-btn"
-            onclick="openDrawer('chat')"
-            title="Chat"
-          >
-            Chat
+          <button class="btn btn-sm topbar-tool-btn" onclick="openDrawer('chat')" title="Chat" aria-label="Chat">
+            <svg class="tb-ico" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 11.6a8 8 0 0 1-11.7 7.1L3.5 20l1.4-4.7A8 8 0 1 1 20.5 11.6z"/></svg><span class="tb-label">Chat</span>
           </button>
-          <button
-            class="btn btn-sm topbar-tool-btn"
-            onclick="openBugReport()"
-            title="Report bug"
-          >
-            Bug
+          <button class="btn btn-sm topbar-tool-btn desktop-only" onclick="openBugReport()" title="Report a bug" aria-label="Report a bug">
+            <svg class="tb-ico" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 21V4"/><path d="M5 4h11.5l-2 4 2 4H5"/></svg><span class="tb-label">Report</span>
           </button>
-          <button
-            class="btn btn-sm topbar-tool-btn"
-            onclick="openDrawer('settings')"
-            title="Timer settings"
-          >
-            Settings
+          <button class="btn btn-sm topbar-tool-btn" onclick="openDrawer('settings')" title="Settings" aria-label="Settings">
+            <svg class="tb-ico" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg><span class="tb-label">Settings</span>
           </button>
-          <button
-            class="btn btn-sm topbar-tool-btn"
-            id="leave-game-btn"
-            onclick="openLeaveGameModal()"
-            title="Leave game"
-            style="display: none; background: rgba(192, 57, 43, 0.35)"
-          >
-            Leave
+          <button class="btn btn-sm topbar-tool-btn desktop-only" id="leave-game-btn" onclick="openLeaveGameModal()" title="Leave game" aria-label="Leave game" style="display: none">
+            <svg class="tb-ico" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h3.5A2.5 2.5 0 0 1 20 6.5v11a2.5 2.5 0 0 1-2.5 2.5H14"/><path d="M9.5 16.5 5 12l4.5-4.5M5 12h10.5"/></svg><span class="tb-label">Leave</span>
           </button>
         </div>
       </div>
@@ -887,7 +861,7 @@
               Players
               <span
                 style="
-                  font-size: 0.7rem;
+                  font-size: var(--fs-2xs);
                   font-weight: 400;
                   opacity: 0.5;
                   margin-left: 0.3rem;
@@ -1046,7 +1020,7 @@
       <div class="winner-name" id="winner-name">Champion!</div>
       <div class="winner-sub" id="winner-sub">Congratulations!</div>
       <div class="winner-leaderboard">
-        <div class="winner-leader-title">Other Players</div>
+        <div class="winner-leader-title">Other players</div>
         <div id="winner-leaderboard"></div>
       </div>
       <div class="winner-actions">
@@ -1073,7 +1047,7 @@
     <!-- Buy prompt -->
     <div class="overlay" id="buy-overlay">
       <div class="modal">
-        <h2 id="buy-title">Buy Property?</h2>
+        <h2 id="buy-title">Buy property?</h2>
         <p id="buy-desc"></p>
         <div class="modal-actions">
           <button class="btn btn-primary" onclick="confirmBuy()">Buy</button>
@@ -1107,7 +1081,7 @@
           <div
             style="
               color: rgba(255, 255, 255, 0.5);
-              font-size: 0.8rem;
+              font-size: var(--fs-xs);
               margin: 0.2rem 0;
             "
           >
@@ -1121,7 +1095,7 @@
         <div
           style="
             color: rgba(255, 255, 255, 0.7);
-            font-size: 0.85rem;
+            font-size: var(--fs-sm);
             margin-bottom: 0.5rem;
           "
         >
@@ -1156,10 +1130,7 @@
     <div class="overlay" id="exit-guard-overlay">
       <div class="modal" style="text-align: center">
         <h2>Leave the match?</h2>
-        <p>
-          You pressed back. Your game is still in progress — leaving now ends it
-          for you.
-        </p>
+        <p>Your game is still in progress. Leaving now ends it for you.</p>
         <div class="modal-actions" style="justify-content: center">
           <button class="btn btn-primary" onclick="dismissExitGuard()">
             Keep playing
@@ -1181,7 +1152,7 @@
       onclick="if(event.target===this)closeOverlay('leave-game-overlay')"
     >
       <div class="modal">
-        <h2>Leave Online Game?</h2>
+        <h2>Leave online game?</h2>
         <p>Choose how your seat is handled after you leave the match.</p>
         <div class="modal-actions">
           <button
@@ -1231,7 +1202,7 @@
         <p
           id="card-desc"
           style="
-            font-size: 1rem;
+            font-size: var(--fs-base);
             color: #fff;
             background: rgba(255, 255, 255, 0.08);
             padding: 1rem;
@@ -1260,7 +1231,7 @@
           <label
             style="
               color: rgba(255, 255, 255, 0.6);
-              font-size: 0.8rem;
+              font-size: var(--fs-xs);
               display: block;
               margin-bottom: 0.3rem;
             "
@@ -1282,10 +1253,10 @@
         </div>
         <div class="trade-sides">
           <div>
-            <h4>Your Offer</h4>
+            <h4>Your offer</h4>
             <div class="trade-prop-list" id="trade-my-props"></div>
             <div style="margin-top: 0.5rem">
-              <label style="color: rgba(255, 255, 255, 0.5); font-size: 0.75rem"
+              <label style="color: rgba(255, 255, 255, 0.72); font-size: var(--fs-xs)"
                 >+ Money:</label
               >
               <input
@@ -1300,7 +1271,7 @@
                   border-radius: 5px;
                   padding: 0.3rem 0.5rem;
                   color: #fff;
-                  font-size: 0.85rem;
+                  font-size: var(--fs-sm);
                   margin-top: 0.25rem;
                   font-family: var(--font-body);
                 "
@@ -1308,10 +1279,10 @@
             </div>
           </div>
           <div>
-            <h4>Their Offer</h4>
+            <h4>Their offer</h4>
             <div class="trade-prop-list" id="trade-their-props"></div>
             <div style="margin-top: 0.5rem">
-              <label style="color: rgba(255, 255, 255, 0.5); font-size: 0.75rem"
+              <label style="color: rgba(255, 255, 255, 0.72); font-size: var(--fs-xs)"
                 >+ Money:</label
               >
               <input
@@ -1326,7 +1297,7 @@
                   border-radius: 5px;
                   padding: 0.3rem 0.5rem;
                   color: #fff;
-                  font-size: 0.85rem;
+                  font-size: var(--fs-sm);
                   margin-top: 0.25rem;
                   font-family: var(--font-body);
                 "
@@ -1365,7 +1336,7 @@
       onclick="if(event.target===this)closeOverlay('build-overlay')"
     >
       <div class="modal">
-        <h2>Build Houses / Hotels</h2>
+        <h2>Build houses and hotels</h2>
         <div id="build-list"></div>
         <button
           class="btn"
@@ -1388,8 +1359,8 @@
       onclick="if(event.target===this)closeOverlay('mortgage-overlay')"
     >
       <div class="modal">
-        <h2>Mortgage Properties</h2>
-        <p style="color: rgba(255, 255, 255, 0.5); font-size: 0.82rem">
+        <h2>Mortgage properties</h2>
+        <p style="color: rgba(255, 255, 255, 0.72); font-size: var(--fs-sm)">
           Mortgage to raise cash. Unmortgage to use property again (costs 10%
           interest).
         </p>

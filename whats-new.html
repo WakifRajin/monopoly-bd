@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Bangladeshi Monopoly - Credits & Patch Logs</title>
 <link rel="icon" type="image/svg+xml" href="logo.svg">
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600..900&family=DM+Sans:opsz,wght@9..40,400..800&display=swap" rel="stylesheet">
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-QPMD9QD5H7"></script>
 <script>
@@ -366,6 +366,39 @@ body::before{
         <li>Board text now scales with the board instead of the window, so it no longer turns tiny when maximised or overlaps itself at middling window sizes.</li>
         <li>On phones, the back button and the edge-swipe gesture no longer end your match by accident. They now ask first, and "Keep playing" is the default; in an online match it takes you to the usual choice of what happens to your seat.</li>
         <li>Closing or reloading the tab mid-match now warns you first.</li>
+        <li>End turn now sits in the middle of the board beside Roll dice. Whichever one you can press right now is filled in; the other waits as an outline.</li>
+        <li>On someone else&#39;s turn the centre buttons step aside, and the line underneath says what is happening instead.</li>
+        <li>Fixed the board sliding sideways on phones and the top buttons disappearing off the right edge. The game screen can no longer be wider than your screen.</li>
+        <li>The phone toolbar is down to three icons: log, chat and settings. Report a bug and leaving the match now live in settings, and the player strip at the bottom already lists everyone.</li>
+        <li>End turn is teal everywhere. It used to be red, a colour now kept for actions you cannot take back, like declining or leaving.</li>
+        <li>Buttons you cannot use yet are greyed out, rather than being a slightly dimmer version of their normal colour.</li>
+        <li>The trade dialog is solid again; the board was showing through behind the offer.</li>
+        <li>You can no longer withdraw an AI&#39;s trade offer on its behalf. Accept or decline it instead.</li>
+        <li>The auto-end countdown on the board now counts down with the timer instead of sitting at the starting number.</li>
+        <li>Quitting from the settings menu asks first, the same as the back button.</li>
+        <li>Labels and dialog titles across the lobby and game now use sentence case.</li>
+        <li>Dialogs you can safely dismiss now have a close button in the top corner, and Escape does the same thing. It stays in reach at the top of long dialogs such as a player&#39;s history; once you scroll, a header strip appears behind it so the list slides underneath instead of showing through.</li>
+        <li>Dialogs now open at the top instead of wherever you last left them scrolled, and a player&#39;s history starts at the top when you switch tabs.</li>
+        <li>Dialogs that need an answer before the game can continue (auctions, debts, buy or auction, and a trade offered to you) deliberately have no close button.</li>
+        <li>Fixed hard-to-read text in dialogs. Some headings, including "Your offer" and "Their offer" in trades, were near-black on dark green.</li>
+        <li>Property cards pick dark or light title text to suit the colour, so light blue and yellow names are readable.</li>
+        <li>Owner names, table labels, prices and times in dialogs are brighter, and the Build, Sell and Mortgage buttons use deeper colours so their labels stand out.</li>
+        <li>The game log is grouped by turn. Each turn has a header with the player&#39;s colour and the time, and the lines under it are shorter and easier to scan.</li>
+        <li>Player names in the log appear in their colour and money amounts are highlighted: green for money received, red for money paid. A small dot marks good news, bad news and notices instead of colouring whole lines.</li>
+        <li>The log no longer jumps back to the bottom while you are scrolled up reading an earlier turn.</li>
+        <li>Log messages are reworded to be consistent: no more doubled lines like &quot;landed on Free Parking&quot; followed by &quot;is just visiting free parking&quot;, no exclamation marks, and no internal wording such as &quot;invalid winner state&quot;.</li>
+        <li>The phone log drawer uses the same grouped layout and shows the whole match, not just the last 30 lines.</li>
+        <li>Fonts load in every weight they are used at. Bold text used to render as semi-bold everywhere, which flattened headings, prices and labels.</li>
+        <li>The board uses the same clean font as the rest of the game instead of Times New Roman, and names no longer split mid-word (&quot;Farmgat e&quot;).</li>
+        <li>On phones, long place names break at a syllable with a hyphen (&quot;Sadar-ghat&quot;, &quot;Kama-lapur&quot;) instead of wherever the square ran out of room.</li>
+        <li>Dialog, panel and card headings, including the player portfolio and place details, use the body font. The decorative serif is kept only for the big titles.</li>
+        <li>Buttons were showing in Arial instead of the game font. They now match everything else.</li>
+        <li>Long player names fit: in the side panel the name gets its own line above the money and stops at two lines, and on phones it shortens with an ellipsis while the AI tag stays visible.</li>
+        <li>A long player name in the top bar no longer pushes the Settings button off the screen on phones.</li>
+        <li>The portfolio tabs are now &quot;Properties&quot; and &quot;History&quot;, without emoji.</li>
+        <li>Text sizes follow one consistent scale across the game instead of dozens of slightly different sizes.</li>
+        <li>The board editor uses the same fonts as the game.</li>
+        <li>Fixed a player&#39;s history not counting money spent winning auctions.</li>
       </ul>
     </section>
 

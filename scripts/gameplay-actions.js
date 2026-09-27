@@ -30,7 +30,7 @@ async function rollDice() {
   }, 200);
 
   addLog(
-    `${p.name} rolled ${d1}+${d2}=${d1 + d2}${doubles ? " (doubles)" : ""}`,
+    `${p.name} rolled ${d1 + d2} (${d1} + ${d2}${doubles ? ", doubles" : ""}).`,
   );
 
   if (p.inJail) {
@@ -63,7 +63,7 @@ async function handleJailRoll(player, d1, d2, doubles) {
     p.inJail = false;
     p.jailTurns = 0;
     p.doublesCount = 0;
-    addLog(`${p.name} rolled doubles — released from jail!`, "success");
+    addLog(`${p.name} rolled doubles and leaves jail.`, "success");
     await movePlayer(p.id, d1 + d2, false);
   } else {
     p.jailTurns++;
@@ -112,7 +112,7 @@ async function movePlayer(player, steps, rolledDoubles) {
     p.money += goSalary;
     goPaid = true;
     addLog(
-      `${p.name} passed GO! Collected ${fmtCurrency(goSalary)}`,
+      `${p.name} passed GO and collected ${fmtCurrency(goSalary)}.`,
       "success",
     );
   }
@@ -149,7 +149,7 @@ async function movePlayerTo(player, target, collectGo = true) {
     p.money += goSalary;
     goPaid = true;
     addLog(
-      `${p.name} passed GO! Collected ${fmtCurrency(goSalary)}`,
+      `${p.name} passed GO and collected ${fmtCurrency(goSalary)}.`,
       "success",
     );
   }
@@ -195,12 +195,23 @@ function landOn(p, rolledDoubles, opts = null) {
   const sp = SPACES[p.pos];
   const goSalary = getThemeGoSalary(G.boardThemeId || selectedThemeId);
   const goPaid = !!(opts && opts.goPaid);
-  addLog(`${p.name} landed on ${sp.name}`);
+  // Spaces whose own log line already says where the player is (GO, jail,
+  // cards, tax, rent) skip the generic "landed on" line to avoid duplicates.
+  const quietLanding = ["go", "jail", "gotojail", "chance", "community", "tax"];
+  const landedProp = G.properties[p.pos];
+  const isRentDue =
+    !!landedProp &&
+    !landedProp.mortgaged &&
+    landedProp.owner !== null &&
+    landedProp.owner !== undefined &&
+    landedProp.owner !== p.id;
+  if (!quietLanding.includes(sp.type) && !isRentDue)
+    addLog(`${p.name} landed on ${sp.name}.`);
 
   if (sp.type === "go") {
     if (!goPaid) {
       addLog(
-        `${p.name} landed on GO — collect ${fmtCurrency(goSalary)}!`,
+        `${p.name} landed on GO and collected ${fmtCurrency(goSalary)}.`,
         "success",
       );
       p.money += goSalary;
@@ -210,7 +221,6 @@ function landOn(p, rolledDoubles, opts = null) {
     addLog(`${p.name} is just visiting jail.`);
     G.phase = "end";
   } else if (sp.type === "parking") {
-    addLog(`${p.name} is just visiting free parking.`);
     G.phase = "end";
   } else if (sp.type === "gotojail") {
     sendToJail(p);
@@ -222,7 +232,7 @@ function landOn(p, rolledDoubles, opts = null) {
     drawCard("community", p);
     return;
   } else if (sp.type === "tax") {
-    addLog(`${p.name} pays ${fmtCurrency(sp.amount)} tax.`, "danger");
+    addLog(`${p.name} pays ${fmtCurrency(sp.amount)} ${sp.name}.`, "danger");
     playSfx("tax");
     chargeMoney(p, sp.amount, null);
     G.phase = "end";
@@ -235,7 +245,7 @@ function landOn(p, rolledDoubles, opts = null) {
     if (!prop) {
       G.phase = "end";
     } else if (prop.mortgaged) {
-      addLog(`${sp.name} is mortgaged — no rent.`);
+      addLog(`${sp.name} is mortgaged, so no rent is due.`);
       G.phase = "end";
     } else if (prop.owner === null) {
       // Can buy
@@ -245,7 +255,7 @@ function landOn(p, rolledDoubles, opts = null) {
       updateActionButtons();
       return;
     } else if (prop.owner === p.id) {
-      addLog(`${p.name} owns ${sp.name}.`);
+      addLog(`${p.name} already owns it.`);
       G.phase = "end";
     } else {
       // Pay rent
@@ -264,7 +274,7 @@ function landOn(p, rolledDoubles, opts = null) {
 
   // If rolled doubles and not in jail, get another roll
   if (rolledDoubles && !p.inJail && !G.gameOver) {
-    addLog(`${p.name} rolled doubles — roll again!`, "success");
+    addLog(`${p.name} rolled doubles and rolls again.`, "success");
     G.phase = "roll";
   }
 
@@ -400,7 +410,7 @@ function drawCard(type, p) {
       if (card.value > 0) {
         actor.money += card.value;
         addLog(
-          `${actor.name} received ${fmtCurrency(card.value)} from a card effect.`,
+          `${actor.name} received ${fmtCurrency(card.value)}.`,
           "success",
         );
         toast(`+${fmtCurrency(card.value)}`, "gold");
@@ -408,7 +418,7 @@ function drawCard(type, p) {
         const paid = chargeMoney(actor, -card.value, null);
         if (paid)
           addLog(
-            `${actor.name} paid ${fmtCurrency(-card.value)} due to a card effect.`,
+            `${actor.name} paid ${fmtCurrency(-card.value)}.`,
             "danger",
           );
       }
@@ -593,7 +603,7 @@ function startAuction() {
   const sp = id === null ? null : SPACES[id];
   if (!isAuctionSystemEnabled()) {
     if (sp) {
-      addLog(`Auction is disabled. ${sp.name} remains unsold.`, "important");
+      addLog(`Auctions are off. ${sp.name} stays unsold.`, "important");
     }
     G.phase = "end";
     renderAll();
@@ -606,7 +616,7 @@ function startAuction() {
       bidderStartIdx: G.currentPlayerIdx,
     })
   ) {
-    addLog("Auction could not start (no eligible bidders).", "danger");
+    addLog("The auction could not start: no one can bid.", "danger");
     G.phase = "end";
     renderAll();
     updateActionButtons();
@@ -638,7 +648,7 @@ function beginAuction(propId, { source = "market", bidderStartIdx = 0 } = {}) {
     bidderSince: Date.now(),
   };
   addLog(
-    `Auction opened for ${sp.name} at ${fmtCurrency(openingBid)} (${openingPercent}% opening bid).`,
+    `Auction for ${sp.name} opens at ${fmtCurrency(openingBid)} (${openingPercent}% of list price).`,
   );
   playSfx("auction-open");
   renderAuction();
@@ -757,13 +767,13 @@ function finalizeAuction(a) {
       playSfx("auction-win");
     } else {
       addLog(
-        `Auction for ${a.propName} ended with invalid winner state; property remains unsold.`,
+        `The auction for ${a.propName} closed without a winner. It stays unsold.`,
         "danger",
       );
     }
   } else {
     addLog(
-      `Auction cancelled — all players passed. ${a.propName} remains unsold.`,
+      `Everyone passed. ${a.propName} stays unsold.`,
     );
   }
 
@@ -777,7 +787,7 @@ function finalizeAuction(a) {
       updateActionButtons();
       return;
     }
-    addLog("Bank auction series completed.", "important");
+    addLog("The bank has finished its auctions.", "important");
     checkBankruptcy();
   }
 
@@ -803,7 +813,7 @@ function enforceAuctionBidderTimeout() {
   if (!bidder) return false;
   // Only the client that owns the decision retires it, so it happens once.
   if (!canLocalControlAuctionAction()) return false;
-  addLog(`${bidder.name} took too long and passes the auction.`, "danger");
+  addLog(`${bidder.name} ran out of time and passes.`, "danger");
   passAuction();
   return true;
 }
@@ -816,7 +826,7 @@ function enforcePendingTradeTimeout() {
   const role = getPendingTradeRole();
   if (role !== "recipient" && role !== "offline" && role !== "ai-recipient")
     return false;
-  addLog("Trade proposal expired with no response.", "danger");
+  addLog("The trade offer expired without an answer.", "danger");
   respondTrade(false);
   return true;
 }
@@ -841,7 +851,7 @@ function placeBid(amount) {
   }
   a.currentBid = newBid;
   a.highBidder = bidder.id;
-  addLog(`${bidder.name} bids ${fmtCurrency(newBid)} for ${a.propName}`);
+  addLog(`${bidder.name} bids ${fmtCurrency(newBid)} for ${a.propName}.`);
   playSfx("bid");
 
   const remaining = a.activePlayers.filter((id) => !a.passed.has(id));
@@ -853,7 +863,7 @@ function placeBid(amount) {
   const nextIdx = nextAuctionBidderIndex(a, Number(a.bidderIdx) + 1);
   if (nextIdx < 0) {
     addLog(
-      "Auction state had no eligible next bidder; finalizing current auction.",
+      "No bidders left. Closing the auction.",
       "danger",
     );
     finalizeAuction(a);
@@ -879,7 +889,7 @@ function passAuction() {
   const bidder = G.players[bidderId];
   if (!bidder) return;
   a.passed.add(bidder.id);
-  addLog(`${bidder.name} passes the auction`);
+  addLog(`${bidder.name} passes.`);
   // Check if only one active bidder remains
   const remaining = a.activePlayers.filter((id) => !a.passed.has(id));
   if (
@@ -893,7 +903,7 @@ function passAuction() {
   const nextIdx = nextAuctionBidderIndex(a, Number(a.bidderIdx) + 1);
   if (nextIdx < 0) {
     addLog(
-      "Auction pass advanced to no eligible bidder; finalizing current auction.",
+      "No bidders left. Closing the auction.",
       "danger",
     );
     finalizeAuction(a);
@@ -934,7 +944,7 @@ function openBuildModal() {
   el.innerHTML = "";
   if (groups.length === 0) {
     el.innerHTML =
-      '<p style="color:rgba(255,255,255,.5);font-size:.85rem">No complete color groups to build on.</p>';
+      '<p style="color:rgba(255,255,255,.7);font-size:var(--fs-sm)">No complete color groups to build on.</p>';
   }
   groups.forEach((ids) => {
     ids.forEach((id) => {
@@ -966,10 +976,10 @@ function openBuildModal() {
         (!prop.hotel || housesAvailable() >= 4);
       row.innerHTML = `
         <div style="width:10px;height:10px;border-radius:2px;background:${c};flex-shrink:0"></div>
-        <div style="flex:1;color:#fff;font-size:.85rem;font-weight:600">${escHtml(sp.name)}</div>
-        <div style="color:rgba(255,255,255,.5);font-size:.78rem">${prop.hotel ? "🏨" : "🏠".repeat(prop.houses) || "—"}</div>
-        <button onclick="buildHouse(${id})" ${canBuildMore && !prop.hotel ? "" : canBuildHotel ? "" : "disabled"} style="background:${canBuildMore || canBuildHotel ? "#2ecc71" : "rgba(255,255,255,.1)"};border:none;color:#fff;border-radius:5px;padding:.3rem .5rem;cursor:pointer;font-size:.75rem">${prop.houses === 4 && !prop.hotel ? `🏨 Hotel (${fmtCurrency(houseCost)})` : `🏠 Build (${fmtCurrency(houseCost)})`}</button>
-        <button onclick="sellHouse(${id})" ${canSell ? "" : "disabled"} style="background:${canSell ? "#e74c3c" : "rgba(255,255,255,.1)"};border:none;color:#fff;border-radius:5px;padding:.3rem .5rem;cursor:pointer;font-size:.75rem">Sell (${fmtCurrency(Math.floor(houseCost / 2))})</button>
+        <div style="flex:1;color:#fff;font-size:var(--fs-sm);font-weight:600">${escHtml(sp.name)}</div>
+        <div style="color:rgba(255,255,255,.7);font-size:var(--fs-xs)">${prop.hotel ? "🏨" : "🏠".repeat(prop.houses) || "—"}</div>
+        <button onclick="buildHouse(${id})" ${canBuildMore && !prop.hotel ? "" : canBuildHotel ? "" : "disabled"} style="background:${canBuildMore || canBuildHotel ? "#1e8449" : "rgba(255,255,255,.1)"};border:none;color:#fff;border-radius:5px;padding:.3rem .5rem;cursor:pointer;font-size:var(--fs-xs)">${prop.houses === 4 && !prop.hotel ? `🏨 Hotel (${fmtCurrency(houseCost)})` : `🏠 Build (${fmtCurrency(houseCost)})`}</button>
+        <button onclick="sellHouse(${id})" ${canSell ? "" : "disabled"} style="background:${canSell ? "#b03a2e" : "rgba(255,255,255,.1)"};border:none;color:#fff;border-radius:5px;padding:.3rem .5rem;cursor:pointer;font-size:var(--fs-xs)">Sell (${fmtCurrency(Math.floor(houseCost / 2))})</button>
       `;
       el.appendChild(row);
     });
@@ -1096,7 +1106,7 @@ function buildHouse(propId) {
   } else {
     prop.houses++;
     addLog(
-      `${p.name} built house #${prop.houses} on ${sp.name} for ${fmtCurrency(cost)}.`,
+      `${p.name} built house ${prop.houses} on ${sp.name} for ${fmtCurrency(cost)}.`,
       "success",
     );
   }
@@ -1136,10 +1146,10 @@ function sellHouse(propId) {
   if (prop.hotel) {
     prop.hotel = false;
     prop.houses = 4;
-    addLog(`${p.name} sold hotel on ${sp.name} for ${fmtCurrency(refund)}.`);
+    addLog(`${p.name} sold the hotel on ${sp.name} for ${fmtCurrency(refund)}.`);
   } else {
     prop.houses--;
-    addLog(`${p.name} sold house on ${sp.name} for ${fmtCurrency(refund)}.`);
+    addLog(`${p.name} sold a house on ${sp.name} for ${fmtCurrency(refund)}.`);
   }
   renderAll();
   if (actorIsAi) {
@@ -1210,7 +1220,7 @@ function openMortgageModal() {
   const allProps = [...p.properties, ...p.railroads, ...p.utilities];
   if (allProps.length === 0) {
     el.innerHTML =
-      '<p style="color:rgba(255,255,255,.5);font-size:.85rem">You own no properties.</p>';
+      '<p style="color:rgba(255,255,255,.7);font-size:var(--fs-sm)">You own no properties.</p>';
   }
   allProps.forEach((id) => {
     const sp = SPACES[id];
@@ -1225,11 +1235,11 @@ function openMortgageModal() {
     const canUnmortgage = prop.mortgaged && p.money >= unmortgageCost;
     row.innerHTML = `
       <div style="width:10px;height:10px;border-radius:2px;background:${color};flex-shrink:0"></div>
-      <div style="flex:1;color:${prop.mortgaged ? "rgba(255,255,255,.4)" : "#fff"};font-size:.85rem;font-weight:600">${escHtml(sp.name)}${prop.mortgaged ? " (mortgaged)" : ""}</div>
+      <div style="flex:1;color:${prop.mortgaged ? "rgba(255,255,255,.7)" : "#fff"};font-size:var(--fs-sm);font-weight:600">${escHtml(sp.name)}${prop.mortgaged ? " (mortgaged)" : ""}</div>
       ${
         !prop.mortgaged
-          ? `<button onclick="mortgageProp(${id})" ${canMortgage ? "" : "disabled"} style="background:${canMortgage ? "#d97706" : "rgba(255,255,255,.1)"};border:none;color:#fff;border-radius:5px;padding:.3rem .5rem;cursor:pointer;font-size:.75rem">Mortgage ${fmtCurrency(mortgageValue)}</button>`
-          : `<button onclick="unmortgageProp(${id})" ${canUnmortgage ? "" : "disabled"} style="background:${canUnmortgage ? "#2ecc71" : "rgba(255,255,255,.1)"};border:none;color:#fff;border-radius:5px;padding:.3rem .5rem;cursor:pointer;font-size:.75rem">Unmortgage ${fmtCurrency(unmortgageCost)}</button>`
+          ? `<button onclick="mortgageProp(${id})" ${canMortgage ? "" : "disabled"} style="background:${canMortgage ? "#a85408" : "rgba(255,255,255,.1)"};border:none;color:#fff;border-radius:5px;padding:.3rem .5rem;cursor:pointer;font-size:var(--fs-xs)">Mortgage ${fmtCurrency(mortgageValue)}</button>`
+          : `<button onclick="unmortgageProp(${id})" ${canUnmortgage ? "" : "disabled"} style="background:${canUnmortgage ? "#1e8449" : "rgba(255,255,255,.1)"};border:none;color:#fff;border-radius:5px;padding:.3rem .5rem;cursor:pointer;font-size:var(--fs-xs)">Unmortgage ${fmtCurrency(unmortgageCost)}</button>`
       }
     `;
     el.appendChild(row);
@@ -1318,7 +1328,7 @@ function getPendingTradeRole() {
 
 function tradeOfferPropsHtml(ids) {
   if (!Array.isArray(ids) || !ids.length) {
-    return '<div style="color:rgba(255,255,255,.4);font-size:.82rem">No properties</div>';
+    return '<div style="color:rgba(255,255,255,.4);font-size:var(--fs-sm)">No properties</div>';
   }
   return ids
     .map((id) => {
@@ -1350,7 +1360,10 @@ function renderTradeReviewModal() {
 
   const role = getPendingTradeRole();
   const canRespond = role === "recipient" || role === "offline";
-  const canCancel = role === "proposer" || role === "offline";
+  // Pass-and-play shares one device, so either side may act — except that a
+  // human cannot withdraw an AI's offer on its behalf; they decline it.
+  const canCancel =
+    role === "proposer" || (role === "offline" && !isAiPlayer(from));
   const statusLabel =
     role === "recipient"
       ? "Your response is needed"
@@ -1384,24 +1397,32 @@ function renderTradeReviewModal() {
 
   modal.innerHTML = `
     <h2>Trade proposal</h2>
-    <div style="display:inline-flex;align-items:center;padding:.28rem .62rem;border-radius:999px;font-size:.74rem;font-weight:700;letter-spacing:.02em;margin-bottom:.55rem;${statusStyle}">${escHtml(statusLabel)}</div>
-    <p style="color:rgba(255,255,255,.62);font-size:.82rem;margin-bottom:.75rem">${escHtml(roleText)}</p>
+    <div style="display:inline-flex;align-items:center;padding:.28rem .62rem;border-radius:999px;font-size:var(--fs-xs);font-weight:700;letter-spacing:.02em;margin-bottom:.55rem;${statusStyle}">${escHtml(statusLabel)}</div>
+    <p style="color:rgba(255,255,255,.62);font-size:var(--fs-sm);margin-bottom:.75rem">${escHtml(roleText)}</p>
     <div class="trade-sides">
       <div>
         <h4>${escHtml(from.name)} gives</h4>
         <div class="trade-prop-list">${tradeOfferPropsHtml(trade.fromProps)}</div>
-        <div style="margin-top:.5rem;color:rgba(255,255,255,.7);font-size:.82rem">Money: ${fmtCurrency(trade.fromMoney || 0)}</div>
+        <div style="margin-top:.5rem;color:rgba(255,255,255,.7);font-size:var(--fs-sm)">Money: ${fmtCurrency(trade.fromMoney || 0)}</div>
       </div>
       <div>
         <h4>${escHtml(to.name)} gives</h4>
         <div class="trade-prop-list">${tradeOfferPropsHtml(trade.toProps)}</div>
-        <div style="margin-top:.5rem;color:rgba(255,255,255,.7);font-size:.82rem">Money: ${fmtCurrency(trade.toMoney || 0)}</div>
+        <div style="margin-top:.5rem;color:rgba(255,255,255,.7);font-size:var(--fs-sm)">Money: ${fmtCurrency(trade.toMoney || 0)}</div>
       </div>
     </div>
     <div class="modal-actions">
-      <button class="btn btn-primary" onclick="respondTrade(true)" ${canRespond ? "" : "disabled"}>Accept</button>
-      <button class="btn btn-danger" onclick="respondTrade(false)" ${canRespond ? "" : "disabled"}>Decline</button>
-      <button class="btn" style="background:rgba(255,255,255,.1);color:#fff" onclick="cancelTradeProposal()" ${canCancel ? "" : "disabled"}>Cancel Proposal</button>
+      ${
+        canRespond
+          ? `<button class="btn btn-primary" onclick="respondTrade(true)">Accept</button>
+      <button class="btn btn-danger" onclick="respondTrade(false)">Decline</button>`
+          : ""
+      }
+      ${
+        canCancel
+          ? `<button class="btn" style="background:rgba(255,255,255,.1);color:#fff" onclick="cancelTradeProposal()">Withdraw offer</button>`
+          : ""
+      }
     </div>
   `;
 }
@@ -1588,7 +1609,7 @@ function renderTradeProps() {
     });
     if (props.length === 0)
       el.innerHTML =
-        '<div style="color:rgba(255,255,255,.3);font-size:.8rem;padding:.3rem">No properties</div>';
+        '<div style="color:rgba(255,255,255,.3);font-size:var(--fs-xs);padding:.3rem">No properties</div>';
   };
 
   const myAll = [...p.properties, ...p.railroads, ...p.utilities];
@@ -1720,7 +1741,7 @@ function respondTrade(acceptTrade) {
   if (!acceptTrade) {
     aiRecordTradeResolution(trade, false);
     addLog(
-      `${to?.name || "Player"} declined ${from?.name || "player"}'s trade proposal.`,
+      `${to?.name || "A player"} declined the trade from ${from?.name || "another player"}.`,
       "danger",
     );
     G.pendingTrade = null;
@@ -1733,7 +1754,7 @@ function respondTrade(acceptTrade) {
 
   const invalidReason = validatePendingTrade(trade);
   if (invalidReason) {
-    addLog(`Trade proposal canceled: ${invalidReason}`, "danger");
+    addLog(`Trade offer dropped: ${invalidReason}`, "danger");
     toast(invalidReason, "danger");
     G.pendingTrade = null;
     tradeReviewShownKey = "";
@@ -1772,7 +1793,7 @@ function cancelTradeProposal() {
   const from = G.players[trade.fromId];
   const to = G.players[trade.toId];
   addLog(
-    `${from?.name || "Player"} canceled the trade proposal to ${to?.name || "player"}.`,
+    `${from?.name || "A player"} withdrew the trade offer to ${to?.name || "another player"}.`,
     "danger",
   );
   G.pendingTrade = null;
@@ -1893,7 +1914,7 @@ function sellBuildingsForEmergencyCash(player) {
       player.money += refund;
       raised += refund;
       addLog(
-        `${player.name} sold hotel on ${sp.name} for ${fmtCurrency(refund)}.`,
+        `${player.name} sold the hotel on ${sp.name} for ${fmtCurrency(refund)}.`,
         "danger",
       );
     }
@@ -2073,7 +2094,7 @@ function showDebtPrompt(p, amount, recipient = null) {
   if (descEl) {
     descEl.textContent = `${p.name} owes ${creditorName} and is short by ${fmtCurrency(shortBy)}. Sell buildings or mortgage properties to raise funds, or declare bankruptcy.`;
   }
-  if (continueBtn) continueBtn.textContent = "Declare Bankruptcy";
+  if (continueBtn) continueBtn.textContent = "Declare bankruptcy";
   if (mortgageBtn) mortgageBtn.style.display = "";
   if (sellBtn) {
     const hasBuildings = (p.properties || []).some((id) =>
@@ -2293,7 +2314,7 @@ function checkBankruptcy() {
         `This is a bug: the creditor is unknown, so the estate goes to the bank.`,
     );
     addLog(
-      `${p.name} ended with a negative balance and is bankrupt to the bank.`,
+      `${p.name} could not cover a negative balance and is bankrupt to the bank.`,
       "danger",
     );
     declareBankruptcy(p, null, Math.abs(p.money), true);
@@ -2315,7 +2336,7 @@ function declareBankruptcy(p, creditor = null, debtAmount = 0) {
     const from = G.players[G.pendingTrade.fromId];
     const to = G.players[G.pendingTrade.toId];
     addLog(
-      `Trade proposal between ${from?.name || "players"} and ${to?.name || "players"} was canceled due to bankruptcy.`,
+      `The trade between ${from?.name || "two players"} and ${to?.name || "another player"} was dropped after a bankruptcy.`,
       "danger",
     );
     G.pendingTrade = null;
@@ -2361,7 +2382,7 @@ function declareBankruptcy(p, creditor = null, debtAmount = 0) {
       );
       if (creditor.money < 0 && !creditor.bankrupt) {
         addLog(
-          `${creditor.name} cannot cover mortgage interest and goes bankrupt to the bank.`,
+          `${creditor.name} cannot cover the mortgage interest and is bankrupt to the bank.`,
           "danger",
         );
         declareBankruptcy(creditor, null, Math.abs(creditor.money), true);
@@ -2376,8 +2397,8 @@ function declareBankruptcy(p, creditor = null, debtAmount = 0) {
     const debtTxt = debtAmount > 0 ? ` (${fmtCurrency(debtAmount)})` : "";
     addLog(
       auctionsEnabled
-        ? `${p.name} is BANKRUPT to the Bank${debtTxt}. Bank auctions all properties.`
-        : `${p.name} is BANKRUPT to the Bank${debtTxt}. Auction system is OFF, so properties return to the bank unsold.`,
+        ? `${p.name} is bankrupt to the bank${debtTxt}. The bank auctions their properties.`
+        : `${p.name} is bankrupt to the bank${debtTxt}. Auctions are off, so their properties return unsold.`,
       "danger",
     );
     p.money = 0;
@@ -2398,7 +2419,7 @@ function declareBankruptcy(p, creditor = null, debtAmount = 0) {
       queueBankAuctions(auctionIds);
       if (auctionIds.length) {
         addLog(
-          `Bank queued ${auctionIds.length} property auction${auctionIds.length > 1 ? "s" : ""}.`,
+          `The bank will auction ${auctionIds.length} propert${auctionIds.length > 1 ? "ies" : "y"}.`,
           "important",
         );
       }
@@ -2518,7 +2539,7 @@ function endTurn() {
   playSfx("turn");
 
   const p = curPlayer();
-  addLog(`─────── ${p.name}'s turn ───────`, "important");
+  addLog(`${p.name}'s turn`, "turn");
   renderAll();
   updateActionButtons();
 }
