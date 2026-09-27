@@ -1,7 +1,7 @@
 // Bump this on every deploy. Caches are keyed by it, and activate() deletes the
 // old ones — without a bump, returning players keep running cached scripts and
 // can end up on a mixed set of old and new files.
-const SW_VERSION = '1.3.2';
+const SW_VERSION = '1.3.4';
 const STATIC_CACHE = `monopoly-bd-static-${SW_VERSION}`;
 const RUNTIME_CACHE = `monopoly-bd-runtime-${SW_VERSION}`;
 
@@ -12,6 +12,8 @@ const APP_SHELL = [
   './logo.svg',
   './icons/icon-192.png',
   './icons/icon-512.png',
+  './images/home-bg.webp',
+  './images/home-bg-small.webp',
   './boardeditor.html',
   './test-lab.html',
   './whats-new.html'

@@ -49,6 +49,7 @@ const MIME = {
   ".json": "application/json",
   ".svg": "image/svg+xml",
   ".png": "image/png",
+  ".webp": "image/webp",
   ".mp3": "audio/mpeg",
   ".txt": "text/plain; charset=utf-8",
 };
@@ -132,7 +133,7 @@ function initScript(seed) {
     realTimeout(fn, Math.max(0, (Number(ms) || 0) * window.__timeScale), ...args);
 }
 
-async function newPage(browser, viewport) {
+async function newPage(browser, viewport, seed = SEED) {
   const { width, height, ...rest } = viewport;
   const context = await browser.newContext({
     viewport: { width, height },
@@ -145,7 +146,7 @@ async function newPage(browser, viewport) {
     /googletagmanager\.com|google-analytics\.com|firebasedatabase\.app|identitytoolkit|securetoken/,
     (route) => route.abort(),
   );
-  await context.addInitScript(initScript, SEED);
+  await context.addInitScript(initScript, seed);
   const page = await context.newPage();
   page.on("pageerror", (err) => console.warn("  page error:", err.message));
   return page;
@@ -169,7 +170,7 @@ async function startMatch(page, { allAi }) {
       if (timerInput) timerInput.value = "0";
       while (lobbyPlayers.length < names.length) addPlayerSlot("ai");
       lobbyPlayers.forEach((p, i) => {
-        p.kind = allAi || i > 0 ? "ai" : "human";
+        p.kind = i > 0 ? "ai" : "human";
         p.name = names[i];
       });
       renderLobby();
@@ -177,6 +178,13 @@ async function startMatch(page, { allAi }) {
         input.value = names[i];
       });
       await startGame();
+      // Ayesha is a human seat (so the match is recorded as one); the AI
+      // plays it only while the script fast-forwards.
+      if (allAi) {
+        G.players[0].kind = "ai";
+        // The scheduler caches whose turn it last saw; reset it after the flip.
+        clearOfflineAiTimer(true);
+      }
     },
     { names: PLAYERS, allAi },
   );
@@ -230,9 +238,22 @@ async function playUntilHumanTurn(page) {
     document.querySelectorAll(".overlay.show").forEach((o) => o.classList.remove("show"));
     renderAll();
     updateActionButtons();
-    return stopped ? turnCount() : -1;
+    if (stopped) return turnCount();
+    return {
+      turns: turnCount(),
+      gameOver: !!G.gameOver,
+      phase: G.phase,
+      current: G.players[G.currentPlayerIdx]?.name,
+      auction: !!G.auctionState,
+      trade: !!G.pendingTrade,
+      debt: !!(G.debtPrompt && G.debtPrompt.active),
+      overlays: [...document.querySelectorAll(".overlay.show")].map((o) => o.id),
+      lastLog: G.log.slice(-3).map((l) => l.text),
+    };
   }, TARGET_TURNS);
-  if (turns < 0) throw new Error("Match ended or stalled before the capture point.");
+  if (typeof turns !== "number") {
+    throw new Error(`Match ended or stalled: ${JSON.stringify(turns)}`);
+  }
   // Let toasts and the last move animation finish.
   await page.waitForTimeout(3500);
   return turns;
@@ -384,13 +405,25 @@ async function main() {
 
   try {
     console.log("Desktop");
-    const desk = await newPage(browser, DESKTOP);
-    await openHome(desk, base);
-    await shot(desk, "desktop-home");
-
-    await startMatch(desk, { allAi: true });
-    const turns = await playUntilHumanTurn(desk);
-    console.log(`  (after ${turns} turns; ${await playHumanTurn(desk)})`);
+    // Matches differ run to run (AI timing still varies), and some never
+    // offer a group to complete. Try a few seeds until one ends with houses.
+    let desk = null;
+    for (let attempt = 0; attempt < 6; attempt++) {
+      desk = await newPage(browser, DESKTOP, SEED + attempt);
+      try {
+        await openHome(desk, base);
+        await startMatch(desk, { allAi: true });
+        const turns = await playUntilHumanTurn(desk);
+        const summary = await playHumanTurn(desk);
+        console.log(`  seed ${SEED + attempt}: ${turns} turns, ${summary}`);
+        if (/built [1-9]/.test(summary)) break;
+      } catch (err) {
+        console.log(`  seed ${SEED + attempt}: ${err.message}`);
+      }
+      await desk.context().close();
+      desk = null;
+    }
+    if (!desk) throw new Error("No seed produced a usable match.");
     const state = await snapshotState(desk);
     await shot(desk, "desktop-game");
 
@@ -407,6 +440,10 @@ async function main() {
     await shot(desk, "desktop-history");
     await closeAll(desk);
 
+    // Home last, so "Recent activity" lists the match that was just played.
+    await desk.evaluate(() => showScreen("home-screen"));
+    await shot(desk, "desktop-home");
+
     const editor = await newPage(browser, DESKTOP);
     await editor.goto(`${base}/boardeditor.html?nosw`, { waitUntil: "networkidle" });
     await editor.evaluate(() => document.fonts.ready);
@@ -416,8 +453,6 @@ async function main() {
     console.log("Phone");
     const phone = await newPage(browser, PHONE);
     await openHome(phone, base);
-    await shot(phone, "phone-home");
-
     await startMatch(phone, { allAi: false });
     await loadState(phone, state);
     await shot(phone, "phone-game");
@@ -434,6 +469,9 @@ async function main() {
     await phone.evaluate((id) => showSpaceInfo(id), propId);
     await shot(phone, "phone-property");
     await closeAll(phone);
+
+    await phone.evaluate(() => showScreen("home-screen"));
+    await shot(phone, "phone-home");
 
     await desk.context().close();
     await phone.context().close();

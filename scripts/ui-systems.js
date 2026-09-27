@@ -542,13 +542,19 @@ function openDrawer(type) {
     const sfxEnabled = !!SFX.enabled;
     const bgmEnabled = !!SFX.bgmEnabled;
     const canLeave = isOnlineGame() && ONLINE.status === "playing";
+    // Opened from the home screen there is no match to quit.
+    const inMatch = !document
+      .getElementById("game-screen")
+      ?.classList.contains("hidden");
     // On phones the top bar keeps only Log, Chat and Settings; everything it
     // drops has to live here instead, or it becomes unreachable.
     const leaveBlock = `<hr style="border:none;border-top:1px solid rgba(255,255,255,.12);margin:1rem 0">
          <div style="display:grid;gap:.5rem">
            <button onclick="closeDrawer();openBugReport()" style="width:100%;padding:.65rem .9rem;border:1px solid rgba(255,255,255,.18);border-radius:8px;background:rgba(255,255,255,.07);color:#fff;font-weight:600;cursor:pointer;font-family:var(--font-body)">Report a bug</button>
            ${
-             canLeave
+             !inMatch
+               ? ""
+               : canLeave
                ? `<button onclick="closeDrawer();openLeaveGameModal()" style="width:100%;padding:.65rem .9rem;border:none;border-radius:8px;background:linear-gradient(135deg,#7f1d1d,#c0392b);color:#fff;font-weight:700;cursor:pointer;font-family:var(--font-body)">Leave online match</button>`
                : `<button onclick="closeDrawer();requestExitMatch()" style="width:100%;padding:.65rem .9rem;border:1px solid rgba(192,57,43,.5);border-radius:8px;background:rgba(192,57,43,.18);color:#ffb3ae;font-weight:600;cursor:pointer;font-family:var(--font-body)">Quit to menu</button>`
            }
@@ -1561,6 +1567,8 @@ function showScreen(id) {
     .forEach((s) => s.classList.add("hidden"));
   document.getElementById(id).classList.remove("hidden");
   syncBgmForScreen(id);
+  if (id === "home-screen") refreshHomeScreen();
+  syncAppNav(id);
   if (id === "game-screen") armExitGuard();
   else disarmExitGuard();
 }
@@ -2276,3 +2284,187 @@ function registerServiceWorker() {
   });
 }
 
+// ═══════════════════════════════════════════════
+//  HOME
+// ═══════════════════════════════════════════════
+// Opens the lobby with its board list in view. Waits a frame so the lobby is
+// laid out before scrolling to it.
+function openBoardPicker() {
+  openOfflineSetupPage();
+  requestAnimationFrame(() => {
+    const card = document.getElementById("board-choice-card");
+    if (!card) return;
+    card.scrollIntoView({ behavior: "smooth", block: "start" });
+    card.classList.remove("is-spotlit");
+    void card.offsetWidth;
+    card.classList.add("is-spotlit");
+  });
+}
+
+function openClassicBoard() {
+  applyThemeById("classic");
+  refreshStartingMoneyUi("classic", true);
+  renderBoardThemeSelector();
+  openBoardPicker();
+}
+
+// Reflects the browser's connection state. Offline and AI games do not need
+// it; online rooms do.
+function updateHomeNetStatus() {
+  const online = navigator.onLine !== false;
+  document.querySelectorAll(".js-net-status").forEach((el) => {
+    el.classList.toggle("is-offline", !online);
+    el.querySelector("span").textContent = online ? "Online" : "Offline";
+    el.title = online
+      ? "Connected. Online rooms are available."
+      : "No connection. Offline and AI games still work.";
+  });
+}
+
+// The side menu (tab bar on phones) belongs to the menu pages only; the match
+// and the winner screen keep the whole screen.
+const APP_NAV_FOR_SCREEN = {
+  "home-screen": "home",
+  "lobby-screen": "play",
+  "online-screen": "play",
+  "how-to-screen": "rules",
+};
+
+function syncAppNav(screenId) {
+  const current = APP_NAV_FOR_SCREEN[screenId];
+  document.body.classList.toggle("has-app-nav", !!current);
+  document.querySelectorAll("#app-nav [data-nav]").forEach((btn) => {
+    const active = btn.dataset.nav === current;
+    btn.classList.toggle("is-active", active);
+    if (active) btn.setAttribute("aria-current", "page");
+    else btn.removeAttribute("aria-current");
+  });
+  if (current) updateHomeNetStatus();
+}
+
+// Inside an online room the lobby's Back button leaves the room properly;
+// the menu has to do the same, or the seat would be left behind.
+async function appNavigate(dest) {
+  if (dest === "settings") {
+    openDrawer("settings");
+    return;
+  }
+  const lobbyOpen = !document
+    .getElementById("lobby-screen")
+    ?.classList.contains("hidden");
+  if (lobbyOpen && isOnlineGame()) {
+    try {
+      await leaveOnlineRoom(true, true);
+    } catch (err) {
+      console.error(err);
+      toast("Could not leave room cleanly.", "danger");
+      return;
+    }
+  }
+  if (dest === "home") openHomePage();
+  else if (dest === "play") openOfflineSetupPage();
+  else if (dest === "boards") openBoardPicker();
+  else if (dest === "rules") showScreen("how-to-screen");
+}
+window.addEventListener("online", updateHomeNetStatus);
+window.addEventListener("offline", updateHomeNetStatus);
+
+// Recent activity is kept in this browser only. The board editor writes to the
+// same key (see boardeditor.html), so the two must agree on the entry shape:
+// { kind: "local" | "online" | "board", title, detail, themeId?, time }.
+const RECENT_ACTIVITY_KEY = "monopoly_recent_activity_v1";
+const RECENT_ACTIVITY_LIMIT = 4;
+
+function readRecentActivity() {
+  try {
+    const list = JSON.parse(localStorage.getItem(RECENT_ACTIVITY_KEY) || "[]");
+    return Array.isArray(list) ? list.filter((e) => e && e.kind && e.time) : [];
+  } catch (_err) {
+    return [];
+  }
+}
+
+function recordRecentActivity(entry) {
+  if (!entry || !entry.kind) return;
+  try {
+    const list = readRecentActivity();
+    list.unshift({ ...entry, time: Date.now() });
+    localStorage.setItem(
+      RECENT_ACTIVITY_KEY,
+      JSON.stringify(list.slice(0, RECENT_ACTIVITY_LIMIT)),
+    );
+  } catch (_err) {
+    // Private mode or full storage: the list is a convenience, so skip it.
+  }
+}
+
+function formatRelativeTime(ts) {
+  const seconds = Math.round((Number(ts) - Date.now()) / 1000);
+  const units = [
+    ["day", 86400],
+    ["hour", 3600],
+    ["minute", 60],
+  ];
+  const rtf =
+    typeof Intl !== "undefined" && Intl.RelativeTimeFormat
+      ? new Intl.RelativeTimeFormat("en", { numeric: "auto", style: "narrow" })
+      : null;
+  for (const [unit, size] of units) {
+    if (Math.abs(seconds) >= size) {
+      const value = Math.round(seconds / size);
+      return rtf ? rtf.format(value, unit) : `${Math.abs(value)} ${unit}s ago`;
+    }
+  }
+  return "just now";
+}
+
+function openRecentActivity(index) {
+  const entry = readRecentActivity()[index];
+  if (!entry) return;
+  if (entry.kind === "online") {
+    openOnlineSetupPage("host");
+  } else if (entry.kind === "board") {
+    openBoardEditorPage();
+  } else {
+    if (entry.themeId && BOARD_THEMES[entry.themeId]) {
+      applyThemeById(entry.themeId);
+      refreshStartingMoneyUi(entry.themeId, true);
+      renderBoardThemeSelector();
+    }
+    openOfflineSetupPage();
+  }
+}
+
+function renderRecentActivity() {
+  const el = document.getElementById("hp-recent-list");
+  if (!el) return;
+  const list = readRecentActivity();
+  if (!list.length) {
+    el.innerHTML =
+      '<p class="hp-recent-empty">Games you start and boards you edit will show up here.</p>';
+    return;
+  }
+  const chevron =
+    '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
+  el.innerHTML = list
+    .map((entry, i) => {
+      const dot =
+        entry.kind === "online" ? " is-online" : entry.kind === "board" ? " is-board" : "";
+      const when = formatRelativeTime(entry.time);
+      const detail = [entry.detail, when].filter(Boolean).join(" · ");
+      return `<button class="hp-recent-item" onclick="openRecentActivity(${i})">
+          <span class="hp-recent-dot${dot}" aria-hidden="true"></span>
+          <span class="hp-card-text">
+            <span class="hp-recent-title">${escHtml(entry.title || "")}</span>
+            <span class="hp-recent-detail">${escHtml(detail)}</span>
+          </span>
+          ${chevron}
+        </button>`;
+    })
+    .join("");
+}
+
+function refreshHomeScreen() {
+  updateHomeNetStatus();
+  renderRecentActivity();
+}

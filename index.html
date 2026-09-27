@@ -57,86 +57,125 @@
     <link rel="stylesheet" href="styles/main.css" />
   </head>
   <body>
+    <!-- Side menu (desktop) / tab bar (phones), shared by the menu pages. -->
+    <aside class="hp-nav" id="app-nav">
+      <div class="hp-nav-logo"><img src="logo.svg" alt="" /></div>
+      <nav class="hp-nav-list" aria-label="Main">
+        <button class="hp-nav-item" data-nav="home" onclick="appNavigate('home')">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 10.5 12 3.5l8.5 7"/><path d="M5.5 9v11h13V9"/><path d="M10 20v-6h4v6"/></svg><span>Home</span>
+        </button>
+        <button class="hp-nav-item" data-nav="play" onclick="appNavigate('play')">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4.5v15l12-7.5z"/></svg><span>Play</span>
+        </button>
+        <button class="hp-nav-item" data-nav="boards" onclick="appNavigate('boards')">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="2"/><path d="M3.5 8.5h17M8.5 3.5v17"/></svg><span>Boards</span>
+        </button>
+        <button class="hp-nav-item" data-nav="rules" onclick="appNavigate('rules')">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 6.5c-1.8-1.4-4.4-2-8-2v14c3.6 0 6.2.6 8 2 1.8-1.4 4.4-2 8-2v-14c-3.6 0-6.2.6-8 2z"/><path d="M12 6.5v14"/></svg><span>Rules</span>
+        </button>
+        <button class="hp-nav-item" data-nav="settings" onclick="appNavigate('settings')">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span>Settings</span>
+        </button>
+      </nav>
+    </aside>
+
     <!-- ═══════════════ HOME SCREEN ═══════════════ -->
-    <div class="screen" id="home-screen">
-      <div class="home-hero">
-        <div class="home-ornament">Bangladesh Edition</div>
-        <div class="home-logo-mark">
-          <img src="logo.svg" alt="Bangladeshi Monopoly Logo" />
-        </div>
-        <h1 class="home-title">
-          <span class="ht-accent">Bangladeshi</span>
-          Monopoly
-        </h1>
-        <div class="home-subtitle-row">
-          <span>Multiplayer</span>
-          <span class="dot-sep"></span>
-          <span>Pass &amp; Play</span>
-          <span class="dot-sep"></span>
-          <span>Online</span>
-        </div>
-        <div class="home-edition-badge">Classic board game</div>
-      </div>
-
-      <div class="home-menu-body">
-        <div class="home-section-label">Play</div>
-
-        <div class="home-play-card">
-          <div class="home-play-title">Choose your game mode</div>
-          <button class="home-btn-primary" onclick="openOfflineSetupPage()">
-            <div class="hbtn-left">
-                            <div class="hbtn-text">
-                <span class="hbtn-label">Play offline</span>
-                <span class="hbtn-sub">Local &amp; Pass &amp; Play</span>
-              </div>
-            </div>
-            <span class="hbtn-arrow">›</span>
-          </button>
-          <button
-            class="home-btn-secondary"
-            onclick="openOnlineSetupPage('host')"
-          >
-            <div class="hbtn-left">
-                            <div class="hbtn-text">
-                <span class="hbtn-label">Play online</span>
-                <span class="hbtn-sub">Host or join a room</span>
-              </div>
-            </div>
-            <span class="hbtn-arrow">›</span>
-          </button>
+    <div class="screen menu-page" id="home-screen">
+      <div class="hp-main">
+        <div class="hp-top">
+          <span class="hp-status js-net-status" id="hp-net-status" role="status">
+            <i aria-hidden="true"></i><span>Online</span>
+          </span>
         </div>
 
-        <div class="home-section-label">Explore</div>
+        <header class="hp-hero">
+          <div class="hp-ornament">Bangladesh edition</div>
+          <div class="hp-brand">
+            <img class="hp-brand-die" src="logo.svg" alt="" />
+            <h1 class="hp-title">
+              <span class="hp-title-accent">Bangladeshi</span>
+              <span>Monopoly</span>
+            </h1>
+          </div>
+          <div class="hp-modes">
+            <span>Multiplayer</span><i aria-hidden="true"></i><span>Pass &amp; play</span><i aria-hidden="true"></i><span>Online</span>
+          </div>
+          <p class="hp-tagline">
+            Own cities. Build empires.<br />
+            Trade your way across Bangladesh.
+          </p>
+        </header>
 
-        <div class="home-menu-grid">
-          <button
-            class="home-menu-item hmi-gold"
-            id="credits-logs-btn"
-            onclick="openWhatsNewPage()"
-          >
-                        <span class="hmi-label">Credits &amp; logs</span>
-            <span class="hmi-sub">Patch notes</span>
+        <section class="hp-play" aria-label="Play">
+          <button class="hp-card hp-card-hero" onclick="openOnlineSetupPage('host')">
+            <span class="hp-card-icon"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.2"/><path d="M6 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="5" cy="9.5" r="2.3"/><circle cx="19" cy="9.5" r="2.3"/><path d="M1.5 18.5c0-2.3 1.6-4 3.5-4.3M22.5 18.5c0-2.3-1.6-4-3.5-4.3"/></svg></span>
+            <span class="hp-card-text">
+              <span class="hp-card-title">Play online</span>
+              <span class="hp-card-sub">Host a room or join one with a code</span>
+            </span>
+            <span class="hp-card-go"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
           </button>
-          <button class="home-menu-item" onclick="showScreen('how-to-screen')">
-                        <span class="hmi-label">How to play</span>
-            <span class="hmi-sub">Rules &amp; guide</span>
+          <div class="hp-card-row">
+          <button class="hp-card" onclick="openOfflineSetupPage()">
+            <span class="hp-card-icon"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8.5" cy="8" r="3.2"/><path d="M2.5 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="16.5" cy="9" r="2.6"/><path d="M15.5 14.2c3.3-.4 6 2 6 5.3"/></svg></span>
+            <span class="hp-card-text">
+              <span class="hp-card-title">Play offline</span>
+              <span class="hp-card-sub">One device, or against AI</span>
+            </span>
+            <span class="hp-card-go"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span>
           </button>
-        </div>
+          <button class="hp-card" onclick="openClassicBoard()">
+            <span class="hp-card-icon"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="2.5"/><rect x="8" y="8" width="8" height="8" rx="1.5"/><path d="M3.5 8H8M16 8h4.5M3.5 16H8M16 16h4.5M8 3.5V8M16 3.5V8M8 16v4.5M16 16v4.5"/></svg></span>
+            <span class="hp-card-text">
+              <span class="hp-card-title">Classic board</span>
+              <span class="hp-card-sub">Original streets and prices</span>
+            </span>
+            <span class="hp-card-go"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span>
+          </button>
+          </div>
+        </section>
 
-        <div class="home-section-label">Dev Tools</div>
-
-        <div class="home-dev-card">
-          <button class="home-dev-btn" onclick="openTestLabPage()">
-            Test Lab
+        <section class="hp-quick" aria-labelledby="hp-quick-label">
+          <h2 class="hp-section-label" id="hp-quick-label">Quick access</h2>
+          <div class="hp-quick-grid">
+          <button class="hp-quick-item" id="credits-logs-btn" onclick="openWhatsNewPage()">
+            <span class="hp-quick-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3.5H7a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8.5z"/><path d="M14 3.5v5h5M9 13h6M9 16.5h4"/></svg></span>
+            <span class="hp-card-text">
+              <span class="hp-quick-title">Credits &amp; logs</span>
+              <span class="hp-quick-sub">Patch notes and updates</span>
+            </span>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
           </button>
-          <button class="home-dev-btn" onclick="openBoardEditorPage()">
-            Board Editor
+          <button class="hp-quick-item" onclick="showScreen('how-to-screen')">
+            <span class="hp-quick-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 6.5c-1.8-1.4-4.4-2-8-2v14c3.6 0 6.2.6 8 2 1.8-1.4 4.4-2 8-2v-14c-3.6 0-6.2.6-8 2z"/><path d="M12 6.5v14"/></svg></span>
+            <span class="hp-card-text">
+              <span class="hp-quick-title">How to play</span>
+              <span class="hp-quick-sub">Rules and guide</span>
+            </span>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
           </button>
-        </div>
+          <button class="hp-quick-item" onclick="openBoardEditorPage()">
+            <span class="hp-quick-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h8.5"/><path d="M16.5 3.8a2.1 2.1 0 0 1 3 3L8 18.3l-4 1 1-4z"/></svg></span>
+            <span class="hp-card-text">
+              <span class="hp-quick-title">Board editor</span>
+              <span class="hp-quick-sub">Create your own board</span>
+            </span>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+          </button>
+          </div>
+        </section>
 
-        <div class="home-footer" style="margin-top: 1.5rem">
-          Bangladeshi Monopoly
-        </div>
+        <section class="hp-recent" aria-labelledby="hp-recent-label">
+          <h2 class="hp-section-label" id="hp-recent-label">Recent activity</h2>
+          <div id="hp-recent-list"></div>
+        </section>
+
+        <footer class="hp-footer">
+          <span>Bangladeshi Monopoly</span>
+          <button class="hp-footer-link" onclick="openTestLabPage()">Test lab</button>
+          <button class="hp-footer-link hp-footer-report" onclick="openBugReport()">Report a bug</button>
+          <span class="hp-footer-motto">Play · Trade · Build</span>
+        </footer>
       </div>
 
       <button
@@ -149,332 +188,308 @@
     </div>
 
     <!-- ═══════════════ ONLINE SETUP SCREEN ═══════════════ -->
-    <div class="screen hidden" id="online-screen">
-      <div class="page-top-actions online-top-actions">
-        <button class="btn btn-sm page-back-btn" onclick="openHomePage()">
-          ← Back
-        </button>
-      </div>
-
-      <div class="online-hero">
-        <div class="online-ornament">Online Multiplayer</div>
-        <div class="online-logo-mark">
-          <img src="logo.svg" alt="Monopoly logo" />
+    <div class="screen hidden menu-page" id="online-screen">
+      <div class="pg-main">
+        <div class="pg-top">
+          <button class="pg-back" onclick="openHomePage()"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg><span>Back</span></button>
+          <span class="hp-status js-net-status" role="status"><i aria-hidden="true"></i><span>Online</span></span>
         </div>
-        <h1 class="online-title">
-          <span class="accent">Room</span>
-          Setup
-        </h1>
-        <div class="online-subtitle-row">
-          <span>Host</span>
-          <span class="online-sub-dot"></span>
-          <span>Join</span>
-          <span class="online-sub-dot"></span>
-          <span>Sync</span>
-        </div>
-        <div class="online-badge">Live Rooms</div>
-      </div>
-
-      <div class="online-body">
-        <div class="online-section-label">Room Entry</div>
-        <div class="card online-room-card">
-          <h2>Online rooms</h2>
-          <div class="input-group">
-            <label>Your online name</label>
-            <input
-              type="text"
-              id="online-player-name"
-              maxlength="24"
-              placeholder="Enter your name"
-            />
-          </div>
-
-          <div class="two-col online-mode-switch" id="online-mode-row">
-            <button
-              class="btn btn-secondary btn-sm"
-              id="mode-host-btn"
-              onclick="setOnlineMode('host')"
-            >
-              Host
-            </button>
-            <button
-              class="btn btn-secondary btn-sm"
-              id="mode-join-btn"
-              onclick="setOnlineMode('join')"
-            >
-              Join
-            </button>
-          </div>
-
-          <div id="host-options" class="online-pane">
-            <div class="online-pane-title">Host a room</div>
-            <div class="two-col">
-              <div class="input-group">
-                <label>Room visibility</label>
-                <select id="room-visibility">
-                  <option value="open" selected>Open</option>
-                  <option value="closed">Closed</option>
-                </select>
-              </div>
-              <div class="input-group">
-                <label>Room password (closed only)</label>
-                <input
-                  type="password"
-                  id="host-room-password"
-                  maxlength="20"
-                  placeholder="Set password"
-                />
-              </div>
-            </div>
-            <button
-              class="btn btn-primary btn-sm btn-full"
-              id="create-room-btn"
-              onclick="createOnlineRoom()"
-            >
-              Create Room
-            </button>
-          </div>
-
-          <div id="join-options" class="online-pane" style="display: none">
-            <div class="online-pane-title">Join a room</div>
+        <header class="pg-hero">
+          <div class="hp-ornament">Online multiplayer</div>
+          <h1 class="pg-title">
+            <span class="hp-title-accent">Online</span>
+            <span>Rooms</span>
+          </h1>
+          <p class="pg-lead">Host a room and share its code, or join one a friend has made. Everyone plays live from their own device.</p>
+        </header>
+        <div class="online-body">
+          <h2 class="hp-section-label">Room entry</h2>
+          <div class="card online-room-card">
+            <h2>Online rooms</h2>
             <div class="input-group">
-              <label>Room code</label>
+              <label>Your online name</label>
               <input
                 type="text"
-                id="join-room-code"
-                maxlength="6"
-                placeholder="ABC123"
-                style="text-transform: uppercase"
+                id="online-player-name"
+                maxlength="24"
+                placeholder="Enter your name"
               />
             </div>
-            <div class="input-group">
-              <label>Password (for closed room)</label>
-              <input
-                type="password"
-                id="join-room-password"
-                maxlength="20"
-                placeholder="Password if needed"
-              />
-            </div>
-            <button
-              class="btn btn-primary btn-sm btn-full"
-              id="join-room-btn"
-              onclick="joinOnlineRoom()"
-            >
-              Join by Code
-            </button>
-            <div class="online-list-head">
-              <label>Open rooms</label>
+
+            <div class="two-col online-mode-switch" id="online-mode-row">
               <button
-                class="btn btn-sm online-refresh-btn"
-                onclick="refreshOpenRoomsList(true)"
+                class="btn btn-secondary btn-sm"
+                id="mode-host-btn"
+                onclick="setOnlineMode('host')"
               >
-                Refresh
+                Host
+              </button>
+              <button
+                class="btn btn-secondary btn-sm"
+                id="mode-join-btn"
+                onclick="setOnlineMode('join')"
+              >
+                Join
               </button>
             </div>
-            <div id="open-rooms-list"></div>
+
+            <div id="host-options" class="online-pane">
+              <div class="online-pane-title">Host a room</div>
+              <div class="two-col">
+                <div class="input-group">
+                  <label>Room visibility</label>
+                  <select id="room-visibility">
+                    <option value="open" selected>Open</option>
+                    <option value="closed">Closed</option>
+                  </select>
+                </div>
+                <div class="input-group">
+                  <label>Room password (closed only)</label>
+                  <input
+                    type="password"
+                    id="host-room-password"
+                    maxlength="20"
+                    placeholder="Set password"
+                  />
+                </div>
+              </div>
+              <button
+                class="btn btn-primary btn-sm btn-full"
+                id="create-room-btn"
+                onclick="createOnlineRoom()"
+              >
+                Create Room
+              </button>
+            </div>
+
+            <div id="join-options" class="online-pane" style="display: none">
+              <div class="online-pane-title">Join a room</div>
+              <div class="input-group">
+                <label>Room code</label>
+                <input
+                  type="text"
+                  id="join-room-code"
+                  maxlength="6"
+                  placeholder="ABC123"
+                  style="text-transform: uppercase"
+                />
+              </div>
+              <div class="input-group">
+                <label>Password (for closed room)</label>
+                <input
+                  type="password"
+                  id="join-room-password"
+                  maxlength="20"
+                  placeholder="Password if needed"
+                />
+              </div>
+              <button
+                class="btn btn-primary btn-sm btn-full"
+                id="join-room-btn"
+                onclick="joinOnlineRoom()"
+              >
+                Join by Code
+              </button>
+              <div class="online-list-head">
+                <label>Open rooms</label>
+                <button
+                  class="btn btn-sm online-refresh-btn"
+                  onclick="refreshOpenRoomsList(true)"
+                >
+                  Refresh
+                </button>
+              </div>
+              <div id="open-rooms-list"></div>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
     <!-- ═══════════════ LOBBY SCREEN ═══════════════ -->
-    <div class="screen hidden" id="lobby-screen">
-      <div class="page-top-actions lobby-top-actions">
-        <button class="btn btn-sm page-back-btn" onclick="handleLobbyBack()">
-          ← Back
-        </button>
-      </div>
+    <div class="screen hidden menu-page" id="lobby-screen">
+      <div class="pg-main">
+        <div class="pg-top">
+          <button class="pg-back" onclick="handleLobbyBack()"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg><span>Back</span></button>
+        </div>
+        <header class="pg-hero">
+          <div class="hp-ornament">Match setup</div>
+          <h1 class="pg-title">
+            <span class="hp-title-accent">Game</span>
+            <span>Lobby</span>
+          </h1>
+          <span class="pg-chip" id="lobby-context-tagline">Local multiplayer</span>
+          <p class="pg-lead">Choose who plays, pick a board and set the house rules.</p>
+        </header>
+        <div class="setup-body">
+          <h2 class="hp-section-label">Players</h2>
+          <div class="card">
+            <h2>Set up players</h2>
+            <div id="player-slots"></div>
+            <div class="setup-player-actions">
+              <button
+                class="btn btn-secondary btn-sm"
+                id="add-player-btn"
+                onclick="addPlayerSlot('human')"
+              >
+                + Add Human
+              </button>
+              <button
+                class="btn btn-secondary btn-sm"
+                id="add-ai-btn"
+                onclick="addPlayerSlot('ai')"
+              >
+                + Add AI
+              </button>
+            </div>
+          </div>
 
-      <div class="setup-hero">
-        <div class="setup-ornament">Match configuration</div>
-        <div class="setup-logo-mark">
-          <img src="logo.svg" alt="Monopoly logo" />
-        </div>
-        <h1 class="setup-title">
-          <span class="accent">Game</span>
-          Lobby
-        </h1>
-        <div class="setup-subtitle-row">
-          <span>Players</span>
-          <span class="setup-sub-dot"></span>
-          <span>Board</span>
-          <span class="setup-sub-dot"></span>
-          <span>Rules</span>
-        </div>
-        <div class="setup-badge" id="lobby-context-tagline">
-          Local multiplayer
-        </div>
-      </div>
+          <div class="card" id="online-room-panel" style="display: none">
+            <h2>Online room</h2>
+            <div class="two-col setup-online-actions">
+              <button
+                class="btn btn-gold btn-sm"
+                id="ready-btn"
+                onclick="toggleReadyState()"
+                disabled
+              >
+                Ready
+              </button>
+              <button
+                class="btn btn-danger btn-sm"
+                id="leave-room-btn"
+                onclick="leaveOnlineRoom()"
+                disabled
+              >
+                Leave Room
+              </button>
+            </div>
+            <div id="online-room-players"></div>
+            <div id="online-room-status">Offline mode. Choose Host or Join.</div>
+          </div>
 
-      <div class="setup-body">
-        <div class="setup-section-label">Lobby settings</div>
-        <div class="card">
-          <h2>Set up players</h2>
-          <div id="player-slots"></div>
-          <div class="setup-player-actions">
-            <button
-              class="btn btn-secondary btn-sm"
-              id="add-player-btn"
-              onclick="addPlayerSlot('human')"
-            >
-              + Add Human
-            </button>
-            <button
-              class="btn btn-secondary btn-sm"
-              id="add-ai-btn"
-              onclick="addPlayerSlot('ai')"
-            >
-              + Add AI
-            </button>
+          <div class="card" id="board-choice-card">
+            <h2>Choose a board</h2>
+            <div id="board-theme-grid"></div>
           </div>
-        </div>
-
-        <div class="card" id="online-room-panel" style="display: none">
-          <h2>Online room</h2>
-          <div class="two-col setup-online-actions">
-            <button
-              class="btn btn-gold btn-sm"
-              id="ready-btn"
-              onclick="toggleReadyState()"
-              disabled
-            >
-              Ready
-            </button>
-            <button
-              class="btn btn-danger btn-sm"
-              id="leave-room-btn"
-              onclick="leaveOnlineRoom()"
-              disabled
-            >
-              Leave Room
-            </button>
-          </div>
-          <div id="online-room-players"></div>
-          <div id="online-room-status">Offline mode. Choose Host or Join.</div>
-        </div>
-
-        <div class="card">
-          <h2>Choose a board</h2>
-          <div id="board-theme-grid"></div>
-        </div>
-        <div class="card" id="custom-board-card">
-          <h3>Custom board seed</h3>
-          <div class="setup-note" style="margin-bottom: 0.5rem">
-            Load a board seed from Board Editor to use it in this match. In
-            online rooms, the host selection is synced for everyone.
-          </div>
-          <div class="input-group">
-            <label for="custom-board-seed">Seed code (MBD1...)</label>
-            <textarea
-              id="custom-board-seed"
-              rows="4"
-              spellcheck="false"
-              autocomplete="off"
-              autocorrect="off"
-              autocapitalize="off"
-              placeholder="Paste custom board seed from Board Editor"
-            ></textarea>
-          </div>
-          <div class="setup-player-actions" style="margin-top: 0.5rem">
-            <button
-              class="btn btn-secondary btn-sm"
-              id="load-custom-board-btn"
-              onclick="loadCustomBoardSeedFromInput()"
-            >
-              Load Seed
-            </button>
-            <button
-              class="btn btn-secondary btn-sm"
-              id="use-saved-custom-board-btn"
-              onclick="loadSavedCustomBoardSeed()"
-            >
-              Use Saved
-            </button>
-            <button
-              class="btn btn-gold btn-sm"
-              id="download-custom-board-btn"
-              onclick="downloadActiveCustomBoardSeed()"
-            >
-              Download Seed
-            </button>
-            <button
-              class="btn btn-danger btn-sm"
-              id="clear-custom-board-btn"
-              onclick="clearCustomBoardThemeSelection()"
-            >
-              Clear
-            </button>
-          </div>
-          <div
-            class="setup-note"
-            id="custom-board-status"
-            style="margin-top: 0.45rem"
-          >
-            No custom board loaded.
-          </div>
-        </div>
-        <div class="card">
-          <h3>Game settings</h3>
-          <div class="two-col">
-            <div class="input-group">
-              <label id="starting-money-label">Starting money</label>
-              <input
-                type="number"
-                id="starting-money"
-                value="15000"
-                min="200"
-                max="200000"
-                step="100"
-              />
+          <div class="card" id="custom-board-card">
+            <h3>Custom board seed</h3>
+            <div class="setup-note" style="margin-bottom: 0.5rem">
+              Load a board seed from Board Editor to use it in this match. In
+              online rooms, the host selection is synced for everyone.
             </div>
             <div class="input-group">
-              <label>Max Houses/Property</label>
-              <select id="max-houses">
-                <option value="4" selected>4 Houses</option>
-                <option value="5">5 Houses</option>
+              <label for="custom-board-seed">Seed code (MBD1...)</label>
+              <textarea
+                id="custom-board-seed"
+                rows="4"
+                spellcheck="false"
+                autocomplete="off"
+                autocorrect="off"
+                autocapitalize="off"
+                placeholder="Paste custom board seed from Board Editor"
+              ></textarea>
+            </div>
+            <div class="setup-player-actions" style="margin-top: 0.5rem">
+              <button
+                class="btn btn-secondary btn-sm"
+                id="load-custom-board-btn"
+                onclick="loadCustomBoardSeedFromInput()"
+              >
+                Load Seed
+              </button>
+              <button
+                class="btn btn-secondary btn-sm"
+                id="use-saved-custom-board-btn"
+                onclick="loadSavedCustomBoardSeed()"
+              >
+                Use Saved
+              </button>
+              <button
+                class="btn btn-gold btn-sm"
+                id="download-custom-board-btn"
+                onclick="downloadActiveCustomBoardSeed()"
+              >
+                Download Seed
+              </button>
+              <button
+                class="btn btn-danger btn-sm"
+                id="clear-custom-board-btn"
+                onclick="clearCustomBoardThemeSelection()"
+              >
+                Clear
+              </button>
+            </div>
+            <div
+              class="setup-note"
+              id="custom-board-status"
+              style="margin-top: 0.45rem"
+            >
+              No custom board loaded.
+            </div>
+          </div>
+          <div class="card">
+            <h3>Game settings</h3>
+            <div class="two-col">
+              <div class="input-group">
+                <label id="starting-money-label">Starting money</label>
+                <input
+                  type="number"
+                  id="starting-money"
+                  value="15000"
+                  min="200"
+                  max="200000"
+                  step="100"
+                />
+              </div>
+              <div class="input-group">
+                <label>Max Houses/Property</label>
+                <select id="max-houses">
+                  <option value="4" selected>4 Houses</option>
+                  <option value="5">5 Houses</option>
+                </select>
+              </div>
+            </div>
+            <div class="input-group">
+              <label>Auto-advance timer (after move)</label>
+              <select id="lobby-timer">
+                <option value="0">Off — manual End Turn only</option>
+                <option value="10">10 seconds</option>
+                <option value="20">20 seconds</option>
+                <option value="30" selected>30 seconds</option>
+                <option value="45">45 seconds</option>
+                <option value="60">60 seconds</option>
               </select>
             </div>
-          </div>
-          <div class="input-group">
-            <label>Auto-advance timer (after move)</label>
-            <select id="lobby-timer">
-              <option value="0">Off — manual End Turn only</option>
-              <option value="10">10 seconds</option>
-              <option value="20">20 seconds</option>
-              <option value="30" selected>30 seconds</option>
-              <option value="45">45 seconds</option>
-              <option value="60">60 seconds</option>
-            </select>
-          </div>
-          <div class="input-group">
-            <label>Auctions</label>
-            <select id="auction-enabled">
-              <option value="on" selected>On</option>
-              <option value="off">Off</option>
-            </select>
-            <div class="setup-note">
-              When enabled, property auctions open around 60%-80% of base price.
+            <div class="input-group">
+              <label>Auctions</label>
+              <select id="auction-enabled">
+                <option value="on" selected>On</option>
+                <option value="off">Off</option>
+              </select>
+              <div class="setup-note">
+                When enabled, property auctions open around 60%-80% of base price.
+              </div>
             </div>
           </div>
+          <div class="card">
+            <h3>How to play</h3>
+            <ul class="how-to">
+              <li>Roll dice to move around the board</li>
+              <li>Buy properties and collect rent from rivals</li>
+              <li>Build houses & hotels to multiply your rent</li>
+              <li>Trade properties with other players</li>
+              <li>Last player standing wins — avoid bankruptcy!</li>
+            </ul>
+          </div>
+          <button
+            class="btn btn-primary btn-lg btn-full setup-start-btn"
+            onclick="startGame()"
+            id="start-btn"
+          >
+            Start game
+          </button>
         </div>
-        <div class="card">
-          <h3>How to play</h3>
-          <ul class="how-to">
-            <li>Roll dice to move around the board</li>
-            <li>Buy properties and collect rent from rivals</li>
-            <li>Build houses & hotels to multiply your rent</li>
-            <li>Trade properties with other players</li>
-            <li>Last player standing wins — avoid bankruptcy!</li>
-          </ul>
-        </div>
-        <button
-          class="btn btn-primary btn-lg btn-full setup-start-btn"
-          onclick="startGame()"
-          id="start-btn"
-        >
-          Start game
-        </button>
       </div>
     </div>
 
@@ -518,289 +533,277 @@
     </div>
 
     <!-- ═══════════════ HOW TO PLAY SCREEN ═══════════════ -->
-    <div class="screen hidden" id="how-to-screen">
-      <div class="page-top-actions howto-top-actions">
-        <button class="btn btn-sm page-back-btn" onclick="openHomePage()">
-          ← Back
-        </button>
-      </div>
-
-      <div class="howto-hero">
-        <div class="howto-ornament">Bangladesh Edition</div>
-        <div class="howto-logo-mark">
-          <img src="logo.svg" alt="Monopoly logo" />
+    <div class="screen hidden menu-page" id="how-to-screen">
+      <div class="pg-main">
+        <div class="pg-top">
+          <button class="pg-back" onclick="openHomePage()"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg><span>Back</span></button>
         </div>
-        <h1 class="howto-title">
-          <span class="accent">How</span>
-          to Play
-        </h1>
-        <div class="howto-subtitle-row">
-          <span>Rules</span>
-          <span class="howto-sub-dot"></span>
-          <span>Turns</span>
-          <span class="howto-sub-dot"></span>
-          <span>Strategy</span>
-        </div>
-        <div class="howto-badge">Full Rulebook</div>
-      </div>
-
-      <div class="howto-body">
-        <div class="howto-section-label">Gameplay Rules</div>
-        <div class="card">
-          <h2>1. Setup, Turn Order, and Win Condition</h2>
-          <ul class="how-to">
-            <li>
-              Offline games support 2 to 8 players (any mix of human and AI).
-              Online games require at least 2 ready human players, and only the
-              host can launch.
-            </li>
-            <li>
-              Turn order follows lobby order and loops to the next non-bankrupt
-              player each turn.
-            </li>
-            <li>
-              You start with the lobby starting-money value. If that value is
-              invalid, the selected board theme default is used.
-            </li>
-            <li>
-              The selected board theme controls currency display, location
-              names, GO salary amount, and default starting money.
-            </li>
-            <li>
-              Goal: make all other players bankrupt. The last non-bankrupt
-              player wins.
-            </li>
-          </ul>
-        </div>
-        <div class="card">
-          <h2>2. Turn Phases and Dice Rules</h2>
-          <ul class="how-to">
-            <li>Every turn runs in phases: Roll → Action/Land Result → End.</li>
-            <li>You must roll before you can end your turn.</li>
-            <li>
-              If you roll doubles (and are not in jail), you get another roll
-              after land effects resolve.
-            </li>
-            <li>
-              If you roll 3 doubles in one turn, you are sent directly to Jail
-              immediately.
-            </li>
-            <li>
-              Movement wraps around 40 spaces. Passing GO pays the theme GO
-              salary. Landing exactly on GO also pays salary.
-            </li>
-          </ul>
-        </div>
-        <div class="card">
-          <h2>3. Space Rules</h2>
-          <ul class="how-to">
-            <li>GO: landing on GO pays salary.</li>
-            <li>Jail/Visit: safe when just visiting.</li>
-            <li>
-              Free Parking: visiting only, no jackpot and no reward pool payout.
-            </li>
-            <li>
-              Go to Jail: sends you to Jail space (position 10), ends movement,
-              and resets doubles streak.
-            </li>
-            <li>Tax spaces: pay the printed amount to the bank.</li>
-            <li>
-              Chance/Community Chest: draw top card from a shuffled deck and
-              apply its action.
-            </li>
-          </ul>
-        </div>
-        <div class="card">
-          <h2>4. Buying, Auction, and Rent</h2>
-          <ul class="how-to">
-            <li>
-              Landing on an unowned property/railroad/utility lets you buy it at
-              face price.
-            </li>
-            <li>
-              If you cannot afford a landed property, buy is disabled and you
-              can auction it or skip.
-            </li>
-            <li>
-              Auction includes all non-bankrupt players. You can toggle auctions
-              on/off in lobby settings. Bid controls are +100, +200, +500,
-              +1000, or Pass.
-            </li>
-            <li>
-              When enabled, auctions start from an opening value (about 60%-80%
-              of base property price), not from 0.
-            </li>
-            <li>
-              You cannot place a bid above your current cash. Auction ends when
-              only one non-passed bidder remains with a valid high bid, or
-              everyone passes.
-            </li>
-            <li>
-              If all pass, the property remains unsold (owner stays none).
-            </li>
-            <li>
-              Rent on normal properties: base rent, or double base if color
-              monopoly and no buildings, or house/hotel rent tiers from the
-              deed.
-            </li>
-            <li>
-              Railroad rent depends on owner total railroads. Inflated boards
-              use 250 / 500 / 1000 / 2000; Classic uses 25 / 50 / 100 / 200.
-            </li>
-            <li>
-              Utility rent is dice-based. Most boards use inflated economy (40x
-              one utility, 100x both); Classic board uses original multipliers
-              (4x and 10x).
-            </li>
-            <li>Mortgaged assets collect no rent.</li>
-          </ul>
-        </div>
-        <div class="card">
-          <h2>5. Building and Mortgage Rules</h2>
-          <ul class="how-to">
-            <li>
-              You can build only after owning all properties in a color group.
-            </li>
-            <li>Build cost per click is that property house cost.</li>
-            <li>
-              At 4 houses, the next build converts that property to a hotel.
-            </li>
-            <li>
-              Selling buildings returns 50% of one house cost per sell action.
-            </li>
-            <li>
-              Selling a hotel converts it back to 4 houses first in this build.
-            </li>
-            <li>
-              Even-building distribution across a color set is not enforced by
-              this build.
-            </li>
-            <li>
-              You can mortgage owned assets (property, railroad, utility) for
-              50% of purchase price, if that asset has no buildings.
-            </li>
-            <li>
-              You cannot mortgage a color property while any property in that
-              same color group still has buildings.
-            </li>
-            <li>Unmortgage cost is 110% of mortgage value (10% interest).</li>
-          </ul>
-        </div>
-        <div class="card">
-          <h2>6. Jail Rules</h2>
-          <ul class="how-to">
-            <li>
-              You can be jailed by Go to Jail square, jail-type cards, or
-              rolling 3 doubles in one turn.
-            </li>
-            <li>
-              When your jailed turn starts, choose to roll for doubles or leave
-              immediately by paying bail/using a card.
-            </li>
-            <li>
-              Bail follows board economy: 500 on inflated boards, 50 on Classic,
-              unless you use a Get Out of Jail Free card.
-            </li>
-            <li>
-              If you roll doubles in jail, you are released and move by that
-              roll.
-            </li>
-            <li>
-              If you fail doubles, jail turn count increases. On the 3rd failed
-              roll, you must pay bail, then move by that roll.
-            </li>
-          </ul>
-        </div>
-        <div class="card">
-          <h2>7. Chance and Community Actions (Implemented Set)</h2>
-          <ul class="how-to">
-            <li>
-              Chance deck actions include movement cards (GO, nearest railway,
-              key destinations), jail cards, fines, rewards, and repair bills.
-              Card values follow board economy: Classic uses original values,
-              other boards use inflated equivalents.
-            </li>
-            <li>
-              Community Chest includes money gains/losses, GO/Jail moves,
-              jail-free card, and birthday collection from each non-bankrupt
-              opponent, with values scaled by board economy.
-            </li>
-            <li>
-              Get Out of Jail Free cards increase your stored jail-free card
-              count.
-            </li>
-            <li>
-              Decks are shuffled at game start and drawn in order; when index
-              exceeds length, drawing wraps back through the same shuffled deck
-              order.
-            </li>
-          </ul>
-        </div>
-        <div class="card">
-          <h2>8. Debt, Bankruptcy, and Asset Transfer</h2>
-          <ul class="how-to">
-            <li>
-              If a human player cannot pay a charge, a debt prompt appears. You
-              must raise money (sell buildings/mortgage) or declare bankruptcy.
-            </li>
-            <li>
-              You cannot end your turn while unresolved debt prompt is active.
-            </li>
-            <li>
-              If debt is paid after raising funds, the exact owed amount is
-              transferred to the creditor (or bank) and play continues.
-            </li>
-            <li>
-              Bankruptcy to another player transfers remaining cash and all
-              owned assets to that creditor.
-            </li>
-            <li>
-              If transferred assets are mortgaged, the creditor pays 10%
-              mortgage-interest to the bank for those assets.
-            </li>
-            <li>
-              Bankruptcy to bank clears ownership, removes all
-              buildings/hotel/mortgage status, and queues each asset for bank
-              auction.
-            </li>
-            <li>Bank auctions run in sequence until queue is empty.</li>
-          </ul>
-        </div>
-        <div class="card">
-          <h2>9. Trading and Timer Rules</h2>
-          <ul class="how-to">
-            <li>Trades can include properties and cash from both sides.</li>
-            <li>
-              A property cannot be traded if it has buildings, or if any
-              property in its same color group has buildings.
-            </li>
-            <li>
-              Recipient can accept or decline. Proposer can cancel while
-              pending.
-            </li>
-            <li>
-              Trade is validated again on response (ownership and available cash
-              must still be valid).
-            </li>
-            <li>
-              Auto-advance timer (Off / 10 / 20 / 30 / 45 / 60 seconds) runs
-              only during end phase after movement resolves.
-            </li>
-            <li>
-              Timer pauses while any modal overlay is open. At zero, turn
-              auto-ends.
-            </li>
-            <li>
-              Online mode rules: only host can launch match or change lobby
-              timer/settings, and all connected players must be ready before
-              start.
-            </li>
-            <li>
-              If someone leaves an online match, leave handling can convert them
-              to AI control or liquidate and auction their assets (host-managed
-              room state).
-            </li>
-          </ul>
+        <header class="pg-hero">
+          <div class="hp-ornament">Rulebook</div>
+          <h1 class="pg-title">
+            <span class="hp-title-accent">How to</span>
+            <span>Play</span>
+          </h1>
+          <p class="pg-lead">Everything the game enforces, from the first roll to the last bankruptcy.</p>
+        </header>
+        <div class="howto-body">
+          <h2 class="hp-section-label">Gameplay rules</h2>
+          <div class="card">
+            <h2>Setup, turn order and winning</h2>
+            <ul class="how-to">
+              <li>
+                Offline games support 2 to 8 players (any mix of human and AI).
+                Online games require at least 2 ready human players, and only the
+                host can launch.
+              </li>
+              <li>
+                Turn order follows lobby order and loops to the next non-bankrupt
+                player each turn.
+              </li>
+              <li>
+                You start with the lobby starting-money value. If that value is
+                invalid, the selected board theme default is used.
+              </li>
+              <li>
+                The selected board theme controls currency display, location
+                names, GO salary amount, and default starting money.
+              </li>
+              <li>
+                Goal: make all other players bankrupt. The last non-bankrupt
+                player wins.
+              </li>
+            </ul>
+          </div>
+          <div class="card">
+            <h2>Turns and dice</h2>
+            <ul class="how-to">
+              <li>Every turn runs in phases: Roll → Action/Land Result → End.</li>
+              <li>You must roll before you can end your turn.</li>
+              <li>
+                If you roll doubles (and are not in jail), you get another roll
+                after land effects resolve.
+              </li>
+              <li>
+                If you roll 3 doubles in one turn, you are sent directly to Jail
+                immediately.
+              </li>
+              <li>
+                Movement wraps around 40 spaces. Passing GO pays the theme GO
+                salary. Landing exactly on GO also pays salary.
+              </li>
+            </ul>
+          </div>
+          <div class="card">
+            <h2>Spaces</h2>
+            <ul class="how-to">
+              <li>GO: landing on GO pays salary.</li>
+              <li>Jail/Visit: safe when just visiting.</li>
+              <li>
+                Free Parking: visiting only, no jackpot and no reward pool payout.
+              </li>
+              <li>
+                Go to Jail: sends you to Jail space (position 10), ends movement,
+                and resets doubles streak.
+              </li>
+              <li>Tax spaces: pay the printed amount to the bank.</li>
+              <li>
+                Chance/Community Chest: draw top card from a shuffled deck and
+                apply its action.
+              </li>
+            </ul>
+          </div>
+          <div class="card">
+            <h2>Buying, auctions and rent</h2>
+            <ul class="how-to">
+              <li>
+                Landing on an unowned property/railroad/utility lets you buy it at
+                face price.
+              </li>
+              <li>
+                If you cannot afford a landed property, buy is disabled and you
+                can auction it or skip.
+              </li>
+              <li>
+                Auction includes all non-bankrupt players. You can toggle auctions
+                on/off in lobby settings. Bid controls are +100, +200, +500,
+                +1000, or Pass.
+              </li>
+              <li>
+                When enabled, auctions start from an opening value (about 60%-80%
+                of base property price), not from 0.
+              </li>
+              <li>
+                You cannot place a bid above your current cash. Auction ends when
+                only one non-passed bidder remains with a valid high bid, or
+                everyone passes.
+              </li>
+              <li>
+                If all pass, the property remains unsold (owner stays none).
+              </li>
+              <li>
+                Rent on normal properties: base rent, or double base if color
+                monopoly and no buildings, or house/hotel rent tiers from the
+                deed.
+              </li>
+              <li>
+                Railroad rent depends on owner total railroads. Inflated boards
+                use 250 / 500 / 1000 / 2000; Classic uses 25 / 50 / 100 / 200.
+              </li>
+              <li>
+                Utility rent is dice-based. Most boards use inflated economy (40x
+                one utility, 100x both); Classic board uses original multipliers
+                (4x and 10x).
+              </li>
+              <li>Mortgaged assets collect no rent.</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h2>Building and mortgages</h2>
+            <ul class="how-to">
+              <li>
+                You can build only after owning all properties in a color group.
+              </li>
+              <li>Build cost per click is that property house cost.</li>
+              <li>
+                At 4 houses, the next build converts that property to a hotel.
+              </li>
+              <li>
+                Selling buildings returns 50% of one house cost per sell action.
+              </li>
+              <li>
+                Selling a hotel converts it back to 4 houses first in this build.
+              </li>
+              <li>
+                Even-building distribution across a color set is not enforced by
+                this build.
+              </li>
+              <li>
+                You can mortgage owned assets (property, railroad, utility) for
+                50% of purchase price, if that asset has no buildings.
+              </li>
+              <li>
+                You cannot mortgage a color property while any property in that
+                same color group still has buildings.
+              </li>
+              <li>Unmortgage cost is 110% of mortgage value (10% interest).</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h2>Jail</h2>
+            <ul class="how-to">
+              <li>
+                You can be jailed by Go to Jail square, jail-type cards, or
+                rolling 3 doubles in one turn.
+              </li>
+              <li>
+                When your jailed turn starts, choose to roll for doubles or leave
+                immediately by paying bail/using a card.
+              </li>
+              <li>
+                Bail follows board economy: 500 on inflated boards, 50 on Classic,
+                unless you use a Get Out of Jail Free card.
+              </li>
+              <li>
+                If you roll doubles in jail, you are released and move by that
+                roll.
+              </li>
+              <li>
+                If you fail doubles, jail turn count increases. On the 3rd failed
+                roll, you must pay bail, then move by that roll.
+              </li>
+            </ul>
+          </div>
+          <div class="card">
+            <h2>Chance and Community Chest</h2>
+            <ul class="how-to">
+              <li>
+                Chance deck actions include movement cards (GO, nearest railway,
+                key destinations), jail cards, fines, rewards, and repair bills.
+                Card values follow board economy: Classic uses original values,
+                other boards use inflated equivalents.
+              </li>
+              <li>
+                Community Chest includes money gains/losses, GO/Jail moves,
+                jail-free card, and birthday collection from each non-bankrupt
+                opponent, with values scaled by board economy.
+              </li>
+              <li>
+                Get Out of Jail Free cards increase your stored jail-free card
+                count.
+              </li>
+              <li>
+                Decks are shuffled at game start and drawn in order; when index
+                exceeds length, drawing wraps back through the same shuffled deck
+                order.
+              </li>
+            </ul>
+          </div>
+          <div class="card">
+            <h2>Debt, bankruptcy and asset transfer</h2>
+            <ul class="how-to">
+              <li>
+                If a human player cannot pay a charge, a debt prompt appears. You
+                must raise money (sell buildings/mortgage) or declare bankruptcy.
+              </li>
+              <li>
+                You cannot end your turn while unresolved debt prompt is active.
+              </li>
+              <li>
+                If debt is paid after raising funds, the exact owed amount is
+                transferred to the creditor (or bank) and play continues.
+              </li>
+              <li>
+                Bankruptcy to another player transfers remaining cash and all
+                owned assets to that creditor.
+              </li>
+              <li>
+                If transferred assets are mortgaged, the creditor pays 10%
+                mortgage-interest to the bank for those assets.
+              </li>
+              <li>
+                Bankruptcy to bank clears ownership, removes all
+                buildings/hotel/mortgage status, and queues each asset for bank
+                auction.
+              </li>
+              <li>Bank auctions run in sequence until queue is empty.</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h2>Trading and the turn timer</h2>
+            <ul class="how-to">
+              <li>Trades can include properties and cash from both sides.</li>
+              <li>
+                A property cannot be traded if it has buildings, or if any
+                property in its same color group has buildings.
+              </li>
+              <li>
+                Recipient can accept or decline. Proposer can cancel while
+                pending.
+              </li>
+              <li>
+                Trade is validated again on response (ownership and available cash
+                must still be valid).
+              </li>
+              <li>
+                Auto-advance timer (Off / 10 / 20 / 30 / 45 / 60 seconds) runs
+                only during end phase after movement resolves.
+              </li>
+              <li>
+                Timer pauses while any modal overlay is open. At zero, turn
+                auto-ends.
+              </li>
+              <li>
+                Online mode rules: only host can launch match or change lobby
+                timer/settings, and all connected players must be ready before
+                start.
+              </li>
+              <li>
+                If someone leaves an online match, leave handling can convert them
+                to AI control or liquidate and auction their assets (host-managed
+                room state).
+              </li>
+            </ul>
+          </div>
         </div>
       </div>
     </div>

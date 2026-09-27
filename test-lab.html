@@ -324,18 +324,23 @@ body::before{
   .summary-grid{grid-template-columns:1fr}
 }
 </style>
+<link rel="stylesheet" href="styles/standalone.css">
 </head>
 <body>
   <main class="page">
-    <div class="top-actions">
-      <a class="btn btn-back" href="index.html">Back to Home</a>
-      <div class="top-note">Monopoly QA Workbench</div>
+    <div class="sa-top">
+      <a class="sa-back" href="index.html"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg><span>Home</span></a>
+      <span class="sa-note">QA workbench</span>
     </div>
 
-    <header class="hero">
-      <div class="logo"><span>Scenario</span> Test Lab</div>
-      <div class="subtitle">Deterministic, fuzz, and online-sync simulation checks with cross-client forensic verification. Use the same run config across clients, then compare fingerprints and diagnostic reports.</div>
-      <div class="hero-steps">
+    <header class="sa-hero">
+      <div class="sa-ornament">Developer tools</div>
+      <h1 class="sa-title">
+        <span class="sa-title-accent">Test</span>
+        <span>Lab</span>
+      </h1>
+      <p class="sa-lead">Deterministic, fuzz and online-sync checks with cross-client verification. Use the same run configuration on every client, then compare fingerprints and reports.</p>
+      <div class="hero-steps sa-chips">
         <span class="step-chip">1. Configure</span>
         <span class="step-chip">2. Run and Verify</span>
         <span class="step-chip">3. Online Multi-Client Audit</span>

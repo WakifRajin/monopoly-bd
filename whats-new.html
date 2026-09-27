@@ -305,36 +305,28 @@ body::before{
   .news-subtitle-row{letter-spacing:.08em;font-size:.72rem}
 }
 </style>
+<link rel="stylesheet" href="styles/standalone.css">
 </head>
 <body>
   <main class="page">
-    <div class="top-actions">
-      <a class="btn-back" href="index.html">Back to Home</a>
+    <div class="sa-top">
+      <a class="sa-back" href="index.html"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg><span>Home</span></a>
+      <span class="sa-brand"><img src="logo.svg" alt="" />Bangladeshi Monopoly</span>
     </div>
 
-    <header class="news-hero">
-      <div class="news-ornament">Bangladesh Edition</div>
-      <div class="news-logo-mark">
-        <img src="logo.svg" alt="Monopoly logo">
-      </div>
-      <h1 class="news-title">
-        <span class="accent">Credits &</span>
-        Patch Logs
+    <header class="sa-hero">
+      <div class="sa-ornament">Credits and updates</div>
+      <h1 class="sa-title">
+        <span class="sa-title-accent">Credits &amp;</span>
+        <span>Patch notes</span>
       </h1>
-      <div class="news-subtitle-row">
-        <span>Release Notes</span>
-        <span class="dot-sep"></span>
-        <span>Credits</span>
-        <span class="dot-sep"></span>
-        <span>Stability</span>
-      </div>
-      <div class="news-badge">Latest Build Notes</div>
+      <p class="sa-lead">What changed in each update, and who makes the game.</p>
     </header>
 
     <div class="section-label">Featured Credits</div>
     <section class="log-card credits-feature">
       <div class="credits-kicker">Primary Creator</div>
-      <h2 class="log-version">Project Credits</h2>
+      <h2 class="log-version">Project credits</h2>
       <h3 class="log-subtitle">Made by</h3>
       <p class="note credits-name">wakifrajin</p>
       <p class="note" style="margin-top:.2rem">Lead design, gameplay systems, and ongoing updates.</p>
@@ -396,6 +388,15 @@ body::before{
         <li>Long player names fit: in the side panel the name gets its own line above the money and stops at two lines, and on phones it shortens with an ellipsis while the AI tag stays visible.</li>
         <li>A long player name in the top bar no longer pushes the Settings button off the screen on phones.</li>
         <li>The portfolio tabs are now &quot;Properties&quot; and &quot;History&quot;, without emoji.</li>
+        <li>A new home screen with artwork of Dhaka at sunset. A side menu on desktop and a tab bar on phones reach Play, Boards, Rules and Settings from anywhere on the page.</li>
+        <li>The online rooms, lobby and rules pages share the home screen&#39;s look: the same side menu (a tab bar on phones), artwork, headings, cards and buttons. The menu hides during a match.</li>
+        <li>Leaving the lobby from the side menu while in an online room leaves the room properly, the same as the Back button.</li>
+        <li>Patch notes, the board editor and the test lab use the same backdrop, headings, cards and buttons, with a Home link at the top.</li>
+        <li>Rule sections have plain titles (&quot;Jail&quot;, &quot;Buying, auctions and rent&quot;) instead of numbered Title Case headings.</li>
+        <li>Online play is the main button on the home screen. Offline play and the Classic board, which opens the lobby with that board already chosen, sit just below it.</li>
+        <li>The home screen lists your recent activity: the last games you started and boards you edited, each one tap away from where you left off. It is stored only in your browser.</li>
+        <li>An indicator in the corner shows whether you are online. Offline and AI games work without a connection.</li>
+        <li>Settings opened from the home screen no longer shows a Quit button when there is no match to quit, and on wide screens it opens as a centred panel.</li>
         <li>The game can be installed as an app from Chrome, Edge and Safari (Add to Home Screen). It opens in its own window with a proper icon, and offline and AI games keep working with no connection.</li>
         <li>Property owners are marked with a small dot in their colour at the end of the colour bar. The old &quot;PR 3&quot; labels were cryptic and covered place names on the short side squares.</li>
         <li>Houses and hotels are drawn on the colour bar, like a real board, instead of an emoji badge that covered prices and, on phones, names.</li>

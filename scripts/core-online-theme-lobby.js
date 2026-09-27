@@ -4486,16 +4486,16 @@ function updateOnlineLobbyUI() {
   const hostModeBtn = document.getElementById("mode-host-btn");
   const joinModeBtn = document.getElementById("mode-join-btn");
 
-  if (hostModeBtn)
-    hostModeBtn.style.background =
-      ONLINE.mode === "host"
-        ? "linear-gradient(135deg,#1e3a5f,#2563eb)"
-        : "rgba(255,255,255,.12)";
-  if (joinModeBtn)
-    joinModeBtn.style.background =
-      ONLINE.mode === "join"
-        ? "linear-gradient(135deg,#1e3a5f,#2563eb)"
-        : "rgba(255,255,255,.12)";
+  // The page stylesheet draws the selected state (.is-selected).
+  [
+    [hostModeBtn, "host"],
+    [joinModeBtn, "join"],
+  ].forEach(([btn, mode]) => {
+    if (!btn) return;
+    const selected = ONLINE.mode === mode;
+    btn.classList.toggle("is-selected", selected);
+    btn.setAttribute("aria-pressed", selected ? "true" : "false");
+  });
   if (hostModeBtn) hostModeBtn.disabled = ONLINE.connected;
   if (joinModeBtn) joinModeBtn.disabled = ONLINE.connected;
   if (hostOpt) hostOpt.style.display = ONLINE.mode === "host" ? "" : "none";
@@ -5575,6 +5575,16 @@ async function startGame() {
     `Game started — ${G.players.length} players, ${t.currency}${fmt(startMoney)} each, ${t.name} board.`,
     "important",
   );
+  const aiSeats = G.players.filter((p) => isAiPlayer(p)).length;
+  recordRecentActivity({
+    kind: isOnlineGame() ? "online" : "local",
+    title: isOnlineGame() ? "Online match" : "Local game",
+    detail:
+      `${G.players.length} players` +
+      (aiSeats && !isOnlineGame() ? `, ${aiSeats} AI` : "") +
+      ` · ${t.name}`,
+    themeId: selectedThemeId,
+  });
   if (auctionEnabled) {
     addLog(
       `Auctions enabled. Opening bid is ${AUCTION_OPENING_MIN_PERCENT}–${AUCTION_OPENING_MAX_PERCENT}% of the list price.`,

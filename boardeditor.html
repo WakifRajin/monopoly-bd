@@ -1003,29 +1003,23 @@
         }
       }
     </style>
+<link rel="stylesheet" href="styles/standalone.css">
   </head>
   <body>
     <main class="page">
-      <div class="topbar">
-        <a class="btn ghost" href="index.html">Back to Home</a>
-        <div class="muted">
-          Seed format: MBD1.&lt;checksum&gt;.&lt;payload&gt;
-        </div>
+      <div class="sa-top">
+        <a class="sa-back" href="index.html"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg><span>Home</span></a>
+        <span class="sa-note">Seed format: MBD1.&lt;checksum&gt;.&lt;payload&gt;</span>
       </div>
 
-      <section class="hero">
-        <h1>Custom Board Editor</h1>
-        <p class="subtitle">
-          Build your own board profile with custom economy scale, property
-          naming, color sets, and pricing/rent curves. Generate a reusable seed
-          code, share it, then load the same board again later.
-        </p>
-        <div class="chips">
-          <span class="chip">No build step</span>
-          <span class="chip">Vanilla HTML/CSS/JS</span>
-          <span class="chip">Reusable seed codes</span>
-        </div>
-      </section>
+      <header class="sa-hero">
+        <div class="sa-ornament">Build your own</div>
+        <h1 class="sa-title">
+          <span class="sa-title-accent">Board</span>
+          <span>Editor</span>
+        </h1>
+        <p class="sa-lead">Rename spaces, change prices, rents and colour groups, and rescale the whole economy. Export a seed code to play the board in the lobby or share it with friends.</p>
+      </header>
 
       <div class="layout">
         <aside>
@@ -3169,11 +3163,34 @@
           return expandBoard(payload);
         }
 
+        // Shown under "Recent activity" on the game's home screen. Same key and
+        // entry shape as recordRecentActivity() in scripts/ui-systems.js. A
+        // burst of edits updates one entry rather than filling the list.
+        function recordBoardEdit() {
+          try {
+            const key = "monopoly_recent_activity_v1";
+            const list = JSON.parse(localStorage.getItem(key) || "[]");
+            const name = (BOARD.meta && BOARD.meta.boardName) || "Custom Board";
+            const now = Date.now();
+            const top = Array.isArray(list) ? list[0] : null;
+            if (top && top.kind === "board" && now - top.time < 30 * 60 * 1000) {
+              top.time = now;
+              top.detail = name;
+            } else {
+              list.unshift({ kind: "board", title: "Board edited", detail: name, time: now });
+            }
+            localStorage.setItem(key, JSON.stringify(list.slice(0, 4)));
+          } catch (_err) {
+            // Storage unavailable; the activity list is optional.
+          }
+        }
+
         function persistSeedSilently() {
           try {
             const seed = buildSeed(BOARD);
             localStorage.setItem(STORAGE_KEY, seed);
             localStorage.setItem(GAME_STORAGE_KEY, seed);
+            recordBoardEdit();
           } catch (_err) {
             // Ignore localStorage issues.
           }
