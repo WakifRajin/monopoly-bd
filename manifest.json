@@ -1,22 +1,25 @@
 {
   "name": "Bangladeshi Monopoly",
   "short_name": "Monopoly BD",
-  "description": "A modern browser-based Bangladeshi Monopoly game with local and online modes.",
+  "description": "A Bangladeshi take on the classic property trading game. Play on one device, against AI, or online with friends.",
   "lang": "en",
   "id": "./",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "orientation": "portrait",
-  "background_color": "#0b1e10",
-  "theme_color": "#1a7a3c",
-  "categories": [
-    "games",
-    "entertainment"
-  ],
+  "orientation": "any",
+  "background_color": "#0f2318",
+  "theme_color": "#0f2318",
+  "categories": ["games", "entertainment"],
   "icons": [
     {
-      "src": "dice.png",
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
@@ -26,6 +29,29 @@
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "docs/screenshots/desktop-game.png",
+      "sizes": "1440x900",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "A match in progress on the Dhaka City board"
+    },
+    {
+      "src": "docs/screenshots/phone-game.png",
+      "sizes": "780x1688",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "The same match on a phone"
+    },
+    {
+      "src": "docs/screenshots/phone-log.png",
+      "sizes": "780x1688",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "The game log, grouped by turn"
     }
   ]
 }

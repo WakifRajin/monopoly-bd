@@ -1274,6 +1274,8 @@ function getPlayerActivityHistory(playerIdx) {
     const entry = allLogs[i] || {};
     const text = String(entry.text || "");
     if (!nameRegex.test(text)) continue;
+    // Turn markers say nothing about the player's activity on their own.
+    if (logTurnName(entry) !== null) continue;
     const parsedMoney = classifyMoneyLogForPlayer(entry, player.name);
     rows.push({
       kind: parsedMoney?.kind || "",
@@ -1389,13 +1391,9 @@ function showPlayerPortfolio(playerIdx, tab = "") {
               ? "rgba(192,57,43,.28)"
               : "rgba(148,163,184,.26)";
           const pillColor = credit ? "#86efac" : debit ? "#fca5a5" : "#e2e8f0";
-          const tagLabel = credit
-            ? "CREDIT"
-            : debit
-              ? "DEBIT"
-              : item.type
-                ? item.type.toUpperCase()
-                : "LOG";
+          // Only money movements get a label; the log's internal entry types
+          // ("important", "danger") are styling hints, not words for players.
+          const tagLabel = credit ? "Received" : debit ? "Paid" : "";
           const sign = credit ? "+" : debit ? "-" : "";
           const amountHtml = hasMoneyTag
             ? `<span style="font-size:var(--fs-sm);font-weight:700;color:${pillColor}">${sign}${fmtCurrency(item.amount)}</span>`
@@ -1403,7 +1401,7 @@ function showPlayerPortfolio(playerIdx, tab = "") {
           return `
           <div style="padding:.6rem .7rem;border-radius:8px;margin-bottom:.42rem;border:1px solid rgba(201,151,28,.22);background:rgba(255,255,255,.08)">
             <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.35rem">
-              <span style="font-size:var(--fs-2xs);font-weight:700;padding:.1rem .42rem;border-radius:999px;background:${pillBg};color:${pillColor}">${tagLabel}</span>
+              ${tagLabel ? `<span style="font-size:var(--fs-2xs);font-weight:700;padding:.1rem .42rem;border-radius:999px;background:${pillBg};color:${pillColor}">${tagLabel}</span>` : ""}
               ${amountHtml}
               <span style="margin-left:auto;font-size:var(--fs-2xs);color:rgba(255,255,255,.7)">${formatLogTime(item.time)}</span>
             </div>
@@ -1412,7 +1410,7 @@ function showPlayerPortfolio(playerIdx, tab = "") {
         `;
         })
         .join("")
-    : `<div style="color:rgba(255,255,255,.7);font-size:var(--fs-md);text-align:center;padding:1.5rem 0">No logs for this player yet</div>`;
+    : `<div style="color:rgba(255,255,255,.7);font-size:var(--fs-md);text-align:center;padding:1.5rem 0">Nothing has happened for this player yet</div>`;
 
   const propertiesTabBtnStyle =
     activeTab === "properties"
@@ -1455,7 +1453,7 @@ function showPlayerPortfolio(playerIdx, tab = "") {
           <div style="font-size:var(--fs-md);font-weight:800;color:#fca5a5">-${fmtCurrency(totalDebit)}</div>
         </div>
       </div>
-      <div style="font-size:var(--fs-xs);font-weight:700;color:rgba(255,255,255,.7);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem">Player history (Whole Match)</div>
+      <div style="font-size:var(--fs-xs);font-weight:700;color:rgba(255,255,255,.7);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem">Whole match</div>
       ${historyHtml}
     </div>
     <button class="btn btn-full" style="background:rgba(255,255,255,.1);color:#fff;margin-top:1rem" onclick="closeOverlay('portfolio-overlay')">Close</button>

@@ -4279,3 +4279,74 @@ body[data-theme="classic"] .space .sp-rent {
     transition: none;
   }
 }
+
+/* ── Ownership marker ────────────────────────────────────────────────────────
+   A dot in the owner's colour, at the right end of the colour bar. It used to be a
+   centred "PR 3" pill that sat on top of names on the short side squares.
+   Mortgaged: a hollow ring in the owner's colour. */
+.space .own-dot,
+.space .own-dot.mortgaged {
+  --dot: clamp(7px, 1.2cqi, 13px);
+  /* Centred on the colour bar (the top 18% of a square), so it stays clear of
+     the price and name below it. */
+  top: max(1px, calc(9% - var(--dot) / 2));
+  right: 3px;
+  left: auto;
+  transform: none;
+  width: var(--dot);
+  height: var(--dot);
+  min-width: 0;
+  padding: 0;
+  border-radius: 50%;
+  border: 1.5px solid #fff;
+  background: var(--own-color, #334155);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.45), 0 1px 3px rgba(0, 0, 0, 0.35);
+  font-size: 0;
+}
+.space .own-dot::before,
+.space .own-dot.mortgaged::before {
+  content: none;
+}
+.space .own-dot.mortgaged {
+  filter: none;
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.85);
+  border-color: var(--own-color, #334155);
+  border-width: 2px;
+}
+
+/* ── Buildings ───────────────────────────────────────────────────────────────
+   Houses and hotels sit on the colour bar, left of the ownership dot. */
+.space .bldg-badge {
+  --pip: clamp(3px, 0.78cqi, 9px);
+  top: 0;
+  bottom: auto;
+  left: 2px;
+  right: auto;
+  height: 18%;
+  display: flex;
+  align-items: center;
+  gap: max(1px, calc(var(--pip) / 4));
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  font-size: 0;
+  line-height: 0;
+  pointer-events: none;
+}
+.bldg-house,
+.bldg-hotel {
+  display: block;
+  height: var(--pip);
+  border-radius: 1px;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.55);
+}
+.bldg-house {
+  width: var(--pip);
+  background: #22c55e;
+}
+.bldg-hotel {
+  width: calc(var(--pip) * 2.4);
+  background: #dc2626;
+}

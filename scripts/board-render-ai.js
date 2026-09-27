@@ -578,14 +578,24 @@ function renderBoardOwnership() {
     const dot = document.createElement("div");
     dot.className = "own-dot";
     if (prop.mortgaged) dot.classList.add("mortgaged");
-    dot.textContent = String((owner.id ?? prop.owner) + 1);
+    // Colour alone identifies the owner (it matches their token and panel);
+    // the old "PR 3" label was cryptic and covered names on short squares.
     dot.title = `${owner.name}${prop.mortgaged ? " (mortgaged)" : ""}`;
+    dot.setAttribute("aria-label", `Owned by ${dot.title}`);
     dot.style.setProperty("--own-color", owner.color || "#334155");
     spEl.appendChild(dot);
     if (prop.houses > 0 || prop.hotel) {
       const badge = document.createElement("div");
       badge.className = "bldg-badge";
-      badge.textContent = prop.hotel ? "🏨" : "🏠".repeat(prop.houses);
+      // Drawn on the colour bar like a physical board. The old emoji pill sat
+      // in the bottom corner, on top of the price and, on phones, the name.
+      badge.innerHTML = prop.hotel
+        ? '<i class="bldg-hotel"></i>'
+        : '<i class="bldg-house"></i>'.repeat(Math.min(4, prop.houses));
+      badge.title = prop.hotel
+        ? "Hotel"
+        : `${prop.houses} house${prop.houses === 1 ? "" : "s"}`;
+      badge.setAttribute("aria-label", badge.title);
       spEl.appendChild(badge);
     }
   });
