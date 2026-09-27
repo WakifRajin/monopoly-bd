@@ -1,6 +1,31 @@
 // ═══════════════════════════════════════════════
 //  SHOW PROPERTY INFO
 // ═══════════════════════════════════════════════
+// Dark or light text, whichever reads better on `hex`. White on the light
+// property colours (light blue, yellow, pink) measured as low as 1.7:1.
+function readableTextOn(hex) {
+  const m = String(hex || "").match(/^#?([0-9a-f]{6})$/i);
+  if (!m) return "#fff";
+  const n = parseInt(m[1], 16);
+  const ch = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => {
+    v /= 255;
+    return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+  });
+  const L = 0.2126 * ch[0] + 0.7152 * ch[1] + 0.0722 * ch[2];
+  // Pick whichever of white / near-black (#111, L≈0.0056) contrasts more.
+  const onWhite = 1.05 / (L + 0.05);
+  const onDark = (L + 0.05) / 0.0556;
+  return onWhite >= onDark ? "#fff" : "#111";
+}
+
+// Player colours are chosen to be recognisable, not to be readable on dark
+// green; red and blue names measured 3.2–3.8:1. Lift them toward white so the
+// hue survives but the text clears AA.
+function playerTextColor(color) {
+  const c = sanitizeColor(color, "#ffffff");
+  return `color-mix(in srgb, ${c} 58%, #ffffff)`;
+}
+
 function showSpaceInfo(id) {
   const sp = SPACES[id];
   const prop = G.properties[id];
@@ -13,19 +38,19 @@ function showSpaceInfo(id) {
         : null;
     const c = COLOR[sp.color];
     modal.innerHTML = `
-      <div class="prop-color-header" style="background:linear-gradient(135deg,${c},${c}cc)">${escHtml(sp.name)}</div>
-      ${owner ? `<div style="color:rgba(255,255,255,.6);font-size:.85rem;margin-bottom:.75rem">Owned by <span style="color:${sanitizeColor(owner.color)};font-weight:700">${escHtml(owner.token)} ${escHtml(owner.name)}</span>${prop.mortgaged ? " (Mortgaged)" : ""}</div>` : '<div style="color:rgba(255,255,255,.5);font-size:.82rem;margin-bottom:.75rem">For Sale — ' + fmtCurrency(sp.price) + "</div>"}
+      <div class="prop-color-header" style="background:linear-gradient(135deg,${c},${c}cc);color:${readableTextOn(c)};${readableTextOn(c) === "#111" ? "text-shadow:none" : ""}">${escHtml(sp.name)}</div>
+      ${owner ? `<div style="color:rgba(255,255,255,.78);font-size:var(--fs-sm);margin-bottom:.75rem">Owned by <span style="color:${playerTextColor(owner.color)};font-weight:700">${escHtml(owner.token)} ${escHtml(owner.name)}</span>${prop.mortgaged ? " (Mortgaged)" : ""}</div>` : '<div style="color:rgba(255,255,255,.75);font-size:var(--fs-sm);margin-bottom:.75rem">For sale — ' + fmtCurrency(sp.price) + "</div>"}
       <table class="prop-table">
-        <tr><td>Purchase Price</td><td>${fmtCurrency(sp.price)}</td></tr>
+        <tr><td>Purchase price</td><td>${fmtCurrency(sp.price)}</td></tr>
         <tr><td>Rent</td><td>${fmtCurrency(sp.rent[0])}</td></tr>
         <tr><td>Rent w/ Monopoly</td><td>${fmtCurrency(sp.rent[0] * 2)}</td></tr>
         <tr><td>Rent 1 House</td><td>${fmtCurrency(sp.rent[1])}</td></tr>
         <tr><td>Rent 2 Houses</td><td>${fmtCurrency(sp.rent[2])}</td></tr>
         <tr><td>Rent 3 Houses</td><td>${fmtCurrency(sp.rent[3])}</td></tr>
         <tr><td>Rent 4 Houses</td><td>${fmtCurrency(sp.rent[4])}</td></tr>
-        <tr><td>Rent Hotel</td><td>${fmtCurrency(sp.rent[5])}</td></tr>
-        <tr><td>House Cost</td><td>${fmtCurrency(sp.house)}</td></tr>
-        <tr><td>Mortgage Value</td><td>${fmtCurrency(mortgageValueForSpace(sp))}</td></tr>
+        <tr><td>Rent with hotel</td><td>${fmtCurrency(sp.rent[5])}</td></tr>
+        <tr><td>House cost</td><td>${fmtCurrency(sp.house)}</td></tr>
+        <tr><td>Mortgage value</td><td>${fmtCurrency(mortgageValueForSpace(sp))}</td></tr>
         ${prop ? `<tr><td>Buildings</td><td>${prop.hotel ? "🏨 Hotel" : prop.houses > 0 ? "🏠×" + prop.houses : "None"}</td></tr>` : ""}
       </table>
       <button class="btn btn-full" style="background:rgba(255,255,255,.1);color:#fff;margin-top:1rem" onclick="closeOverlay('prop-overlay')">Close</button>
@@ -37,7 +62,7 @@ function showSpaceInfo(id) {
         : null;
     modal.innerHTML = `
       <div class="prop-color-header" style="background:linear-gradient(135deg,#333,#555)">🚂 ${escHtml(sp.name)}</div>
-      ${owner ? `<div style="color:rgba(255,255,255,.6);font-size:.85rem;margin-bottom:.75rem">Owned by <span style="color:${sanitizeColor(owner.color)};font-weight:700">${escHtml(owner.token)} ${escHtml(owner.name)}</span></div>` : '<div style="color:rgba(255,255,255,.5);font-size:.82rem;margin-bottom:.75rem">For Sale — ' + fmtCurrency(sp.price) + "</div>"}
+      ${owner ? `<div style="color:rgba(255,255,255,.78);font-size:var(--fs-sm);margin-bottom:.75rem">Owned by <span style="color:${playerTextColor(owner.color)};font-weight:700">${escHtml(owner.token)} ${escHtml(owner.name)}</span></div>` : '<div style="color:rgba(255,255,255,.75);font-size:var(--fs-sm);margin-bottom:.75rem">For sale — ' + fmtCurrency(sp.price) + "</div>"}
       <table class="prop-table">
         <tr><td>Price</td><td>${fmtCurrency(sp.price)}</td></tr>
         <tr><td>Rent (1 RR)</td><td>${fmtCurrency(sp.rent[0])}</td></tr>
@@ -286,6 +311,100 @@ function addLog(text, type = "") {
   renderGameLog();
 }
 
+// Turn markers used to be plain text ("─── Name's turn ───", type important);
+// entries from older clients and saved games still arrive that way.
+const LEGACY_TURN_RE = /^[─—-]{3,}\s*(.+?)'s turn\s*[─—-]{3,}$/;
+
+function logTurnName(entry) {
+  const text = String(entry?.text || "");
+  if (entry?.type === "turn") return text.replace(/'s turn$/, "");
+  const m = text.match(LEGACY_TURN_RE);
+  return m ? m[1] : null;
+}
+
+// Escapes the text, then tints player names and highlights money amounts.
+// Works on the escaped string so nothing a player typed becomes markup.
+function decorateLogText(text, type) {
+  let html = escHtml(text || "");
+  const players = (G.players || [])
+    .filter((p) => p && p.name)
+    .sort((a, b) => b.name.length - a.name.length);
+  if (players.length) {
+    const byName = new Map(players.map((p) => [escHtml(p.name), p]));
+    const re = new RegExp(
+      [...byName.keys()].map(escapeRegExp).join("|"),
+      "g",
+    );
+    html = html.replace(re, (name) => {
+      const p = byName.get(name);
+      return `<span class="log-name" style="color:${playerTextColor(p.color)}">${name}</span>`;
+    });
+  }
+  const symbols = Array.from(
+    new Set(
+      Object.values(BOARD_THEMES || {})
+        .map((t) => escHtml(String(t?.currency || "").trim()))
+        .filter(Boolean),
+    ),
+  );
+  if (symbols.length) {
+    const moneyRe = new RegExp(
+      // Digits may contain separators but must end on a digit, so a
+      // sentence's closing full stop stays outside the highlight.
+      `-?(?:${symbols.map(escapeRegExp).join("|")})\\s?\\d(?:[\\d,.]*\\d)?`,
+      "g",
+    );
+    const tone =
+      type === "danger" ? " is-loss" : type === "success" ? " is-gain" : "";
+    html = html.replace(moneyRe, (m) => `<span class="log-amt${tone}">${m}</span>`);
+  }
+  return html;
+}
+
+// One shared renderer for the desktop panel and the mobile drawer. Entries are
+// grouped under the turn they happened in; the time appears once per turn.
+function renderLogFeedHtml(entries) {
+  const list = Array.isArray(entries) ? entries : [];
+  let html = "";
+  let open = false;
+  const openGroup = (head, cls = "", color = "") => {
+    if (open) html += "</div>";
+    html += `<div class="log-turn${cls}"${color ? ` style="--turn-color:${color}"` : ""}>${head}`;
+    open = true;
+  };
+  for (const entry of list) {
+    if (!entry) continue;
+    const time = formatLogTime(entry.time);
+    const turnName = logTurnName(entry);
+    if (turnName !== null) {
+      const p = (G.players || []).find((x) => x && x.name === turnName);
+      const color = p ? sanitizeColor(p.color, "#ffffff") : "#ffffff";
+      openGroup(
+        `<div class="log-turn-head"><span class="log-turn-dot"></span>` +
+          `<span class="log-turn-title"><span style="color:${playerTextColor(color)}">${escHtml(turnName)}</span>'s turn</span>` +
+          `<time class="log-time">${time}</time></div>`,
+        "",
+        color,
+      );
+      continue;
+    }
+    if (!open) {
+      openGroup(
+        `<div class="log-turn-head"><span class="log-turn-dot"></span>` +
+          `<span class="log-turn-title">Match</span><time class="log-time">${time}</time></div>`,
+        " is-system",
+      );
+    }
+    const type = String(entry.type || "");
+    const cls = ["important", "danger", "success"].includes(type)
+      ? ` log-${type}`
+      : "";
+    html += `<div class="log-entry${cls}">${decorateLogText(entry.text, type)}</div>`;
+  }
+  if (open) html += "</div>";
+  return html || '<div class="log-empty">Nothing has happened yet.</div>';
+}
+
 function getLastChatMessage() {
   return Array.isArray(G.chat) && G.chat.length
     ? G.chat[G.chat.length - 1]
@@ -377,7 +496,7 @@ function openDrawer(type) {
   const content = document.getElementById("drawer-content");
   if (type === "players") {
     content.innerHTML = `
-      <h3 style="color:#fff;margin-bottom:.75rem;font-family:var(--font-display)">Players</h3>
+      <h3 style="color:#fff;margin-bottom:.75rem;font-family:var(--font-heading)">Players</h3>
       ${(G.players || [])
         .map((p, i) => {
           const active = i === G.currentPlayerIdx;
@@ -388,30 +507,26 @@ function openDrawer(type) {
           const bg = active ? "rgba(201,151,28,.12)" : "rgba(255,255,255,.05)";
           const color = sanitizeColor(p.color, "#ffffff");
           return `<div onclick="showPlayerPortfolio(${i});closeDrawer()" style="display:flex;align-items:center;gap:.55rem;padding:.5rem .55rem;border:1px solid ${border};border-radius:8px;background:${bg};margin-bottom:.38rem;cursor:pointer">
-          <div style="font-size:1.15rem;color:${color}">${escHtml(p.token)}</div>
+          <div style="font-size:var(--fs-lg);color:${color}">${escHtml(p.token)}</div>
           <div style="min-width:0;flex:1">
-            <div style="color:#fff;font-weight:700;font-size:.86rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(p.name)}${p.bankrupt ? " (out)" : ""}</div>
-            <div style="color:rgba(255,255,255,.5);font-size:.74rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(where)}</div>
+            <div style="color:#fff;font-weight:700;font-size:var(--fs-sm);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(p.name)}${p.bankrupt ? " (out)" : ""}</div>
+            <div style="color:rgba(255,255,255,.5);font-size:var(--fs-xs);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(where)}</div>
           </div>
-          <div style="font-size:.82rem;color:var(--gold-light);font-weight:700">${fmtCurrency(p.money)}</div>
+          <div style="font-size:var(--fs-sm);color:var(--gold-light);font-weight:700">${fmtCurrency(p.money)}</div>
         </div>`;
         })
         .join("")}
-      <p style="color:rgba(255,255,255,.45);font-size:.74rem;margin-top:.35rem">Tap a player card to view full portfolio and assets.</p>
+      <p style="color:rgba(255,255,255,.45);font-size:var(--fs-xs);margin-top:.35rem">Tap a player card to view full portfolio and assets.</p>
     `;
   } else if (type === "log") {
     content.innerHTML =
-      '<h3 style="color:#fff;margin-bottom:.75rem;font-family:var(--font-display)">Game log</h3>' +
-      G.log
-        .slice(-30)
-        .map(
-          (l) =>
-            `<div class="log-entry${l.type ? " log-" + l.type : ""}">${escHtml(l.text || "")}</div>`,
-        )
-        .join("");
+      '<h3 style="color:#fff;margin-bottom:.75rem;font-family:var(--font-heading)">Game log</h3>' +
+      `<div id="drawer-log-feed" class="log-feed drawer-log-feed">${renderLogFeedHtml(G.log || [])}</div>`;
+    const feed = document.getElementById("drawer-log-feed");
+    if (feed) requestAnimationFrame(() => (feed.scrollTop = feed.scrollHeight));
   } else if (type === "chat") {
     content.innerHTML = `
-      <h3 style="color:#fff;margin-bottom:.75rem;font-family:var(--font-display)">Chat</h3>
+      <h3 style="color:#fff;margin-bottom:.75rem;font-family:var(--font-heading)">Chat</h3>
       <div id="drawer-chat" style="max-height:300px;overflow-y:auto"></div>
       <div style="display:flex;gap:.5rem;margin-top:.75rem">
         <input id="drawer-chat-input" type="text" placeholder="Message..." style="flex:1;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:6px;padding:.4rem .6rem;color:#fff;font-family:var(--font-body)">
@@ -427,58 +542,64 @@ function openDrawer(type) {
     const sfxEnabled = !!SFX.enabled;
     const bgmEnabled = !!SFX.bgmEnabled;
     const canLeave = isOnlineGame() && ONLINE.status === "playing";
-    const leaveBlock = canLeave
-      ? `<hr style="border:none;border-top:1px solid rgba(255,255,255,.12);margin:1rem 0">
-         <div style="color:rgba(255,255,255,.6);font-size:.85rem;margin-bottom:.6rem">Online match</div>
-         <button onclick="closeDrawer();openLeaveGameModal()" style="width:100%;padding:.6rem .9rem;border:none;border-radius:8px;background:linear-gradient(135deg,#7f1d1d,#c0392b);color:#fff;font-weight:700;cursor:pointer">🚪 Leave Game</button>`
-      : "";
+    // On phones the top bar keeps only Log, Chat and Settings; everything it
+    // drops has to live here instead, or it becomes unreachable.
+    const leaveBlock = `<hr style="border:none;border-top:1px solid rgba(255,255,255,.12);margin:1rem 0">
+         <div style="display:grid;gap:.5rem">
+           <button onclick="closeDrawer();openBugReport()" style="width:100%;padding:.65rem .9rem;border:1px solid rgba(255,255,255,.18);border-radius:8px;background:rgba(255,255,255,.07);color:#fff;font-weight:600;cursor:pointer;font-family:var(--font-body)">Report a bug</button>
+           ${
+             canLeave
+               ? `<button onclick="closeDrawer();openLeaveGameModal()" style="width:100%;padding:.65rem .9rem;border:none;border-radius:8px;background:linear-gradient(135deg,#7f1d1d,#c0392b);color:#fff;font-weight:700;cursor:pointer;font-family:var(--font-body)">Leave online match</button>`
+               : `<button onclick="closeDrawer();requestExitMatch()" style="width:100%;padding:.65rem .9rem;border:1px solid rgba(192,57,43,.5);border-radius:8px;background:rgba(192,57,43,.18);color:#ffb3ae;font-weight:600;cursor:pointer;font-family:var(--font-body)">Quit to menu</button>`
+           }
+         </div>`;
     content.innerHTML = `
-      <h3 style="color:#fff;margin-bottom:1rem;font-family:var(--font-display)">Timer and sound</h3>
+      <h3 style="color:#fff;margin-bottom:1rem;font-family:var(--font-heading)">Timer and sound</h3>
       <div style="margin-bottom:1rem;padding:.75rem;border:1px solid rgba(255,255,255,.14);border-radius:10px;background:rgba(255,255,255,.05)">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:.6rem;margin-bottom:.65rem">
           <div>
-            <div style="color:#fff;font-size:.88rem;font-weight:700">Sound Effects</div>
-            <div style="color:rgba(255,255,255,.52);font-size:.76rem">Dice, rent, jail, auction, and win sounds</div>
+            <div style="color:#fff;font-size:var(--fs-sm);font-weight:700">Sound effects</div>
+            <div style="color:rgba(255,255,255,.52);font-size:var(--fs-xs)">Dice, rent, jail, auction, and win sounds</div>
           </div>
-          <button onclick="toggleSfxEnabled()" style="padding:.42rem .75rem;border:1px solid ${sfxEnabled ? "rgba(45,160,90,.5)" : "rgba(255,255,255,.25)"};background:${sfxEnabled ? "rgba(45,160,90,.22)" : "rgba(255,255,255,.07)"};color:${sfxEnabled ? "#86efac" : "rgba(255,255,255,.76)"};border-radius:7px;cursor:pointer;font-family:var(--font-body);font-size:.8rem;font-weight:700">${sfxEnabled ? "On" : "Off"}</button>
+          <button onclick="toggleSfxEnabled()" style="padding:.42rem .75rem;border:1px solid ${sfxEnabled ? "rgba(45,160,90,.5)" : "rgba(255,255,255,.25)"};background:${sfxEnabled ? "rgba(45,160,90,.22)" : "rgba(255,255,255,.07)"};color:${sfxEnabled ? "#86efac" : "rgba(255,255,255,.76)"};border-radius:7px;cursor:pointer;font-family:var(--font-body);font-size:var(--fs-xs);font-weight:700">${sfxEnabled ? "On" : "Off"}</button>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;gap:.6rem;margin-bottom:.65rem">
           <div>
-            <div style="color:#fff;font-size:.88rem;font-weight:700">Background Music</div>
-            <div style="color:rgba(255,255,255,.52);font-size:.76rem">Plays during active match</div>
+            <div style="color:#fff;font-size:var(--fs-sm);font-weight:700">Background music</div>
+            <div style="color:rgba(255,255,255,.52);font-size:var(--fs-xs)">Plays during active match</div>
           </div>
-          <button onclick="toggleBgmEnabled()" style="padding:.42rem .75rem;border:1px solid ${bgmEnabled ? "rgba(240,192,64,.5)" : "rgba(255,255,255,.25)"};background:${bgmEnabled ? "rgba(240,192,64,.18)" : "rgba(255,255,255,.07)"};color:${bgmEnabled ? "var(--gold-light)" : "rgba(255,255,255,.76)"};border-radius:7px;cursor:pointer;font-family:var(--font-body);font-size:.8rem;font-weight:700">${bgmEnabled ? "On" : "Off"}</button>
+          <button onclick="toggleBgmEnabled()" style="padding:.42rem .75rem;border:1px solid ${bgmEnabled ? "rgba(240,192,64,.5)" : "rgba(255,255,255,.25)"};background:${bgmEnabled ? "rgba(240,192,64,.18)" : "rgba(255,255,255,.07)"};color:${bgmEnabled ? "var(--gold-light)" : "rgba(255,255,255,.76)"};border-radius:7px;cursor:pointer;font-family:var(--font-body);font-size:var(--fs-xs);font-weight:700">${bgmEnabled ? "On" : "Off"}</button>
         </div>
-        <label style="color:rgba(255,255,255,.72);font-size:.82rem;display:flex;justify-content:space-between;align-items:center;margin-bottom:.35rem">
+        <label style="color:rgba(255,255,255,.72);font-size:var(--fs-sm);display:flex;justify-content:space-between;align-items:center;margin-bottom:.35rem">
           <span>Volume</span>
           <span id="sfx-volume-label">${sfxVolumePct}%</span>
         </label>
         <input type="range" min="0" max="100" value="${sfxVolumePct}" oninput="document.getElementById('sfx-volume-label').textContent=this.value+'%';setSfxVolume(Number(this.value)/100,false)" onchange="setSfxVolume(Number(this.value)/100,true)" style="width:100%;accent-color:var(--gold-light)">
       </div>
-      <p style="color:rgba(255,255,255,.6);font-size:.85rem;margin-bottom:1rem">
+      <p style="color:rgba(255,255,255,.6);font-size:var(--fs-sm);margin-bottom:1rem">
         After a player finishes their move, a countdown begins. When it hits zero, the turn automatically advances — even if they haven't clicked End Turn.
       </p>
       <div style="margin-bottom:1rem">
-        <label style="color:rgba(255,255,255,.7);font-size:.85rem;display:block;margin-bottom:.4rem">Auto-advance delay</label>
+        <label style="color:rgba(255,255,255,.7);font-size:var(--fs-sm);display:block;margin-bottom:.4rem">Auto-advance delay</label>
         <div style="display:flex;gap:.5rem;flex-wrap:wrap">
-          ${[0, 10, 20, 30, 45, 60].map((v) => `<button onclick="setTimerDuration(${v})" style="padding:.5rem .9rem;border:1px solid ${dur === v ? "var(--gold-light)" : "rgba(255,255,255,.2)"};background:${dur === v ? "rgba(201,151,28,.25)" : "rgba(255,255,255,.07)"};color:${dur === v ? "var(--gold-light)" : "rgba(255,255,255,.7)"};border-radius:7px;cursor:pointer;font-family:var(--font-body);font-size:.85rem;font-weight:600">${v === 0 ? "Off" : v + "s"}</button>`).join("")}
+          ${[0, 10, 20, 30, 45, 60].map((v) => `<button onclick="setTimerDuration(${v})" style="padding:.5rem .9rem;border:1px solid ${dur === v ? "var(--gold-light)" : "rgba(255,255,255,.2)"};background:${dur === v ? "rgba(201,151,28,.25)" : "rgba(255,255,255,.07)"};color:${dur === v ? "var(--gold-light)" : "rgba(255,255,255,.7)"};border-radius:7px;cursor:pointer;font-family:var(--font-body);font-size:var(--fs-sm);font-weight:600">${v === 0 ? "Off" : v + "s"}</button>`).join("")}
         </div>
       </div>
-      <p style="color:rgba(255,255,255,.4);font-size:.78rem">Timer only runs during the "end turn" phase (after rolling & landing). It pauses while modals are open.</p>
+      <p style="color:rgba(255,255,255,.4);font-size:var(--fs-xs)">Timer only runs during the "end turn" phase (after rolling & landing). It pauses while modals are open.</p>
       <div style="margin:1rem 0">
-        <label style="color:rgba(255,255,255,.7);font-size:.85rem;display:block;margin-bottom:.4rem">Movement speed</label>
+        <label style="color:rgba(255,255,255,.7);font-size:var(--fs-sm);display:block;margin-bottom:.4rem">Movement speed</label>
         <div style="display:flex;gap:.5rem;flex-wrap:wrap">
           ${[["Fast", 0.4], ["Normal", 1], ["Slow", 1.8]]
             .map(([label, v]) => {
               const on = Math.abs((MOVE_SPEED.factor || 1) - v) < 0.05;
-              return `<button onclick="setMoveSpeed(${v})" style="padding:.5rem .9rem;border:1px solid ${on ? "var(--gold-light)" : "rgba(255,255,255,.2)"};background:${on ? "rgba(201,151,28,.25)" : "rgba(255,255,255,.07)"};color:${on ? "var(--gold-light)" : "rgba(255,255,255,.7)"};border-radius:7px;cursor:pointer;font-family:var(--font-body);font-size:.85rem;font-weight:600">${label}</button>`;
+              return `<button onclick="setMoveSpeed(${v})" style="padding:.5rem .9rem;border:1px solid ${on ? "var(--gold-light)" : "rgba(255,255,255,.2)"};background:${on ? "rgba(201,151,28,.25)" : "rgba(255,255,255,.07)"};color:${on ? "var(--gold-light)" : "rgba(255,255,255,.7)"};border-radius:7px;cursor:pointer;font-family:var(--font-body);font-size:var(--fs-sm);font-weight:600">${label}</button>`;
             })
             .join("")}
         </div>
       </div>
       <div style="margin-bottom:1rem;padding:.7rem .8rem;border:1px solid rgba(255,255,255,.12);border-radius:10px;background:rgba(255,255,255,.04)">
-        <div style="color:#fff;font-size:.85rem;font-weight:700;margin-bottom:.4rem">Keyboard</div>
-        <div style="color:rgba(255,255,255,.55);font-size:.78rem;line-height:1.7">
+        <div style="color:#fff;font-size:var(--fs-sm);font-weight:700;margin-bottom:.4rem">Keyboard</div>
+        <div style="color:rgba(255,255,255,.55);font-size:var(--fs-xs);line-height:1.7">
           <b style="color:rgba(255,255,255,.8)">Space</b> roll, or end turn ·
           <b style="color:rgba(255,255,255,.8)">Enter</b> confirm dialog ·
           <b style="color:rgba(255,255,255,.8)">Esc</b> close ·
@@ -511,8 +632,22 @@ function closeDrawer() {
 // ═══════════════════════════════════════════════
 //  OVERLAYS
 // ═══════════════════════════════════════════════
+// Dialogs kept their scroll position between openings, so a reopened portfolio
+// could start halfway down. Reset only on a genuine closed-to-open transition:
+// several dialogs re-open themselves while already showing (build refreshes
+// after each house, the auction on each bid), and those must keep your place.
+function resetModalScroll(overlay) {
+  const m = overlay?.querySelector(".modal");
+  if (!m) return;
+  m.scrollTop = 0;
+  m.classList.remove("is-scrolled");
+}
+
 function openOverlay(id) {
-  document.getElementById(id).classList.add("show");
+  const el = document.getElementById(id);
+  const wasOpen = el.classList.contains("show");
+  el.classList.add("show");
+  if (!wasOpen) resetModalScroll(el);
 }
 function closeOverlay(id) {
   document.getElementById(id).classList.remove("show");
@@ -1109,7 +1244,7 @@ function classifyMoneyLogForPlayer(logEntry, playerName) {
 
   if (!startsWithPlayer) return null;
 
-  if (lower.includes("wins auction")) return { kind: "debit", amount };
+  if (/\b(won|wins) the auction\b/.test(lower)) return { kind: "debit", amount };
   if (
     /\b(pays|paid|bought|unmortgaged|built|tax|bail|must pay|interest)\b/.test(
       lower,
@@ -1166,6 +1301,8 @@ function setPortfolioTab(tab) {
     return;
   PORTFOLIO_VIEW.tab = tab === "log" ? "log" : "properties";
   showPlayerPortfolio(PORTFOLIO_VIEW.playerIdx, PORTFOLIO_VIEW.tab);
+  // A different tab is different content; start it at the top.
+  resetModalScroll(document.getElementById("portfolio-overlay"));
 }
 
 function showPlayerPortfolio(playerIdx, tab = "") {
@@ -1212,7 +1349,7 @@ function showPlayerPortfolio(playerIdx, tab = "") {
 
   let propsHtml = "";
   if (allProps.length === 0) {
-    propsHtml = `<div style="color:rgba(255,255,255,.4);font-size:.9rem;text-align:center;padding:1.5rem 0">No properties owned yet</div>`;
+    propsHtml = `<div style="color:rgba(255,255,255,.7);font-size:var(--fs-md);text-align:center;padding:1.5rem 0">No properties owned yet</div>`;
   } else {
     Object.values(groups).forEach((items) => {
       items.forEach(({ sp, prop, id }) => {
@@ -1228,13 +1365,13 @@ function showPlayerPortfolio(playerIdx, tab = "") {
             ? "🏠".repeat(prop.houses)
             : "";
         const mortgStr = prop.mortgaged
-          ? ' <span style="color:#f59e0b;font-size:.72rem">[Mortgaged]</span>'
+          ? ' <span style="color:#f59e0b;font-size:var(--fs-2xs)">[Mortgaged]</span>'
           : "";
         propsHtml += `
           <div style="display:flex;align-items:center;gap:.6rem;padding:.55rem .7rem;background:rgba(255,255,255,.06);border-radius:7px;margin-bottom:.35rem;border-left:3px solid ${c}">
-            <div style="font-size:.9rem;flex:1;color:#fff;font-weight:600">${escHtml(sp.name)}${mortgStr}</div>
-            ${buildings ? `<div style="font-size:.9rem">${buildings}</div>` : ""}
-            <div style="font-size:.75rem;color:rgba(255,255,255,.45)">${fmtCurrency(sp.price || 0)}</div>
+            <div style="font-size:var(--fs-md);flex:1;color:#fff;font-weight:600">${escHtml(sp.name)}${mortgStr}</div>
+            ${buildings ? `<div style="font-size:var(--fs-md)">${buildings}</div>` : ""}
+            <div style="font-size:var(--fs-xs);color:rgba(255,255,255,.7)">${fmtCurrency(sp.price || 0)}</div>
           </div>`;
       });
     });
@@ -1261,21 +1398,21 @@ function showPlayerPortfolio(playerIdx, tab = "") {
                 : "LOG";
           const sign = credit ? "+" : debit ? "-" : "";
           const amountHtml = hasMoneyTag
-            ? `<span style="font-size:.86rem;font-weight:700;color:${pillColor}">${sign}${fmtCurrency(item.amount)}</span>`
+            ? `<span style="font-size:var(--fs-sm);font-weight:700;color:${pillColor}">${sign}${fmtCurrency(item.amount)}</span>`
             : "";
           return `
           <div style="padding:.6rem .7rem;border-radius:8px;margin-bottom:.42rem;border:1px solid rgba(201,151,28,.22);background:rgba(255,255,255,.08)">
             <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.35rem">
-              <span style="font-size:.72rem;font-weight:700;padding:.1rem .42rem;border-radius:999px;background:${pillBg};color:${pillColor}">${tagLabel}</span>
+              <span style="font-size:var(--fs-2xs);font-weight:700;padding:.1rem .42rem;border-radius:999px;background:${pillBg};color:${pillColor}">${tagLabel}</span>
               ${amountHtml}
-              <span style="margin-left:auto;font-size:.72rem;color:rgba(255,255,255,.45)">${formatLogTime(item.time)}</span>
+              <span style="margin-left:auto;font-size:var(--fs-2xs);color:rgba(255,255,255,.7)">${formatLogTime(item.time)}</span>
             </div>
-            <div style="font-size:.8rem;color:rgba(255,255,255,.72);line-height:1.4">${escHtml(item.text)}</div>
+            <div style="font-size:var(--fs-xs);color:rgba(255,255,255,.72);line-height:1.4">${escHtml(item.text)}</div>
           </div>
         `;
         })
         .join("")
-    : `<div style="color:rgba(255,255,255,.45);font-size:.9rem;text-align:center;padding:1.5rem 0">No logs for this player yet</div>`;
+    : `<div style="color:rgba(255,255,255,.7);font-size:var(--fs-md);text-align:center;padding:1.5rem 0">No logs for this player yet</div>`;
 
   const propertiesTabBtnStyle =
     activeTab === "properties"
@@ -1287,38 +1424,38 @@ function showPlayerPortfolio(playerIdx, tab = "") {
       : "background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);color:rgba(255,255,255,.78);";
 
   modal.innerHTML = `
-    <div style="display:flex;align-items:center;gap:.8rem;margin-bottom:1rem">
-      <div style="font-size:2rem;color:${sanitizeColor(p.color)}">${escHtml(p.token)}</div>
+    <div class="portfolio-head" style="display:flex;align-items:center;gap:.8rem;margin-bottom:1rem">
+      <div style="font-size:var(--fs-3xl);color:${sanitizeColor(p.color)}">${escHtml(p.token)}</div>
       <div>
-        <div style="font-family:var(--font-display);font-size:1.3rem;color:#fff;font-weight:700">${escHtml(p.name)}${p.bankrupt ? " (out)" : ""}</div>
-        <div style="font-size:.8rem;color:rgba(255,255,255,.5);margin-top:.15rem">${statusIcon}</div>
+        <div style="font-family:var(--font-heading);font-size:var(--fs-xl);color:#fff;font-weight:700">${escHtml(p.name)}${p.bankrupt ? " (out)" : ""}</div>
+        <div style="font-size:var(--fs-xs);color:rgba(255,255,255,.7);margin-top:.15rem">${statusIcon}</div>
       </div>
       <div style="margin-left:auto;text-align:right">
-        <div style="font-size:1.2rem;font-weight:800;color:var(--gold-light)">${fmtCurrency(p.money)}</div>
-        <div style="font-size:.72rem;color:rgba(255,255,255,.4)">${allProps.length} ${allProps.length === 1 ? "property" : "properties"}</div>
+        <div style="font-size:var(--fs-lg);font-weight:800;color:var(--gold-light)">${fmtCurrency(p.money)}</div>
+        <div style="font-size:var(--fs-2xs);color:rgba(255,255,255,.7)">${allProps.length} ${allProps.length === 1 ? "property" : "properties"}</div>
       </div>
     </div>
-    ${p.jailFreeCards > 0 ? `<div style="background:rgba(201,151,28,.15);border:1px solid rgba(201,151,28,.3);border-radius:7px;padding:.5rem .8rem;margin-bottom:.75rem;color:var(--gold-light);font-size:.82rem">🎴 ${p.jailFreeCards}× Get Out of Jail Free card</div>` : ""}
+    ${p.jailFreeCards > 0 ? `<div style="background:rgba(201,151,28,.15);border:1px solid rgba(201,151,28,.3);border-radius:7px;padding:.5rem .8rem;margin-bottom:.75rem;color:var(--gold-light);font-size:var(--fs-sm)">🎴 ${p.jailFreeCards}× Get Out of Jail Free card</div>` : ""}
     <div style="display:flex;gap:.45rem;margin-bottom:.75rem">
-      <button style="flex:1;padding:.45rem .6rem;border-radius:8px;cursor:pointer;font-size:.82rem;font-weight:700;${propertiesTabBtnStyle}" onclick="setPortfolioTab('properties')">🏘 Properties</button>
-      <button style="flex:1;padding:.45rem .6rem;border-radius:8px;cursor:pointer;font-size:.82rem;font-weight:700;${logTabBtnStyle}" onclick="setPortfolioTab('log')">📋 Game Log</button>
+      <button style="flex:1;padding:.45rem .6rem;border-radius:8px;cursor:pointer;font-size:var(--fs-sm);font-weight:700;${propertiesTabBtnStyle}" onclick="setPortfolioTab('properties')">Properties</button>
+      <button style="flex:1;padding:.45rem .6rem;border-radius:8px;cursor:pointer;font-size:var(--fs-sm);font-weight:700;${logTabBtnStyle}" onclick="setPortfolioTab('log')">History</button>
     </div>
     <div style="display:${activeTab === "properties" ? "" : "none"}">
-      <div style="font-size:.8rem;font-weight:700;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem">Properties</div>
+      <div style="font-size:var(--fs-xs);font-weight:700;color:rgba(255,255,255,.7);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem">Properties</div>
       ${propsHtml}
     </div>
     <div style="display:${activeTab === "log" ? "" : "none"}">
       <div style="display:flex;gap:.6rem;margin-bottom:.6rem">
         <div style="flex:1;background:rgba(45,160,90,.15);border:1px solid rgba(45,160,90,.35);border-radius:8px;padding:.42rem .55rem">
-          <div style="font-size:.68rem;letter-spacing:.05em;text-transform:uppercase;color:rgba(134,239,172,.8)">Total Credit</div>
-          <div style="font-size:.95rem;font-weight:800;color:#86efac">+${fmtCurrency(totalCredit)}</div>
+          <div style="font-size:var(--fs-2xs);letter-spacing:.05em;text-transform:uppercase;color:#86efac">Total credit</div>
+          <div style="font-size:var(--fs-md);font-weight:800;color:#86efac">+${fmtCurrency(totalCredit)}</div>
         </div>
         <div style="flex:1;background:rgba(192,57,43,.15);border:1px solid rgba(192,57,43,.35);border-radius:8px;padding:.42rem .55rem">
-          <div style="font-size:.68rem;letter-spacing:.05em;text-transform:uppercase;color:rgba(252,165,165,.8)">Total Debit</div>
-          <div style="font-size:.95rem;font-weight:800;color:#fca5a5">-${fmtCurrency(totalDebit)}</div>
+          <div style="font-size:var(--fs-2xs);letter-spacing:.05em;text-transform:uppercase;color:#fca5a5">Total debit</div>
+          <div style="font-size:var(--fs-md);font-weight:800;color:#fca5a5">-${fmtCurrency(totalDebit)}</div>
         </div>
       </div>
-      <div style="font-size:.8rem;font-weight:700;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem">Player History (Whole Match)</div>
+      <div style="font-size:var(--fs-xs);font-weight:700;color:rgba(255,255,255,.7);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem">Player history (Whole Match)</div>
       ${historyHtml}
     </div>
     <button class="btn btn-full" style="background:rgba(255,255,255,.1);color:#fff;margin-top:1rem" onclick="closeOverlay('portfolio-overlay')">Close</button>
@@ -1493,6 +1630,16 @@ function disarmExitGuard() {
   closeOverlay("exit-guard-overlay");
 }
 
+// Explicit "quit" from a menu: same confirmation as the back gesture.
+function requestExitMatch() {
+  if (!matchInProgress()) {
+    openHomePage();
+    return;
+  }
+  EXIT_GUARD.prompting = true;
+  openOverlay("exit-guard-overlay");
+}
+
 // "Keep playing" is the default action, and the only one a stray swipe can reach.
 function dismissExitGuard() {
   EXIT_GUARD.prompting = false;
@@ -1610,6 +1757,15 @@ function stopTimer() {
 }
 
 function updateTimerUI() {
+  // The countdown text on the board and in the mobile turn line was written
+  // once and never updated, so it read "30s" while the ring counted down.
+  if (TIMER.intervalId && G?.phase === "end") {
+    const line = `Turn ends in ${TIMER.remaining}s`;
+    for (const id of ["center-msg", "mobile-turnline"]) {
+      const el = document.getElementById(id);
+      if (el && /^Turn ends in \d+s$/.test(el.textContent)) el.textContent = line;
+    }
+  }
   const arc = document.getElementById("timer-arc");
   const num = document.getElementById("timer-num");
   if (!arc || !num) return;
@@ -1909,6 +2065,87 @@ function primaryButtonIn(overlayId) {
   return o.querySelector(".btn-primary:not([disabled]), .btn:not([disabled])");
 }
 
+// ═══════════════════════════════════════════════
+//  DIALOG CLOSE BUTTONS
+// ═══════════════════════════════════════════════
+// Dialogs that are safe to dismiss get an X in their top corner. Each maps to
+// what "close" means for that dialog. Deliberately absent: the auction (bid or
+// pass), the debt prompt, buy-or-auction, and a trade you have been offered —
+// those are decisions the game is waiting on, and dismissing them would stall
+// the match or quietly skip a rule (closing buy would skip the auction).
+const DISMISSABLE_OVERLAYS = {
+  "prop-overlay": () => closeOverlay("prop-overlay"),
+  "portfolio-overlay": () => closeOverlay("portfolio-overlay"),
+  "build-overlay": () => closeOverlay("build-overlay"),
+  "mortgage-overlay": () => closeOverlay("mortgage-overlay"),
+  "trade-overlay": () => closeOverlay("trade-overlay"),
+  "rent-overlay": () => closeOverlay("rent-overlay"),
+  "jail-overlay": () => closeOverlay("jail-overlay"),
+  "leave-game-overlay": () => closeOverlay("leave-game-overlay"),
+  // Closing the back-button prompt means staying in the game.
+  "exit-guard-overlay": () => dismissExitGuard(),
+  // A card cannot be refused, so closing it acknowledges it.
+  "card-overlay": () =>
+    document.querySelector("#card-overlay .modal > .btn, #card-overlay .modal .btn:not(.modal-close)")?.click(),
+};
+
+const MODAL_CLOSE_ICON =
+  '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" ' +
+  'stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>';
+
+function ensureModalCloseButton(modal, overlayId) {
+  if (modal.querySelector(":scope > .modal-close-bar")) return;
+  // A zero-height sticky bar holds the button: it takes no space in the flow
+  // (so full-bleed headers keep their width) and stays pinned to the top of
+  // dialogs long enough to scroll.
+  const bar = document.createElement("div");
+  bar.className = "modal-close-bar";
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "modal-close";
+  btn.setAttribute("aria-label", "Close");
+  btn.title = "Close";
+  btn.innerHTML = MODAL_CLOSE_ICON;
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    DISMISSABLE_OVERLAYS[overlayId]?.();
+  });
+  bar.appendChild(btn);
+  modal.prepend(bar);
+  // Once the dialog scrolls, a solid band appears behind the button so content
+  // slides under the band rather than under a bare floating circle.
+  if (!modal.dataset.closeScrollBound) {
+    modal.dataset.closeScrollBound = "1";
+    modal.addEventListener(
+      "scroll",
+      () => modal.classList.toggle("is-scrolled", modal.scrollTop > 2),
+      { passive: true },
+    );
+  }
+  modal.classList.toggle("is-scrolled", modal.scrollTop > 2);
+}
+
+// Several dialogs rebuild their whole contents with innerHTML each time they
+// open, which would wipe a static button. Re-attach whenever that happens.
+function installModalCloseButtons() {
+  for (const id of Object.keys(DISMISSABLE_OVERLAYS)) {
+    const modal = document.getElementById(id)?.querySelector(".modal");
+    if (!modal) continue;
+    ensureModalCloseButton(modal, id);
+    new MutationObserver(() => ensureModalCloseButton(modal, id)).observe(modal, {
+      childList: true,
+    });
+  }
+}
+
+// Topmost dismissable dialog that is currently open, if any.
+function topDismissableOverlay() {
+  const open = [...document.querySelectorAll(".overlay.show")].filter(
+    (o) => DISMISSABLE_OVERLAYS[o.id],
+  );
+  return open.length ? open[open.length - 1].id : null;
+}
+
 function installKeyboardShortcuts() {
   document.addEventListener("keydown", (e) => {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
@@ -1919,14 +2156,11 @@ function installKeyboardShortcuts() {
     const openOverlay = document.querySelector(".overlay.show");
 
     if (e.key === "Escape") {
-      // Only dialogs that are safe to walk away from.
-      for (const id of ["prop-overlay", "jail-overlay", "rent-overlay", "card-overlay"]) {
-        const el = document.getElementById(id);
-        if (el?.classList.contains("show")) {
-          e.preventDefault();
-          closeOverlay(id);
-          return;
-        }
+      // Same action as the dialog's X, and only for dialogs that have one.
+      const top = topDismissableOverlay();
+      if (top) {
+        e.preventDefault();
+        DISMISSABLE_OVERLAYS[top]();
       }
       return;
     }

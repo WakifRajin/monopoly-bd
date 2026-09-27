@@ -9,7 +9,7 @@
     <title>Monopoly Board Editor</title>
     <link rel="icon" type="image/svg+xml" href="logo.svg" />
     <link
-      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400..800&family=IBM+Plex+Mono:wght@400;600&display=swap"
       rel="stylesheet"
     />
     <!-- Google tag (gtag.js) -->
@@ -43,7 +43,7 @@
         --radius: 14px;
         --radius-sm: 10px;
         --shadow: 0 24px 52px rgba(0, 0, 0, 0.34);
-        --font-display: "Space Grotesk", "Segoe UI", sans-serif;
+        --font-display: "DM Sans", system-ui, sans-serif;
         --font-code: "IBM Plex Mono", Consolas, monospace;
       }
 
@@ -609,7 +609,7 @@
         max-height: 2.3em;
         overflow: hidden;
         color: #111;
-        font-family: "Times New Roman", Georgia, serif;
+        font-family: var(--font-display);
         font-weight: 700;
       }
 
@@ -649,7 +649,7 @@
         font-weight: 800;
         line-height: 1.2;
         color: #0a3d0a;
-        font-family: "Times New Roman", Georgia, serif;
+        font-family: var(--font-display);
       }
 
       .pv-center .meta {

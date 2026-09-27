@@ -1,6 +1,59 @@
 // ═══════════════════════════════════════════════
 //  BOARD BUILDER
 // ═══════════════════════════════════════════════
+// Top and bottom squares on a phone are ~30px wide, narrower than words like
+// "Sadarghat", so the browser split them wherever it ran out of room
+// ("Sadarg|hat"). Browsers cannot hyphenate place names on their own, so mark
+// syllable breaks with soft hyphens: they are invisible unless a break is
+// needed, and then render as "Sadar-ghat".
+//
+// Rule: in each run of consonants between two vowels, break before the last
+// consonant (Ka-ma-la-pur, Farm-gate, Dhan-mondi). Consonant + "h" is kept as
+// one sound, which matters for romanised Bangla (Sadar-ghat, Moti-jheel).
+// Each side of a break keeps at least three letters.
+const SOFT_HYPHEN = "­";
+function hyphenateWord(word) {
+  if (word.length < 6 || !/^[A-Za-z]+$/.test(word)) return word;
+  const lower = word.toLowerCase();
+  const units = [];
+  for (let i = 0; i < lower.length; i++) {
+    const pair = lower.slice(i, i + 2);
+    const len = /^[bcdgjkpstr]h$/.test(pair) ? 2 : 1;
+    units.push({ start: i, len, text: lower.slice(i, i + len) });
+    i += len - 1;
+  }
+  const isVowel = (u, idx) => {
+    if (!u || u.len > 1) return false;
+    if ("aeiou".includes(u.text)) return true;
+    // "y" is a vowel unless a vowel follows it (Mymensingh vs Sayedabad).
+    return u.text === "y" && idx > 0 && !isVowel(units[idx + 1], idx + 1);
+  };
+  const breaks = [];
+  for (let k = 1; k < units.length - 1; k++) {
+    if (isVowel(units[k], k) || !isVowel(units[k + 1], k + 1)) continue;
+    // units[k] is the last consonant before a vowel; find the vowel before the run.
+    let j = k - 1;
+    while (j >= 0 && !isVowel(units[j], j)) j--;
+    if (j < 0) continue;
+    const at = units[k].start;
+    if (at >= 3 && word.length - at >= 3) breaks.push(at);
+  }
+  if (!breaks.length) return word;
+  let out = "";
+  let last = 0;
+  for (const at of breaks) {
+    out += word.slice(last, at) + SOFT_HYPHEN;
+    last = at;
+  }
+  return out + word.slice(last);
+}
+
+function boardLabelHtml(name) {
+  return escHtml(
+    String(name || "").replace(/[A-Za-z]+/g, (w) => hyphenateWord(w)),
+  );
+}
+
 function buildBoard() {
   const board = document.getElementById("game-board");
   board.innerHTML = "";
@@ -27,27 +80,27 @@ function buildBoard() {
     if (s.type === "property") {
       const c = COLOR[s.color];
       inner = `<div class="color-bar" style="background:${c};height:18%"></div>
-               <div class="sp-name">${escHtml(s.name)}</div>
+               <div class="sp-name">${boardLabelHtml(s.name)}</div>
                <div class="sp-price">${fmtCurrency(s.price)}</div>
                <div class="sp-rent">Rent ${fmtCurrency(s.rent?.[0] || 0)}</div>`;
     } else if (s.type === "railroad") {
-      inner = `<div class="sp-icon">🚂</div><div class="sp-name">${escHtml(s.name)}</div><div class="sp-price">${fmtCurrency(s.price)}</div><div class="sp-rent">Rent ${fmtCurrency(s.rent?.[0] || 0)}</div>`;
+      inner = `<div class="sp-icon">🚂</div><div class="sp-name">${boardLabelHtml(s.name)}</div><div class="sp-price">${fmtCurrency(s.price)}</div><div class="sp-rent">Rent ${fmtCurrency(s.rent?.[0] || 0)}</div>`;
     } else if (s.type === "utility") {
-      inner = `<div class="sp-icon">${escHtml(s.icon)}</div><div class="sp-name">${escHtml(s.name)}</div><div class="sp-price">${fmtCurrency(s.price)}</div>`;
+      inner = `<div class="sp-icon">${escHtml(s.icon)}</div><div class="sp-name">${boardLabelHtml(s.name)}</div><div class="sp-price">${fmtCurrency(s.price)}</div>`;
     } else if (s.type === "go") {
-      inner = `<div class="sp-name"><div style="font-size:1.6em">🏁</div><div style="color:#c0392b;font-weight:900;font-size:1.1em;font-family:'Times New Roman',Georgia,serif">GO</div><div style="font-size:.65em;color:#1a5c1a">Collect ${escHtml((window.ACTIVE_THEME || BOARD_THEMES.dhaka).currency)}${Number((window.ACTIVE_THEME || BOARD_THEMES.dhaka).goSalary) || 0}</div></div>`;
+      inner = `<div class="sp-name"><div style="font-size:1.6em">🏁</div><div style="color:#c0392b;font-weight:900;font-size:1.1em;font-family: var(--font-body)">GO</div><div style="font-size:.65em;color:#1a5c1a">Collect ${escHtml((window.ACTIVE_THEME || BOARD_THEMES.dhaka).currency)}${Number((window.ACTIVE_THEME || BOARD_THEMES.dhaka).goSalary) || 0}</div></div>`;
     } else if (s.type === "jail") {
-      inner = `<div class="sp-name"><div style="font-size:1.2em">⛓️</div><div style="font-family:'Times New Roman',Georgia,serif;font-weight:700">JAIL</div><div style="font-size:.75em">Just Visiting</div></div>`;
+      inner = `<div class="sp-name"><div style="font-size:1.2em">⛓️</div><div style="font-family: var(--font-body);font-weight:700">JAIL</div><div style="font-size:.75em">Just Visiting</div></div>`;
     } else if (s.type === "parking") {
-      inner = `<div class="sp-name"><div style="font-size:1.5em">🅿️</div><div style="font-family:'Times New Roman',Georgia,serif;font-weight:700">FREE</div><div style="font-size:.75em">Parking</div></div>`;
+      inner = `<div class="sp-name"><div style="font-size:1.5em">🅿️</div><div style="font-family: var(--font-body);font-weight:700">FREE</div><div style="font-size:.75em">Parking</div></div>`;
     } else if (s.type === "gotojail") {
-      inner = `<div class="sp-name"><div style="font-size:1.3em">🚔</div><div style="color:#c0392b;font-size:.9em;font-family:'Times New Roman',Georgia,serif">GO TO</div><div style="color:#c0392b;font-weight:900;font-family:'Times New Roman',Georgia,serif">JAIL</div></div>`;
+      inner = `<div class="sp-name"><div style="font-size:1.3em">🚔</div><div style="color:#c0392b;font-size:.9em;font-family: var(--font-body)">GO TO</div><div style="color:#c0392b;font-weight:900;font-family: var(--font-body)">JAIL</div></div>`;
     } else if (s.type === "chance") {
-      inner = `<div class="sp-name"><div style="font-size:1.5em">❓</div><div style="color:#e67e22;font-weight:700;font-family:'Times New Roman',Georgia,serif">CHANCE</div></div>`;
+      inner = `<div class="sp-name"><div style="font-size:1.5em">❓</div><div style="color:#e67e22;font-weight:700;font-size:.8em;font-family: var(--font-body)">CHANCE</div></div>`;
     } else if (s.type === "community") {
-      inner = `<div class="sp-name"><div style="font-size:1.3em">📦</div><div style="font-size:.75em;color:#2563eb;font-weight:700;font-family:'Times New Roman',Georgia,serif">COMMUNITY</div><div style="font-size:.7em;color:#2563eb;font-family:'Times New Roman',Georgia,serif">CHEST</div></div>`;
+      inner = `<div class="sp-name"><div style="font-size:1.3em">📦</div><div style="font-size:.75em;color:#2563eb;font-weight:700;font-family: var(--font-body)">${boardLabelHtml("COMMUNITY")}</div><div style="font-size:.7em;color:#2563eb;font-family: var(--font-body)">CHEST</div></div>`;
     } else if (s.type === "tax") {
-      inner = `<div class="sp-name"><div style="font-size:1.3em">${escHtml(s.icon)}</div><div style="font-size:.8em;font-family:'Times New Roman',Georgia,serif;font-weight:700">${escHtml(s.name)}</div><div class="sp-price">${fmtCurrency(s.amount)}</div></div>`;
+      inner = `<div class="sp-name"><div style="font-size:1.3em">${escHtml(s.icon)}</div><div style="font-size:.8em;font-family: var(--font-body);font-weight:700">${boardLabelHtml(s.name)}</div><div class="sp-price">${fmtCurrency(s.amount)}</div></div>`;
     }
     el.innerHTML = inner;
     board.appendChild(el);
@@ -64,8 +117,11 @@ function buildBoard() {
       <div class="die" id="die1" data-v="${die1Value}">${'<span class="dot"></span>'.repeat(7)}</div>
       <div class="die" id="die2" data-v="${die2Value}">${'<span class="dot"></span>'.repeat(7)}</div>
     </div>
-    <button id="roll-btn" onclick="rollDice()">Roll dice</button>
-    <div id="center-msg" style="font-size:clamp(.6rem,1.2vmin,.8rem);color:#1a5c1a;margin-top:.3rem;font-weight:700;font-family:'Times New Roman',Georgia,serif"></div>
+    <div class="center-actions" id="center-actions">
+      <button id="roll-btn" class="center-btn" onclick="rollDice()">Roll dice</button>
+      <button id="center-end-btn" class="center-btn" onclick="endTurn()">End turn</button>
+    </div>
+    <div id="center-msg" style="font-size:clamp(.6rem,1.2vmin,.8rem);color:#1a5c1a;margin-top:.3rem;font-weight:700;font-family: var(--font-body)"></div>
   `;
   board.appendChild(center);
 }
@@ -120,16 +176,19 @@ function renderGameLog() {
   const el = document.getElementById("game-log");
   if (!el || !Array.isArray(G.log)) return;
   appendLogsToArchive(G.log);
-  el.innerHTML = G.log
-    .map((l) => {
-      const ts = l.time ? new Date(l.time) : new Date();
-      const hh = ts.getHours().toString().padStart(2, "0");
-      const mm = ts.getMinutes().toString().padStart(2, "0");
-      const cls = l.type ? ` log-${l.type}` : "";
-      return `<div class="log-entry${cls}"><span class="log-time">${hh}:${mm}</span>${escHtml(l.text || "")}</div>`;
-    })
-    .join("");
-  el.scrollTop = el.scrollHeight;
+  // Only follow new entries when the reader is already at the bottom; someone
+  // scrolled up to read an earlier turn should not be yanked back down.
+  const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 24;
+  el.innerHTML = renderLogFeedHtml(G.log);
+  if (atBottom || !el.dataset.rendered) el.scrollTop = el.scrollHeight;
+  el.dataset.rendered = "1";
+  const drawerFeed = document.getElementById("drawer-log-feed");
+  if (drawerFeed) {
+    const drawerAtBottom =
+      drawerFeed.scrollHeight - drawerFeed.scrollTop - drawerFeed.clientHeight < 24;
+    drawerFeed.innerHTML = renderLogFeedHtml(G.log);
+    if (drawerAtBottom) drawerFeed.scrollTop = drawerFeed.scrollHeight;
+  }
 }
 
 function renderChatLog() {
@@ -193,6 +252,13 @@ function playerGroupProgress(player) {
     }));
 }
 
+function playerTagsHtml(p) {
+  return (
+    (isAiPlayer(p) ? '<span class="ptag">AI</span>' : "") +
+    (p.bankrupt ? '<span class="ptag out">OUT</span>' : "")
+  );
+}
+
 function renderPlayerCards() {
   const el = document.getElementById("player-cards");
   const mobileEl = document.getElementById("mobile-player-strip");
@@ -225,8 +291,10 @@ function renderPlayerCards() {
       div.innerHTML = `
         <div class="prow1">
           <div class="ptoken" style="color:${sanitizeColor(p.color)}">${escHtml(p.token)}</div>
-          <div class="pname">${escHtml(p.name)}${isAiPlayer(p) ? '<span class="ptag">AI</span>' : ""}${p.bankrupt ? '<span class="ptag out">OUT</span>' : ""}</div>
-          <div class="pmoney">${fmtCurrency(p.money)}</div>
+          <div class="pmain">
+            <div class="pname" title="${escHtml(p.name)}"><span class="pname-text">${escHtml(p.name)}</span>${playerTagsHtml(p)}</div>
+            <div class="pmoney">${fmtCurrency(p.money)}</div>
+          </div>
         </div>
         <div class="ppos">${p.inJail ? "In jail" : escHtml(SPACES[p.pos]?.name || "On board")}</div>
         <div class="pworth">Net worth ${fmtCurrency(playerNetWorth(p))}</div>
@@ -254,7 +322,7 @@ function renderPlayerCards() {
       chip.innerHTML = `
         <div class="mobile-player-main">
           <span class="mobile-player-token" style="color:${sanitizeColor(p.color)}">${escHtml(p.token)}</span>
-          <span class="mobile-player-name">${escHtml(p.name)}${isAiPlayer(p) ? '<span class="ptag">AI</span>' : ""}${p.bankrupt ? '<span class="ptag out">OUT</span>' : ""}</span>
+          <span class="mobile-player-name" title="${escHtml(p.name)}">${escHtml(p.name)}</span>${playerTagsHtml(p)}
         </div>
         <div class="mobile-player-meta">${fmtCurrency(p.money)} • net ${fmtCurrency(playerNetWorth(p))}</div>
       `;
@@ -1790,7 +1858,7 @@ function runOfflineAiStep() {
       G.pendingBuy = null;
       G.phase = "end";
       addLog(
-        `${p.name} skipped ${sp?.name || "this property"}. Auctions are disabled, so it remains unsold.`,
+        `${p.name} passed on ${sp?.name || "this property"}. Auctions are off, so it stays unsold.`,
         "important",
       );
       renderAll();
@@ -1915,10 +1983,11 @@ function updateActionButtons() {
     });
 
     const rollBtn = document.getElementById("roll-btn");
-    if (rollBtn) {
-      rollBtn.disabled = true;
-      rollBtn.textContent = "Game over";
-    }
+    if (rollBtn) rollBtn.disabled = true;
+    const endBtnGo = document.getElementById("center-end-btn");
+    if (endBtnGo) endBtnGo.disabled = true;
+    const rowGo = document.getElementById("center-actions");
+    if (rowGo) rowGo.style.display = "none";
 
     const cm = document.getElementById("center-msg");
     if (cm)
@@ -1953,25 +2022,25 @@ function updateActionButtons() {
     if (el) el.disabled = !canHumanAct || !canEnd;
   });
 
+  // The centre row only appears when there is something for *this* player to
+  // press. On anyone else's turn it steps aside and the status line below says
+  // what is happening, rather than a disabled button pretending to be a label.
+  const centerRow = document.getElementById("center-actions");
+  const showCenterRow = turnOwnedByMe && !aiTurnActive;
+  if (centerRow) centerRow.style.display = showCenterRow ? "" : "none";
+
   const rollBtn = document.getElementById("roll-btn");
+  const centerEndBtn = document.getElementById("center-end-btn");
   if (rollBtn) {
     rollBtn.disabled = debtPromptActive || G.phase !== "roll" || !canHumanAct;
-    rollBtn.textContent = movementLocked
-      ? `${p.name} is moving…`
-      : cardFxPending
-        ? "Resolving card effect…"
-        : debtPromptActive
-          ? debtPending && turnOwnedByMe
-            ? "Settle debt or declare bankruptcy"
-            : `${debtPayer?.name || "Player"} is settling a debt`
-          : aiTurnActive
-            ? `${p.name} is thinking…`
-            : !turnOwnedByMe
-              ? `${p.name} is playing`
-              : inJail && G.phase === "roll"
-                ? "Roll for doubles"
-                : "Roll dice";
+    rollBtn.textContent = inJail && G.phase === "roll" ? "Roll for doubles" : "Roll dice";
   }
+  if (centerEndBtn) {
+    centerEndBtn.disabled = !canHumanAct || !canEnd;
+  }
+  // Whichever one applies right now is the filled, primary button.
+  if (rollBtn) rollBtn.classList.toggle("is-primary", !rollBtn.disabled);
+  if (centerEndBtn) centerEndBtn.classList.toggle("is-primary", !centerEndBtn.disabled);
 
   // Jail bail button
   const bailAmount = getThemeJailBail(G.boardThemeId || selectedThemeId);
@@ -2005,7 +2074,7 @@ function updateActionButtons() {
     else
       cm.textContent =
         TIMER.duration > 0
-          ? `Auto-advancing in ${TIMER.duration}s…`
+          ? `Turn ends in ${TIMER.intervalId ? TIMER.remaining : TIMER.duration}s`
           : `End turn when ready`;
   }
 
@@ -2032,7 +2101,7 @@ function updateActionButtons() {
     else
       mobileTurnLine.textContent =
         TIMER.duration > 0
-          ? `Auto-end in ${TIMER.duration}s`
+          ? `Turn ends in ${TIMER.intervalId ? TIMER.remaining : TIMER.duration}s`
           : "End your turn when ready";
   }
 

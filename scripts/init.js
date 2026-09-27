@@ -15,6 +15,7 @@ installSfxUnlockListeners();
 installOnlineMutationHooks();
 installLobbyEvents();
 installKeyboardShortcuts();
+installModalCloseButtons();
 registerServiceWorker();
 initializeCustomBoardFromStorage();
 loadLobbyPrefs();
