@@ -56,91 +56,11 @@ Offline and AI games keep working with no connection once the app has loaded. On
 
 The game is plain HTML, CSS and JavaScript, so there's nothing to build. Serve the folder with any static server and open it:
 
-<<<<<<< Updated upstream
-![Online lobby](docs/screenshots/online-lobby.png)
-
-### Home Screen
-
-![Home screen](docs/screenshots/gameplay-home.png)
-
-### Credits and Patch Logs
-
-![Patch logs page](docs/screenshots/patch-logs.png)
-
-### Scenario Test Lab
-
-![Scenario test lab page](docs/screenshots/test-lab.png)
-
-## Features
-
-### Core Gameplay
-
-- Property buying, rent, mortgages, houses and hotels, and bankruptcy handling
-- Chance and Community Chest card decks
-- Jail flow with bail, doubles roll, and jail-free card support
-- Player-to-player trade proposals with validation at response time
-- Optional property auctions when players decline purchases
-- Optional auto-advance turn timer
-
-### Multiplayer
-
-- Local multiplayer on one device
-- Online room hosting and joining via room code
-- Open rooms and password-protected closed rooms
-- Ready/unready flow before match launch (host launches)
-- In-game chat for online matches
-- Online leave handling with AI takeover or liquidation-and-auction paths
-
-### Themes
-
-- Dhaka City
-- Bangladesh
-- World Tour
-- Ancient Wonders
-
-### UX
-
-- Responsive desktop and mobile layouts
-- Animated movement, dice visuals, and contextual toasts
-- Winner screen with post-game options
-- Persistent game log panel
-
-## Important Notes
-
-- The lobby currently shows a Max Houses/Property selector, but gameplay logic follows the classic cap of 4 houses, then hotel.
-- Online mode depends on Firebase services being reachable.
-
-## Run Locally
-
-1. Clone or download this repository.
-2. Open index.html directly in a browser, or serve the folder with any static server.
-3. If using a server, open its local URL in your browser.
-
-Example static server commands:
-
-- python -m http.server 8080
-- npx serve .
-
-## Online Mode Setup (For Forks)
-
-If you deploy your own copy and want online rooms:
-
-1. Create a Firebase project.
-2. Enable Anonymous Sign-in in Firebase Authentication.
-3. Enable Firebase Realtime Database.
-4. Replace the firebaseConfig values in index.html with your project values.
-5. Deploy the static files.
-
-## Troubleshooting
-
-### Room sync delays or stale state
-=======
 ```bash
 python -m http.server 8080
 ```
 
 Then go to <http://localhost:8080>. You can also run `npx serve .`. Opening `index.html` directly from disk mostly works, but the service worker and some browser APIs need `http://`.
->>>>>>> Stashed changes
 
 These URL flags help during development:
 
