@@ -493,6 +493,7 @@ function sendChat() {
 //  DRAWER (mobile)
 // ═══════════════════════════════════════════════
 function openDrawer(type) {
+  CURRENT_DRAWER = type;
   const content = document.getElementById("drawer-content");
   if (type === "players") {
     content.innerHTML = `
@@ -632,6 +633,7 @@ function sendChatFromDrawer() {
 }
 
 function closeDrawer() {
+  CURRENT_DRAWER = "";
   document.getElementById("mobile-drawer").classList.remove("open");
 }
 
@@ -863,7 +865,7 @@ function setSfxEnabled(enabled, notify = true) {
 
 function toggleSfxEnabled() {
   setSfxEnabled(!SFX.enabled, true);
-  openDrawer("settings");
+  refreshSettingsViews();
 }
 
 function setBgmEnabled(enabled, notify = true) {
@@ -876,7 +878,7 @@ function setBgmEnabled(enabled, notify = true) {
 
 function toggleBgmEnabled() {
   setBgmEnabled(!SFX.bgmEnabled, true);
-  openDrawer("settings");
+  refreshSettingsViews();
 }
 
 function setSfxVolume(volume, notify = false) {
@@ -2256,7 +2258,7 @@ function setMoveSpeed(factor) {
     next <= 0.5 ? "Animation: fast" : next >= 1.5 ? "Animation: slow" : "Animation: normal",
     "gold",
   );
-  if (document.getElementById("drawer-settings")) openDrawer("settings");
+  refreshSettingsViews();
 }
 
 function registerServiceWorker() {
@@ -2328,11 +2330,14 @@ const APP_NAV_FOR_SCREEN = {
   "lobby-screen": "play",
   "online-screen": "play",
   "how-to-screen": "rules",
+  "settings-screen": "settings",
 };
 
 function syncAppNav(screenId) {
   const current = APP_NAV_FOR_SCREEN[screenId];
   document.body.classList.toggle("has-app-nav", !!current);
+  // The home hero already shows the logo; the rail repeats it elsewhere.
+  document.body.classList.toggle("nav-on-home", current === "home");
   document.querySelectorAll("#app-nav [data-nav]").forEach((btn) => {
     const active = btn.dataset.nav === current;
     btn.classList.toggle("is-active", active);
@@ -2346,7 +2351,7 @@ function syncAppNav(screenId) {
 // the menu has to do the same, or the seat would be left behind.
 async function appNavigate(dest) {
   if (dest === "settings") {
-    openDrawer("settings");
+    openSettingsPage();
     return;
   }
   const lobbyOpen = !document
@@ -2467,4 +2472,194 @@ function renderRecentActivity() {
 function refreshHomeScreen() {
   updateHomeNetStatus();
   renderRecentActivity();
+}
+
+// ═══════════════════════════════════════════════
+//  SETTINGS PAGE (from the menus)
+// ═══════════════════════════════════════════════
+// The in-match drawer holds what matters mid-game (timer, sound, leaving).
+// This page is the app-wide version: sound, defaults for new games, the
+// online name, saved data and app info.
+let CURRENT_DRAWER = "";
+const APP_VERSION = "0.1.0";
+
+function refreshSettingsViews() {
+  if (CURRENT_DRAWER === "settings") openDrawer("settings");
+  const page = document.getElementById("settings-screen");
+  if (page && !page.classList.contains("hidden")) renderSettingsPage();
+}
+
+function openSettingsPage() {
+  renderSettingsPage();
+  showScreen("settings-screen");
+}
+
+function settingsSwitch(id, on, onclick, label) {
+  return `<button type="button" class="mp-switch${on ? " is-on" : ""}" id="${id}" role="switch" aria-checked="${on}" aria-label="${escAttr(label)}" onclick="${onclick}"><span></span></button>`;
+}
+
+function settingsRow(title, help, control) {
+  return `<div class="mp-setting">
+      <div class="mp-setting-text">
+        <div class="mp-setting-title">${title}</div>
+        ${help ? `<div class="mp-setting-help">${help}</div>` : ""}
+      </div>
+      <div class="mp-setting-control">${control}</div>
+    </div>`;
+}
+
+function settingsLink(title, help, onclick) {
+  return `<button type="button" class="mp-setting mp-setting-link" onclick="${onclick}">
+      <span class="mp-setting-text">
+        <span class="mp-setting-title">${title}</span>
+        ${help ? `<span class="mp-setting-help">${help}</span>` : ""}
+      </span>
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+    </button>`;
+}
+
+function renderSettingsPage() {
+  const body = document.getElementById("settings-body");
+  if (!body) return;
+  const volume = Math.round(clampSfxVolume(SFX.volume) * 100);
+  const speed = MOVE_SPEED.factor || 1;
+  const speeds = [["Fast", 0.4], ["Normal", 1], ["Slow", 1.8]];
+  const timer = String(document.getElementById("lobby-timer")?.value ?? TIMER.duration);
+  const timers = [["0", "Off"], ["10", "10 seconds"], ["20", "20 seconds"], ["30", "30 seconds"], ["45", "45 seconds"], ["60", "60 seconds"]];
+  let name = "";
+  try {
+    name = localStorage.getItem("monopoly_online_name") || "";
+  } catch (_err) {}
+  if (!name) name = document.getElementById("online-player-name")?.value || "";
+  const recentCount = readRecentActivity().length;
+
+  body.innerHTML = `
+    <section class="mp-card">
+      <h2 class="mp-card-title">Sound</h2>
+      ${settingsRow("Sound effects", "Dice, rent, jail, auctions and wins", settingsSwitch("set-sfx", !!SFX.enabled, "toggleSfxEnabled()", "Sound effects"))}
+      ${settingsRow("Music", "Plays during a match", settingsSwitch("set-bgm", !!SFX.bgmEnabled, "toggleBgmEnabled()", "Music"))}
+      <div class="mp-setting mp-setting-stack">
+        <div class="mp-setting-text">
+          <label class="mp-setting-title" for="set-volume">Volume</label>
+        </div>
+        <div class="mp-range">
+          <input type="range" id="set-volume" min="0" max="100" value="${volume}"
+            oninput="document.getElementById('set-volume-value').textContent=this.value+'%';setSfxVolume(Number(this.value)/100,false)"
+            onchange="setSfxVolume(Number(this.value)/100,false)" />
+          <output id="set-volume-value" for="set-volume">${volume}%</output>
+        </div>
+      </div>
+    </section>
+
+    <section class="mp-card">
+      <h2 class="mp-card-title">New games</h2>
+      <div class="mp-setting mp-setting-stack">
+        <div class="mp-setting-text">
+          <div class="mp-setting-title">Animation speed</div>
+          <div class="mp-setting-help">How fast tokens move around the board</div>
+        </div>
+        <div class="mp-segmented mp-segmented-3" role="group" aria-label="Animation speed">
+          ${speeds
+            .map(([label, v]) => `<button type="button" class="${Math.abs(speed - v) < 0.05 ? "is-selected" : ""}" aria-pressed="${Math.abs(speed - v) < 0.05}" onclick="setMoveSpeed(${v})">${label}</button>`)
+            .join("")}
+        </div>
+      </div>
+      ${settingsRow(
+        '<label for="set-timer">Turn timer</label>',
+        "Default for new games; each lobby can change it",
+        `<div class="mp-field mp-field-inline"><select id="set-timer" onchange="setDefaultTurnTimer(this.value)">${timers
+          .map(([v, l]) => `<option value="${v}"${v === timer ? " selected" : ""}>${l}</option>`)
+          .join("")}</select></div>`,
+      )}
+    </section>
+
+    <section class="mp-card">
+      <h2 class="mp-card-title">Online</h2>
+      <div class="mp-field">
+        <label for="set-online-name">Your name in online rooms</label>
+        <input type="text" id="set-online-name" maxlength="24" placeholder="Enter your name" value="${escAttr(name)}" autocomplete="nickname" onchange="setDefaultOnlineName(this.value)" />
+      </div>
+    </section>
+
+    <section class="mp-card">
+      <h2 class="mp-card-title">Saved data</h2>
+      ${settingsRow(
+        "Recent activity",
+        recentCount ? `${recentCount} item${recentCount === 1 ? "" : "s"} on the home screen` : "Nothing saved",
+        `<button type="button" class="mp-btn mp-btn-secondary mp-btn-sm" onclick="clearRecentActivity()" ${recentCount ? "" : "disabled"}>Clear</button>`,
+      )}
+      ${settingsRow(
+        "Reset settings",
+        "Sound, speed, timer and lobby choices go back to their defaults",
+        `<button type="button" class="mp-btn mp-btn-danger mp-btn-sm" onclick="resetAllSettings()">Reset</button>`,
+      )}
+    </section>
+
+    <section class="mp-card">
+      <h2 class="mp-card-title">About</h2>
+      ${settingsRow("Version", "", `<span class="mp-setting-value">${APP_VERSION}</span>`)}
+      ${settingsLink("Patch notes", "What changed in each update", "openWhatsNewPage()")}
+      ${settingsLink("Report a bug", "Opens the issue form in a new tab", "openBugReport()")}
+      <div class="mp-setting mp-setting-stack">
+        <div class="mp-setting-text">
+          <div class="mp-setting-title">Keyboard shortcuts</div>
+          <div class="mp-setting-help">During a match</div>
+        </div>
+        <dl class="mp-keys">
+          <div><dt><kbd>Space</kbd></dt><dd>Roll, or end turn</dd></div>
+          <div><dt><kbd>Enter</kbd></dt><dd>Confirm dialog</dd></div>
+          <div><dt><kbd>Esc</kbd></dt><dd>Close dialog</dd></div>
+          <div><dt><kbd>B</kbd></dt><dd>Buy</dd></div>
+          <div><dt><kbd>H</kbd></dt><dd>Build</dd></div>
+          <div><dt><kbd>M</kbd></dt><dd>Mortgage</dd></div>
+          <div><dt><kbd>T</kbd></dt><dd>Trade</dd></div>
+        </dl>
+      </div>
+    </section>
+  `;
+}
+
+function setDefaultTurnTimer(value) {
+  const secs = Math.max(0, Number(value) || 0);
+  const lobbyTimer = document.getElementById("lobby-timer");
+  if (lobbyTimer) lobbyTimer.value = String(secs);
+  TIMER.duration = secs;
+  saveLobbyPrefs();
+  toast(secs ? `Turn timer: ${secs} seconds` : "Turn timer off", "gold");
+}
+
+function setDefaultOnlineName(value) {
+  const name = sanitizeName(value, "Player");
+  try {
+    localStorage.setItem("monopoly_online_name", name);
+  } catch (_err) {}
+  const onlineInput = document.getElementById("online-player-name");
+  if (onlineInput) onlineInput.value = name;
+  const field = document.getElementById("set-online-name");
+  if (field) field.value = name;
+  toast("Name saved", "gold");
+}
+
+function clearRecentActivity() {
+  try {
+    localStorage.removeItem(RECENT_ACTIVITY_KEY);
+  } catch (_err) {}
+  renderRecentActivity();
+  renderSettingsPage();
+  toast("Recent activity cleared", "gold");
+}
+
+function resetAllSettings() {
+  if (!window.confirm("Reset sound, speed, timer and lobby choices to their defaults?")) return;
+  try {
+    [
+      LOBBY_PREFS_KEY,
+      SFX_PREF_ENABLED_KEY,
+      SFX_PREF_VOLUME_KEY,
+      SFX_PREF_BGM_ENABLED_KEY,
+    ].forEach((k) => localStorage.removeItem(k));
+  } catch (_err) {}
+  // Defaults live in several modules; a reload is the only reliable way to
+  // re-read every one of them.
+  window.location.reload();
 }

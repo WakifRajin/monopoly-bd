@@ -29,7 +29,7 @@ const OUT_DIR = path.join(ROOT, "docs", "screenshots");
 const SEED = 20260927;
 // Rounds of play before capturing. Enough for players to own most of the board
 // and start building; not so many that someone has already gone bankrupt.
-const TARGET_TURNS = 60;
+const TARGET_TURNS = 48;
 const PLAYERS = ["Ayesha", "Rafi", "Nusrat", "Tanvir"];
 
 const DESKTOP = { width: 1440, height: 900, deviceScaleFactor: 1 };
@@ -210,7 +210,9 @@ async function playUntilHumanTurn(page) {
       // a limit so a match that never offers one still gets captured.
       const ready =
         turnCount() >= target &&
-        (window.__tradePlan() || turnCount() >= target + 80) &&
+        (window.__tradePlan() ||
+        Object.values(G.properties).some((x) => x && (x.houses || x.hotel)) ||
+        turnCount() >= target + 80) &&
         G.currentPlayerIdx === 0 &&
         G.phase === "roll" &&
         !G.players[0].inJail &&
@@ -265,7 +267,10 @@ async function playHumanTurn(page) {
   const summary = await page.evaluate(() => {
     const me = G.players[0];
     const plan = window.__tradePlan();
-    if (!plan) return "no group one trade away";
+    if (!plan) {
+      const houses = Object.values(G.properties).filter((x) => x && (x.houses || x.hotel)).length;
+      return houses ? `no trade needed, built ${houses} (by the AI)` : "no group one trade away";
+    }
 
     const partner = G.players[plan.ownerId];
     const give = me.properties.find(

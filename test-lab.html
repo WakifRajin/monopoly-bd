@@ -133,12 +133,10 @@ body::before{
 
 .card-head{margin-bottom:.78rem}
 .kicker{
-  font-size:.72rem;
-  letter-spacing:.09em;
-  text-transform:uppercase;
-  color:#b5e8c5;
-  font-weight:800;
-  margin-bottom:.24rem;
+  font-size:.8rem;
+  color:var(--mp-gold, #f0c040);
+  font-weight:600;
+  margin-bottom:.2rem;
 }
 
 .card h2{font-family:var(--font-display);font-size:1.24rem;line-height:1.14;margin-bottom:.22rem}
@@ -324,26 +322,16 @@ body::before{
   .summary-grid{grid-template-columns:1fr}
 }
 </style>
+<link rel="stylesheet" href="styles/menu.css">
 <link rel="stylesheet" href="styles/standalone.css">
 </head>
 <body>
   <main class="page">
-    <div class="sa-top">
-      <a class="sa-back" href="index.html"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg><span>Home</span></a>
-      <span class="sa-note">QA workbench</span>
-    </div>
-
-    <header class="sa-hero">
-      <div class="sa-ornament">Developer tools</div>
-      <h1 class="sa-title">
-        <span class="sa-title-accent">Test</span>
-        <span>Lab</span>
-      </h1>
-      <p class="sa-lead">Deterministic, fuzz and online-sync checks with cross-client verification. Use the same run configuration on every client, then compare fingerprints and reports.</p>
-      <div class="hero-steps sa-chips">
-        <span class="step-chip">1. Configure</span>
-        <span class="step-chip">2. Run and Verify</span>
-        <span class="step-chip">3. Online Multi-Client Audit</span>
+    <header class="mp-header">
+      <a class="mp-back" href="index.html" aria-label="Back to home"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></a>
+      <div class="mp-heading">
+        <h1 class="mp-title">Test lab</h1>
+        <p class="mp-subtitle">Deterministic, fuzz and online-sync checks. Run the same configuration on every client, then compare fingerprints.</p>
       </div>
     </header>
 
@@ -351,7 +339,7 @@ body::before{
       <section class="card">
         <div class="card-head">
           <div class="kicker">Step 1</div>
-          <h2>Run Configuration</h2>
+          <h2>Run configuration</h2>
           <p class="card-subtitle">Control deterministic inputs for local and online checks.</p>
         </div>
         <div class="row">
@@ -360,18 +348,18 @@ body::before{
             <input id="seed" type="number" value="1337">
           </div>
           <div class="input-group">
-            <label for="players">Player Count (Fuzz)</label>
+            <label for="players">Player count (fuzz)</label>
             <input id="players" type="number" min="2" max="8" value="4">
           </div>
           <div class="input-group">
-            <label for="iterations">Fuzz Iterations</label>
+            <label for="iterations">Fuzz iterations</label>
             <input id="iterations" type="number" min="100" max="200000" value="12000">
           </div>
         </div>
         <div class="actions">
-          <button class="btn btn-primary" id="run-quick">Run Quick Smoke</button>
-          <button class="btn btn-secondary" id="run-full">Run Full Suite</button>
-          <button class="btn btn-ghost" id="copy-fingerprint">Copy Fingerprint</button>
+          <button class="btn btn-primary" id="run-quick">Run quick smoke test</button>
+          <button class="btn btn-secondary" id="run-full">Run full suite</button>
+          <button class="btn btn-ghost" id="copy-fingerprint">Copy fingerprint</button>
         </div>
         <p class="status-line">
           Quick smoke validates core pathways quickly. Full suite runs deeper invariant fuzzing and online synchronization checks.
@@ -381,7 +369,7 @@ body::before{
       <section class="card">
         <div class="card-head">
           <div class="kicker">Step 2</div>
-          <h2>Summary and Fingerprints</h2>
+          <h2>Summary and fingerprints</h2>
           <p class="card-subtitle">Confirm deterministic equivalence across clients using shared fingerprints.</p>
         </div>
 
@@ -393,13 +381,13 @@ body::before{
         </div>
 
         <div class="input-group">
-          <label for="fingerprint">Fingerprint (Share Between Clients)</label>
+          <label for="fingerprint">Fingerprint (share between clients)</label>
           <input id="fingerprint" class="code" type="text" readonly placeholder="Run tests to generate fingerprint">
         </div>
 
         <div class="row tight">
           <div class="input-group" style="grid-column:span 2">
-            <label for="peer-fingerprint">Peer Fingerprint</label>
+            <label for="peer-fingerprint">Peer fingerprint</label>
             <input id="peer-fingerprint" class="code" type="text" placeholder="Paste fingerprint to compare">
           </div>
           <div class="input-group">
@@ -418,7 +406,7 @@ body::before{
     <section class="card">
       <div class="card-head">
         <div class="kicker">Step 3</div>
-        <h2>Online Multi-Client Test Room</h2>
+        <h2>Online multi-client test room</h2>
         <p class="card-subtitle">Create or join a shared room, run synchronized match checks, and inspect forensic logs.</p>
       </div>
 
@@ -426,25 +414,25 @@ body::before{
         <div>
           <div class="row">
             <div class="input-group">
-              <label for="test-room-name">Client Name</label>
+              <label for="test-room-name">Client name</label>
               <input id="test-room-name" type="text" maxlength="24" value="Tester">
             </div>
             <div class="input-group">
-              <label for="test-room-code">Room Code</label>
+              <label for="test-room-code">Room code</label>
               <input id="test-room-code" type="text" maxlength="6" placeholder="Auto on create">
             </div>
             <div class="input-group">
-              <label for="test-room-turns">Target Turns</label>
+              <label for="test-room-turns">Target turns</label>
               <input id="test-room-turns" type="number" min="20" max="1500" value="180">
             </div>
           </div>
 
           <div class="actions-grid">
-            <button class="btn btn-primary" id="test-room-create">Create Room</button>
-            <button class="btn btn-secondary" id="test-room-join">Join Room</button>
-            <button class="btn btn-ghost" id="test-room-refresh">Refresh Open Rooms</button>
-            <button class="btn btn-ghost" id="test-room-start">Start Shared Match Test</button>
-            <button class="btn btn-ghost" id="test-room-leave" style="grid-column:span 2">Leave Room</button>
+            <button class="btn btn-primary" id="test-room-create">Create room</button>
+            <button class="btn btn-secondary" id="test-room-join">Join room</button>
+            <button class="btn btn-ghost" id="test-room-refresh">Refresh open rooms</button>
+            <button class="btn btn-ghost" id="test-room-start">Start shared match test</button>
+            <button class="btn btn-ghost" id="test-room-leave" style="grid-column:span 2">Leave room</button>
           </div>
 
           <p class="status-line" id="test-room-status">
@@ -462,7 +450,7 @@ body::before{
         <div>
           <div class="row" style="margin-top:.02rem">
             <div class="input-group">
-              <label for="test-room-log-client">Log Filter</label>
+              <label for="test-room-log-client">Log filter</label>
               <select id="test-room-log-client">
                 <option value="all">All Clients</option>
               </select>
@@ -482,7 +470,7 @@ body::before{
       <section class="card">
         <div class="card-head">
           <div class="kicker">Results</div>
-          <h2>Suite Results</h2>
+          <h2>Suite results</h2>
           <p class="card-subtitle">Each suite is listed with pass/fail and runtime.</p>
         </div>
         <div id="suite-results"></div>
@@ -491,7 +479,7 @@ body::before{
       <section class="card">
         <div class="card-head">
           <div class="kicker">Diagnostics</div>
-          <h2>Execution Details</h2>
+          <h2>Execution details</h2>
           <p class="card-subtitle">Expanded payload, failure details, and reproducibility context.</p>
         </div>
         <div id="raw-output">No run yet.</div>

@@ -533,7 +533,7 @@ async function refreshOpenRoomsList(force = false) {
 
     if (!visibleRooms.length) {
       listEl.innerHTML =
-        '<div class="online-room-empty">No open rooms available.</div>';
+        '<div class="online-room-empty">No open rooms right now. Create one, or ask a friend for their code.</div>';
       return;
     }
 
@@ -541,10 +541,10 @@ async function refreshOpenRoomsList(force = false) {
       .map((r) => {
         return `<div class="online-open-room">
         <div class="online-open-room-meta">
-          <div class="online-open-room-code">${escHtml(r.id)} • ${r.playerCount}/8</div>
-          <div class="online-open-room-host">Host: ${escHtml(r.hostName)}</div>
+          <div class="online-open-room-code">${escHtml(r.id)}</div>
+          <div class="online-open-room-host">Hosted by ${escHtml(r.hostName)} · ${r.playerCount} of 8 players</div>
         </div>
-        <button class="btn btn-sm online-open-room-btn" onclick="joinOpenRoom('${r.id}')">Join</button>
+        <button class="mp-btn mp-btn-primary mp-btn-sm" onclick="joinOpenRoom('${r.id}')">Join</button>
       </div>`;
       })
       .join("");
@@ -679,7 +679,7 @@ function updateOnlineStatus(text, isError = false) {
   const el = document.getElementById("online-room-status");
   if (!el) return;
   el.textContent = text;
-  el.style.color = isError ? "#ff9ca1" : "rgba(255,255,255,.65)";
+  el.classList.toggle("is-error", !!isError);
 }
 
 function firebaseErrorMessage(err, fallback = "Online request failed.") {
@@ -2620,12 +2620,17 @@ function renderBoardThemeSelector() {
   el.innerHTML = "";
   const hostCanEditTheme = !isOnlineGame() || ONLINE.isHost;
   Object.values(BOARD_THEMES).forEach((t) => {
-    const btn = document.createElement("div");
+    const btn = document.createElement("button");
     const active = t.id === selectedThemeId;
-    btn.style.cssText = `padding:.75rem;border-radius:9px;cursor:${hostCanEditTheme ? "pointer" : "not-allowed"};border:2px solid ${active ? "var(--gold-light)" : "rgba(255,255,255,.15)"};background:${active ? "rgba(201,151,28,.2)" : "rgba(255,255,255,.06)"};transition:all .2s;${hostCanEditTheme ? "" : "opacity:.65"}`;
-    btn.innerHTML = `<div style="font-size:var(--fs-2xl);margin-bottom:.3rem">${escHtml(t.flag)}</div>
-      <div style="font-weight:700;color:#fff;font-size:var(--fs-md)">${escHtml(t.name)}</div>
-      <div style="font-size:var(--fs-xs);color:rgba(255,255,255,.5);margin-top:.15rem">${escHtml(t.desc)}</div>`;
+    btn.type = "button";
+    btn.className = "mp-board-tile" + (active ? " is-selected" : "");
+    btn.disabled = !hostCanEditTheme;
+    btn.setAttribute("aria-pressed", active ? "true" : "false");
+    btn.innerHTML = `<span class="mp-board-flag" aria-hidden="true">${escHtml(t.flag)}</span>
+      <span class="mp-board-text">
+        <span class="mp-board-name">${escHtml(t.name)}</span>
+        <span class="mp-board-desc">${escHtml(t.desc)}</span>
+      </span>`;
     btn.onclick = async () => {
       if (!hostCanEditTheme) return;
       applyThemeById(t.id);
@@ -4507,10 +4512,9 @@ function updateOnlineLobbyUI() {
   if (readyBtn) {
     const me = lobbyPlayers.find((p) => p.uid === ONLINE.localUid);
     readyBtn.disabled = !ONLINE.connected || !me || ONLINE.status !== "lobby";
-    readyBtn.textContent = me?.ready ? "Not ready" : "Ready";
-    readyBtn.style.background = me?.ready
-      ? "linear-gradient(135deg,#7f1d1d,#c0392b)"
-      : "linear-gradient(135deg,#92610e,var(--gold))";
+    readyBtn.textContent = me?.ready ? "Not ready" : "I'm ready";
+    readyBtn.classList.toggle("mp-btn-primary", !me?.ready);
+    readyBtn.classList.toggle("mp-btn-secondary", !!me?.ready);
   }
 
   if (ONLINE.connected) {
@@ -4519,12 +4523,13 @@ function updateOnlineLobbyUI() {
       getOnlinePlayerName();
     const playersIn = lobbyPlayers.filter((p) => p.uid).length;
     const readyIn = lobbyPlayers.filter((p) => p.uid && p.ready).length;
-    const vis = ONLINE.visibility === "closed" ? "Closed" : "Open";
+    const vis = ONLINE.visibility === "closed" ? "password protected" : "open";
     updateOnlineStatus(
-      `Room ${ONLINE.roomId} • ${vis} • ${readyIn}/${playersIn} ready • ${myName}${ONLINE.isHost ? " (Host)" : ""}.`,
+      `Room ${ONLINE.roomId} is ${vis}. ${readyIn} of ${playersIn} players ready.` +
+        (ONLINE.isHost ? " You are the host." : ` Playing as ${myName}.`),
     );
   } else if (ONLINE.ready) {
-    updateOnlineStatus("Offline mode. Choose Host or Join.");
+    updateOnlineStatus("Not in a room yet.");
     if (ONLINE.mode === "join") refreshOpenRoomsList();
   }
 }
@@ -5314,13 +5319,14 @@ function renderLobby() {
     const readOnlyAttr = editable ? "" : "readonly";
     const removeBtn =
       !online && editable && i >= 2
-        ? `<button class="remove-btn" onclick="removePlayer(${i})">✕</button>`
+        ? `<button class="mp-icon-btn remove-btn" onclick="removePlayer(${i})" aria-label="Remove ${escAttr(p.name)}"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>`
         : "";
     const pColor = TOKEN_COLORS[i % TOKEN_COLORS.length];
     const safeName = escAttr(p.name);
     const readyBadge =
       online && p.uid
-        ? `<span style="margin-left:.3rem;font-size:var(--fs-2xs);padding:.1rem .35rem;border-radius:10px;background:${p.ready ? "rgba(45,160,90,.3)" : "rgba(127,29,29,.3)"};color:${p.ready ? "#86efac" : "#fca5a5"}">${p.ready ? "READY" : "NOT READY"}</span>`
+        ? (p.uid === ONLINE.hostUid ? '<span class="mp-badge is-host">Host</span>' : "") +
+          `<span class="mp-badge ${p.ready ? "is-ready" : "is-waiting"}">${p.ready ? "Ready" : "Not ready"}</span>`
         : "";
     const typeSelect = !online
       ? `<select class="type-select" title="Player type" onchange="onLobbyTypeChange(${i}, this.value)">
@@ -5330,7 +5336,7 @@ function renderLobby() {
       : "";
     const tokenControls =
       online && isMe
-        ? `<div style="display:flex;gap:.25rem"><button class="btn btn-sm" style="padding:.2rem .35rem;background:rgba(255,255,255,.12);color:#fff" onclick="cycleMyToken(-1)">◀</button><button class="btn btn-sm" style="padding:.2rem .35rem;background:rgba(255,255,255,.12);color:#fff" onclick="cycleMyToken(1)">▶</button></div>`
+        ? `<div class="mp-token-picker"><button class="mp-icon-btn" onclick="cycleMyToken(-1)" aria-label="Previous token"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button><button class="mp-icon-btn" onclick="cycleMyToken(1)" aria-label="Next token"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button></div>`
         : "";
     div.innerHTML = `
       <div class="token-preview" style="color:${pColor}">${escHtml(p.token)}</div>
@@ -5355,7 +5361,7 @@ function renderLobby() {
   }
 
   const hostEditable = !online || ONLINE.isHost;
-  ["starting-money", "max-houses", "lobby-timer", "auction-enabled"].forEach(
+  ["starting-money", "lobby-timer", "auction-enabled"].forEach(
     (id) => {
       const input = document.getElementById(id);
       if (input) input.disabled = !hostEditable;
@@ -5381,24 +5387,10 @@ function renderLobby() {
     }
   }
 
+  // The Players card above already lists everyone with host and ready
+  // badges; the room card only carries the room status line.
   const roomPlayersEl = document.getElementById("online-room-players");
-  if (roomPlayersEl) {
-    if (!online) {
-      roomPlayersEl.innerHTML = "";
-    } else {
-      roomPlayersEl.innerHTML = lobbyPlayers
-        .filter((p) => p.uid)
-        .map((p, i) => {
-          const mine = p.uid === ONLINE.localUid;
-          const host = p.uid === ONLINE.hostUid;
-          return `<div class="online-connected-player">
-          <div class="online-connected-name">${escHtml(p.token || "●")} ${escHtml(p.name)}${host ? " (Host)" : ""}${mine ? " (You)" : ""}</div>
-          <div class="online-connected-ready ${p.ready ? "is-ready" : "is-not-ready"}">${p.ready ? "READY" : "NOT READY"}</div>
-        </div>`;
-        })
-        .join("");
-    }
-  }
+  if (roomPlayersEl) roomPlayersEl.innerHTML = "";
 
   refreshStartingMoneyUi(selectedThemeId, false);
   updateOnlineLobbyUI();

@@ -1,19 +1,13 @@
 /*
- * Shared look for the standalone pages (patch notes, board editor, test lab).
- * Loaded after each page's own <style> block, so it wins at equal
- * specificity. Matches the menu pages in styles/main.css: the home artwork
- * behind a dark overlay, a left-aligned header, and the same cards.
+ * Standalone pages (patch notes, board editor, test lab).
+ * Loaded after styles/menu.css, which provides the header (.mp-header),
+ * buttons and type. This file adds the page backdrop and maps each page's
+ * own card and label classes onto the same look.
  */
-:root {
-  --hp-gold: #f0c040;
-  --hp-line: rgba(255, 255, 255, 0.12);
-  --sa-card-bg: linear-gradient(135deg, rgba(20, 64, 38, 0.8), rgba(8, 28, 17, 0.86));
-  --sa-card-border: rgba(74, 170, 110, 0.26);
-}
-
 body {
   background: #07140c;
   background-image: none;
+  font-family: var(--mp-font-body);
 }
 body::before {
   content: "";
@@ -32,176 +26,79 @@ body::before {
     linear-gradient(0deg, rgba(6, 18, 11, 0.9) 0%, rgba(6, 18, 11, 0) 40%),
     url("../images/home-bg.webp") 64% 100% / auto 132% no-repeat,
     #07140c;
-  background-size: auto, auto, auto 132%;
+}
+@media (max-width: 767px) {
+  body::before {
+    background:
+      linear-gradient(180deg, rgba(6, 18, 11, 0.6) 0%, rgba(6, 18, 11, 0.9) 26rem, #06120b 34rem),
+      url("../images/home-bg-small.webp") 76% top / auto 34rem no-repeat,
+      #06120b;
+  }
 }
 
-/* ── Top row ── */
-.sa-top {
+/* Same outer spacing as the in-app menu pages. */
+.page {
   position: relative;
   z-index: 1;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  flex-wrap: wrap;
+  padding: var(--mp-pad) var(--mp-pad) 3rem;
 }
-.sa-back {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.45rem 0.9rem 0.45rem 0.6rem;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(0, 0, 0, 0.3);
-  color: rgba(255, 255, 255, 0.88);
-  font-family: var(--font-body);
-  font-size: 0.85rem;
-  font-weight: 500;
-  text-decoration: none;
-  transition: background 0.15s, border-color 0.15s;
-}
-.sa-back:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.26);
-}
-.sa-back:focus-visible {
-  outline: 2px solid var(--hp-gold);
-  outline-offset: 2px;
-}
-.sa-brand {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.6rem;
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 0.7rem;
-  font-weight: 600;
-  letter-spacing: 0.3em;
-  text-transform: uppercase;
-}
-.sa-brand img {
-  width: 1.9rem;
-  height: 1.9rem;
-}
-.sa-note {
-  color: rgba(255, 255, 255, 0.55);
-  font-size: 0.78rem;
-}
-
-/* ── Header ── */
-.sa-hero {
+.mp-header {
   position: relative;
   z-index: 1;
-  padding: 2rem 0 2.2rem;
-  text-align: left;
-}
-.sa-ornament {
-  display: flex;
-  align-items: center;
-  gap: 1.4rem;
-  max-width: 24rem;
-  margin: 0 0 1.4rem 0.2rem;
-  color: var(--hp-gold);
-  font-size: 0.78rem;
-  font-weight: 600;
-  letter-spacing: 0.42em;
-  text-transform: uppercase;
-}
-.sa-ornament::before,
-.sa-ornament::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(240, 192, 64, 0.6), transparent);
-}
-.sa-title {
-  display: flex;
-  flex-direction: column;
-  font-family: "Playfair Display", Georgia, serif;
-  font-weight: 900;
-  line-height: 0.98;
-  font-size: clamp(2.6rem, 4.6vw, 4rem);
-  color: #fff;
-  text-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
-}
-.sa-title-accent {
-  font-size: 0.72em;
-  font-weight: 800;
-  background: linear-gradient(180deg, #ffd766 0%, #e0a92a 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-.sa-lead {
-  max-width: 38rem;
-  margin-top: 1.1rem;
-  color: rgba(255, 255, 255, 0.78);
-  font-size: 0.95rem;
-  line-height: 1.55;
-}
-.sa-hero .sa-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.45rem;
-  margin-top: 1rem;
 }
 
-/* ── Section labels ── */
-.sa-section-label,
+/* ── Section labels: sentence case, like every other heading ── */
 .section-label {
-  display: flex;
-  align-items: center;
-  gap: 1.5rem;
-  margin: 1.6rem 0 1rem;
-  color: rgba(255, 255, 255, 0.78);
-  font-size: 0.78rem;
-  font-weight: 600;
-  letter-spacing: 0.34em;
-  text-transform: uppercase;
+  display: block;
+  margin: 2rem 0 0.85rem;
+  color: var(--mp-text);
+  font: 600 1.05rem/1.3 var(--mp-font-body);
+  letter-spacing: normal;
+  text-transform: none;
   opacity: 1;
 }
-.sa-section-label::after,
+.section-label::before,
 .section-label::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: var(--hp-line);
+  content: none;
+}
+.mp-header + .section-label {
+  margin-top: 0;
 }
 
-/* ── Cards (each page names them differently) ── */
+/* ── Cards ── */
 .log-card,
 .card {
-  border-radius: 18px;
-  border: 1px solid var(--sa-card-border);
-  background: var(--sa-card-bg);
-  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.32);
+  border-radius: var(--mp-radius);
+  border: 1px solid var(--mp-card-border);
+  background: var(--mp-card-bg);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.28);
   backdrop-filter: blur(8px);
 }
 .log-card::before {
   content: none;
 }
 .log-card.credits-feature {
-  border-color: rgba(240, 192, 64, 0.55);
-  background:
-    radial-gradient(120% 140% at 0% 0%, rgba(240, 192, 64, 0.14), transparent 55%),
-    var(--sa-card-bg);
+  border-color: rgba(240, 192, 64, 0.5);
 }
 .log-version,
 .card h2 {
-  font-family: var(--font-body);
+  font-family: var(--mp-font-body);
   font-weight: 600;
+  letter-spacing: normal;
 }
 .log-version {
-  font-size: 1.3rem;
-  color: #fff;
+  font-size: 1.15rem;
+  color: var(--mp-text);
 }
 .log-subtitle {
-  color: var(--hp-gold);
+  margin-top: 0.2rem;
+  color: var(--mp-text-2);
+  font-family: var(--mp-font-body);
   font-weight: 500;
+  font-size: 0.92rem;
 }
 
-/* ── Buttons ──
-   Same roles as the game's menu pages: the main action of a section is gold,
-   everything else is a quiet glass button. Class names differ per page. */
+/* ── Buttons: same roles as the menus ── */
 .btn-primary,
 .btn.primary {
   border: 1px solid rgba(255, 214, 102, 0.75);
@@ -227,28 +124,4 @@ body::before {
 .btn.ghost:hover {
   border-color: rgba(255, 255, 255, 0.3);
   background: rgba(255, 255, 255, 0.12);
-}
-
-/* ── Phones ── */
-@media (max-width: 899px) {
-  body::before {
-    background:
-      linear-gradient(180deg, rgba(6, 18, 11, 0.55) 0%, rgba(6, 18, 11, 0.88) 30%, #06120b 55%),
-      url("../images/home-bg-small.webp") 76% top / auto 50% no-repeat,
-      #06120b;
-  }
-  .sa-hero {
-    padding: 1.6rem 0;
-  }
-  .sa-ornament {
-    max-width: none;
-    font-size: 0.7rem;
-    letter-spacing: 0.36em;
-  }
-  .sa-title {
-    font-size: clamp(2.3rem, 11vw, 3rem);
-  }
-  .sa-brand {
-    display: none;
-  }
 }

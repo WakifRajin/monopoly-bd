@@ -204,11 +204,9 @@
       }
 
       .input-group label {
-        color: #ecfaf3;
-        font-size: 0.78rem;
-        letter-spacing: 0.04em;
-        text-transform: uppercase;
-        font-weight: 700;
+        color: rgba(255, 255, 255, 0.76);
+        font-size: 0.85rem;
+        font-weight: 500;
       }
 
       .input-group input,
@@ -536,11 +534,10 @@
       }
 
       .preview-title {
-        margin: 0 0 0.4rem;
-        font-size: 0.86rem;
-        color: #f3fff9;
-        letter-spacing: 0.04em;
-        text-transform: uppercase;
+        margin: 0 0 0.5rem;
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #fff;
       }
 
       .board-preview {
@@ -754,11 +751,10 @@
       }
 
       .deck-title {
-        margin: 0.92rem 0 0.34rem;
-        font-size: 0.92rem;
-        letter-spacing: 0.05em;
-        text-transform: uppercase;
-        color: #f2fff8;
+        margin: 1rem 0 0.5rem;
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #fff;
       }
 
       .deck-grid {
@@ -862,8 +858,11 @@
 
       @media (max-width: 1120px) {
         .layout {
-          grid-template-columns: 1fr;
+          grid-template-columns: minmax(0, 1fr);
         }
+      }
+      .layout > * {
+        min-width: 0;
       }
 
       @media (max-width: 900px) {
@@ -1003,28 +1002,23 @@
         }
       }
     </style>
+<link rel="stylesheet" href="styles/menu.css">
 <link rel="stylesheet" href="styles/standalone.css">
   </head>
   <body>
     <main class="page">
-      <div class="sa-top">
-        <a class="sa-back" href="index.html"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg><span>Home</span></a>
-        <span class="sa-note">Seed format: MBD1.&lt;checksum&gt;.&lt;payload&gt;</span>
-      </div>
-
-      <header class="sa-hero">
-        <div class="sa-ornament">Build your own</div>
-        <h1 class="sa-title">
-          <span class="sa-title-accent">Board</span>
-          <span>Editor</span>
-        </h1>
-        <p class="sa-lead">Rename spaces, change prices, rents and colour groups, and rescale the whole economy. Export a seed code to play the board in the lobby or share it with friends.</p>
+      <header class="mp-header">
+        <a class="mp-back" href="index.html" aria-label="Back to home"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></a>
+        <div class="mp-heading">
+          <h1 class="mp-title">Board editor</h1>
+          <p class="mp-subtitle">Rename spaces, change prices and rents, and rescale the economy. Export a seed code to play it or share it.</p>
+        </div>
       </header>
 
       <div class="layout">
         <aside>
           <section class="card">
-            <h2>Board Meta</h2>
+            <h2>Board details</h2>
             <p class="note">
               Economy scale auto-recalculates all money values and updates the
               live board preview.
@@ -1032,7 +1026,7 @@
 
             <div class="input-grid">
               <div class="input-group" style="grid-column: 1 / -1">
-                <label for="board-name">Board Name</label>
+                <label for="board-name">Board name</label>
                 <input
                   id="board-name"
                   type="text"
@@ -1041,7 +1035,7 @@
                 />
               </div>
               <div class="input-group">
-                <label for="currency-symbol">Currency Symbol</label>
+                <label for="currency-symbol">Currency symbol</label>
                 <input
                   id="currency-symbol"
                   type="text"
@@ -1050,7 +1044,7 @@
                 />
               </div>
               <div class="input-group">
-                <label for="economy-scale">Economy Scale</label>
+                <label for="economy-scale">Economy scale</label>
                 <input
                   id="economy-scale"
                   type="number"
@@ -1061,7 +1055,7 @@
                 />
               </div>
               <div class="input-group">
-                <label for="go-salary">GO Salary</label>
+                <label for="go-salary">GO salary</label>
                 <input
                   id="go-salary"
                   type="number"
@@ -1071,7 +1065,7 @@
                 />
               </div>
               <div class="input-group">
-                <label for="start-money">Start Money</label>
+                <label for="start-money">Starting money</label>
                 <input
                   id="start-money"
                   type="number"
@@ -1081,7 +1075,7 @@
                 />
               </div>
               <div class="input-group">
-                <label for="jail-bail">Jail Bail</label>
+                <label for="jail-bail">Jail bail</label>
                 <input
                   id="jail-bail"
                   type="number"
@@ -1114,13 +1108,13 @@
 
             <div class="actions">
               <button class="btn ghost" id="reset-board-btn">
-                Reset to Classic
+                Reset to classic
               </button>
             </div>
           </section>
 
           <section class="card" style="margin-top: 0.82rem">
-            <h2>Property Groups</h2>
+            <h2>Colour groups</h2>
             <p class="note">
               Colors are controlled per group. Changing a group color updates
               all properties in that group.
@@ -1129,7 +1123,7 @@
           </section>
 
           <section class="card" style="margin-top: 0.82rem">
-            <h2>Seed Code</h2>
+            <h2>Seed code</h2>
             <p class="note">
               Generate code from current board, then paste it later to restore
               the same setup.
@@ -1146,17 +1140,17 @@
 
             <div class="actions-tight">
               <button class="btn warning" id="generate-seed-btn">
-                Generate Seed
+                Generate seed
               </button>
               <button class="btn secondary" id="load-seed-btn">
-                Load Seed
+                Load seed
               </button>
-              <button class="btn ghost" id="copy-seed-btn">Copy Seed</button>
+              <button class="btn ghost" id="copy-seed-btn">Copy seed</button>
               <button class="btn secondary" id="use-seed-in-game-btn">
-                Use In Game
+                Use in game
               </button>
               <button class="btn ghost" id="download-seed-btn">
-                Download Seed
+                Download seed
               </button>
             </div>
 
@@ -1189,7 +1183,7 @@
         </aside>
 
         <section class="card editor">
-          <h2>Ownable Spaces</h2>
+          <h2>Spaces</h2>
           <p class="note">
             Edit names, group IDs, prices, rents, house costs, and mortgage
             values. For rent, use comma-separated numbers. Property rent expects
@@ -1197,7 +1191,7 @@
           </p>
 
           <div class="preview-wrap">
-            <h3 class="preview-title">Live Board View</h3>
+            <h3 class="preview-title">Live preview</h3>
             <div id="board-preview" class="board-preview"></div>
           </div>
 
@@ -1220,7 +1214,7 @@
             </table>
           </div>
 
-          <h3 class="deck-title">Card Decks</h3>
+          <h3 class="deck-title">Card decks</h3>
           <p class="note">
             Chance and Community cards are editable. Value format examples: 200,
             -50, railroad, house:25,hotel:100.
@@ -1310,7 +1304,7 @@
           </div>
 
           <div class="input-group" id="pe-group-color-wrap">
-            <label for="pe-group-color">Group Color</label>
+            <label for="pe-group-color">Group colour</label>
             <select id="pe-group-color">
               <option value="BROWN">BROWN</option>
               <option value="LBLUE">LBLUE</option>
@@ -1329,7 +1323,7 @@
           </div>
 
           <div class="input-group" id="pe-house-wrap">
-            <label for="pe-house">House Cost</label>
+            <label for="pe-house">House cost</label>
             <input id="pe-house" type="number" min="0" step="1" />
           </div>
 
@@ -1339,7 +1333,7 @@
           </div>
 
           <div class="input-group full" id="pe-rent-wrap">
-            <label for="pe-rent">Rent CSV</label>
+            <label for="pe-rent">Rent (comma-separated)</label>
             <input
               id="pe-rent"
               type="text"
@@ -1354,7 +1348,7 @@
             Cancel
           </button>
           <button class="btn primary" id="pe-save-btn" type="button">
-            Save Changes
+            Save changes
           </button>
         </div>
       </div>

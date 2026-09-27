@@ -181,7 +181,9 @@ After a deploy, check that:
 
 ```
 index.html              The app: every screen, dialog and panel
-styles/main.css         All styles for the app
+styles/main.css         The match: board, panels, dialogs
+styles/menu.css         Menu pages: home, rooms, lobby, rules (and shared by the pages below)
+styles/standalone.css   Extra styles for the standalone pages
 scripts/                Game code, loaded in this order by index.html
   core-online-theme-lobby.js   Firebase config, online rooms and sync, board themes, lobby
   board-render-ai.js           Board rendering, player panels, AI players

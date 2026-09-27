@@ -305,39 +305,31 @@ body::before{
   .news-subtitle-row{letter-spacing:.08em;font-size:.72rem}
 }
 </style>
+<link rel="stylesheet" href="styles/menu.css">
 <link rel="stylesheet" href="styles/standalone.css">
 </head>
 <body>
   <main class="page">
-    <div class="sa-top">
-      <a class="sa-back" href="index.html"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg><span>Home</span></a>
-      <span class="sa-brand"><img src="logo.svg" alt="" />Bangladeshi Monopoly</span>
-    </div>
-
-    <header class="sa-hero">
-      <div class="sa-ornament">Credits and updates</div>
-      <h1 class="sa-title">
-        <span class="sa-title-accent">Credits &amp;</span>
-        <span>Patch notes</span>
-      </h1>
-      <p class="sa-lead">What changed in each update, and who makes the game.</p>
+    <header class="mp-header">
+      <a class="mp-back" href="index.html" aria-label="Back to home"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></a>
+      <div class="mp-heading">
+        <h1 class="mp-title">Patch notes</h1>
+        <p class="mp-subtitle">What changed in each update, and who makes the game.</p>
+      </div>
     </header>
 
-    <div class="section-label">Featured Credits</div>
+    <h2 class="section-label">Credits</h2>
     <section class="log-card credits-feature">
-      <div class="credits-kicker">Primary Creator</div>
-      <h2 class="log-version">Project credits</h2>
-      <h3 class="log-subtitle">Made by</h3>
-      <p class="note credits-name">wakifrajin</p>
+      <h3 class="log-version">Made by wakifrajin</h3>
       <p class="note" style="margin-top:.2rem">Lead design, gameplay systems, and ongoing updates.</p>
       <p style="margin-top:.45rem">
         <a class="credits-link" href="https://github.com/WakifRajin" target="_blank" rel="noopener noreferrer">https://github.com/WakifRajin</a>
       </p>
     </section>
 
-    <div class="section-label">Latest Update</div>
+    <h2 class="section-label">Latest update</h2>
     <section class="log-card">
-      <h2 class="log-version">Update 0.1.0 - New Board, Clearer Table</h2>
+      <h2 class="log-version">0.1.0 · New board, clearer table</h2>
       <h3 class="log-subtitle">A Bangladesh cities board, information where you need it, and a lot less decoration</h3>
       <ul class="changes">
         <li>Added <b>&#2471;&#2472;&#2496; &#2489;&#2476;&#2494;&#2480; &#2478;&#2460;&#2494;&#2480; &#2454;&#2503;&#2482;&#2494;</b> as a permanent board, picked from the theme list like any other. No seed to paste.</li>
@@ -389,6 +381,17 @@ body::before{
         <li>A long player name in the top bar no longer pushes the Settings button off the screen on phones.</li>
         <li>The portfolio tabs are now &quot;Properties&quot; and &quot;History&quot;, without emoji.</li>
         <li>A new home screen with artwork of Dhaka at sunset. A side menu on desktop and a tab bar on phones reach Play, Boards, Rules and Settings from anywhere on the page.</li>
+        <li>Settings on the home screen opens its own page: sound, animation speed and the default turn timer for new games, your online name, clearing recent activity, resetting settings, and version, keyboard shortcuts and links. The settings panel inside a match is unchanged.</li>
+        <li>Recent activity on the home screen no longer runs off the bottom of laptop screens; the home page fits on one screen at common desktop sizes.</li>
+        <li>The side menu no longer repeats the logo next to the home page title.</li>
+        <li>The Play online card has a globe in the background.</li>
+        <li>Menus follow one set of rules: every page opens with the same header (back button, title, one line of description), content sits in cards titled in plain sentence case, and each page has one gold main action. Scattered uppercase labels, ornaments and slogans are gone.</li>
+        <li>The lobby is reorganised into Players, Board and House rules. On desktop it uses two columns; the Start game button stays pinned at the bottom of the screen. Custom board seeds moved into a collapsible section under Board.</li>
+        <li>Removed the &quot;Max houses&quot; lobby setting. It never changed the game, which always builds four houses before a hotel.</li>
+        <li>Online rooms: the host and join forms are simpler, &quot;Who can join&quot; replaces the open/closed wording, and the room status reads as a sentence. Room players are listed once, with Host and Ready badges.</li>
+        <li>How to play has a row of section links at the top to jump to a rule.</li>
+        <li>Menus scale properly from small phones to wide screens, with a bottom tab bar on phones, a compact side menu on tablets and the full menu on desktops. Nothing runs off the side of the screen.</li>
+        <li>Patch notes, the board editor and the test lab use the same header and sentence-case headings, labels and buttons. The board editor no longer runs off the side of the screen on phones.</li>
         <li>The online rooms, lobby and rules pages share the home screen&#39;s look: the same side menu (a tab bar on phones), artwork, headings, cards and buttons. The menu hides during a match.</li>
         <li>Leaving the lobby from the side menu while in an online room leaves the room properly, the same as the Back button.</li>
         <li>Patch notes, the board editor and the test lab use the same backdrop, headings, cards and buttons, with a Home link at the top.</li>
@@ -408,10 +411,10 @@ body::before{
       </ul>
     </section>
 
-    <div class="section-label">Previous Updates</div>
+    <h2 class="section-label">Earlier updates</h2>
     <div class="stack">
       <section class="log-card">
-      <h2 class="log-version">Update 0.0.9 - Security and Economy Fixes</h2>
+      <h2 class="log-version">0.0.9 · Security and economy fixes</h2>
       <h3 class="log-subtitle">Closed exploits, protected online rooms, and money that adds up</h3>
       <ul class="changes">
         <li>Fixed an exploit where the sell-building action paid out money for properties you did not own, or that had nothing built on them. It now checks ownership and buildings before paying anything.</li>
@@ -432,7 +435,7 @@ body::before{
       </section>
 
       <section class="log-card">
-      <h2 class="log-version">Update 0.0.8 - UI Updates and Custom Board Editor</h2>
+      <h2 class="log-version">0.0.8 · UI updates and custom board editor</h2>
       <h3 class="log-subtitle">Homepage polish, board tools, audio, and reliability</h3>
       <ul class="changes">
         <li>Redesigned the home screen with the new layout and structured Play, Explore, and Dev sections.</li>
@@ -448,7 +451,7 @@ body::before{
       </section>
 
       <section class="log-card">
-        <h2 class="log-version">Update 0.0.7 - Classic Board and Stability Fixes</h2>
+        <h2 class="log-version">0.0.7 · Classic board and stability fixes</h2>
         <h3 class="log-subtitle">Rule parity and turn-flow reliability</h3>
         <ul class="changes">
           <li>Added the new Classic board with original Monopoly-style economy: $200 GO, $1500 start money, classic property values, classic railroads and utilities, and $50 jail bail.</li>
@@ -461,7 +464,7 @@ body::before{
       </section>
 
       <section class="log-card">
-        <h2 class="log-version">Update 0.0.6 - Winner Screen Upgrade</h2>
+        <h2 class="log-version">0.0.6 · Winner screen upgrade</h2>
         <h3 class="log-subtitle">Cleaner endgame flow</h3>
         <ul class="changes">
           <li>Winner screen now always stays above overlays, including bank auctions.</li>
@@ -472,7 +475,7 @@ body::before{
       </section>
 
       <section class="log-card">
-        <h2 class="log-version">Update 0.0.5 - Bankruptcy and Online Reliability</h2>
+        <h2 class="log-version">0.0.5 · Bankruptcy and online reliability</h2>
         <h3 class="log-subtitle">Debt resolution stability</h3>
         <ul class="changes">
           <li>Improved AI debt handling so AI can sell, mortgage, or declare bankruptcy without getting stuck.</li>
@@ -483,7 +486,7 @@ body::before{
       </section>
 
       <section class="log-card">
-        <h2 class="log-version">Update 0.0.4 - Home and Patch Notes</h2>
+        <h2 class="log-version">0.0.4 · Home and patch notes</h2>
         <h3 class="log-subtitle">New discoverability for updates</h3>
         <ul class="changes">
           <li>Added a small circular What's New button at the bottom of the home screen.</li>
@@ -492,7 +495,7 @@ body::before{
       </section>
 
       <section class="log-card">
-        <h2 class="log-version">Update 0.0.3 - Auction System Revamp</h2>
+        <h2 class="log-version">0.0.3 · Auction system revamp</h2>
         <h3 class="log-subtitle">Gameplay and menu improvements</h3>
         <ul class="changes">
           <li>Added a new Auction System toggle in lobby settings (On or Off).</li>
@@ -504,7 +507,7 @@ body::before{
       </section>
 
       <section class="log-card">
-        <h2 class="log-version">Update 0.0.2 - Online Sync and Stability</h2>
+        <h2 class="log-version">0.0.2 · Online sync and stability</h2>
         <h3 class="log-subtitle">Host room settings and rule consistency</h3>
         <ul class="changes">
           <li>Auction settings now sync correctly in online rooms.</li>
@@ -515,7 +518,7 @@ body::before{
       </section>
 
       <section class="log-card">
-        <h2 class="log-version">Update 0.0.1 - UI Updates</h2>
+        <h2 class="log-version">0.0.1 · UI updates</h2>
         <h3 class="log-subtitle">Auction panel improvements</h3>
         <ul class="changes">
           <li>Auction panel has improved display content for bidding context.</li>
