@@ -1006,6 +1006,137 @@ function aiEvaluateTradeGroupSwing(trade, aiPlayerId) {
   return result;
 }
 
+// What everything `playerId` holds is worth to them under an ownership map.
+// Set synergy is priced in, so completing a colour group (or breaking one) moves
+// the number far more than the cards' list prices alone.
+function aiPortfolioValue(playerId, ownerOverrides = null) {
+  if (!Number.isInteger(playerId)) return 0;
+  let total = 0;
+  let railroads = 0;
+  let utilities = 0;
+  const groups = new Map();
+
+  SPACES.forEach((sp) => {
+    if (!sp || !G.properties?.[sp.id]) return;
+    if (!["property", "railroad", "utility"].includes(sp.type)) return;
+    const price = Number(sp.price) || estimateAssetValue(sp.id);
+    if (sp.type === "property") {
+      if (!groups.has(sp.group)) groups.set(sp.group, { n: 0, k: 0, sum: 0 });
+      const g = groups.get(sp.group);
+      g.n++;
+      g.sum += price;
+      if (aiOwnerForSpace(sp.id, ownerOverrides) !== playerId) return;
+      g.k++;
+    } else if (aiOwnerForSpace(sp.id, ownerOverrides) !== playerId) {
+      return;
+    } else if (sp.type === "railroad") {
+      railroads++;
+    } else {
+      utilities++;
+    }
+    total += price;
+    // A mortgaged card still has to be bought back before it earns.
+    if (G.properties[sp.id].mortgaged) {
+      total -= Math.floor(mortgageValueForSpace(sp) * 1.1);
+    }
+  });
+
+  groups.forEach((g) => {
+    if (!g.k) return;
+    if (g.k === g.n) total += Math.floor(g.sum * 1.6);
+    else if (g.k === g.n - 1) total += Math.floor(g.sum * (g.n >= 3 ? 0.3 : 0.1));
+  });
+
+  const scale = aiEconomyScale();
+  if (railroads > 1) total += Math.floor((railroads - 1) * 600 * scale);
+  if (utilities > 1) total += Math.floor(350 * scale);
+  return total;
+}
+
+function aiTradeOwnerOverrides(trade) {
+  const overrides = new Map();
+  (trade.fromProps || []).forEach((id) =>
+    overrides.set(Number(id), Number(trade.toId)),
+  );
+  (trade.toProps || []).forEach((id) =>
+    overrides.set(Number(id), Number(trade.fromId)),
+  );
+  return overrides;
+}
+
+function aiMortgageInterestOn(propIds) {
+  return (propIds || []).reduce((sum, id) => {
+    if (!G.properties[id]?.mortgaged) return sum;
+    return sum + Math.ceil(mortgageValueForSpace(SPACES[id]) * 0.1);
+  }, 0);
+}
+
+// How a trade looks from `playerId`'s side: their own gain, the counterparty's
+// gain, and the bar their gain has to clear. `accept` means the deal is fair or
+// better for them without handing the other side much more than they get.
+function aiTradeTerms(trade, playerId) {
+  const fromId = Number(trade.fromId);
+  const toId = Number(trade.toId);
+  const otherId = playerId === fromId ? toId : fromId;
+  const me = G.players[playerId];
+  const overrides = aiTradeOwnerOverrides(trade);
+  const fromMoney = Math.max(0, Number(trade.fromMoney) || 0);
+  const toMoney = Math.max(0, Number(trade.toMoney) || 0);
+  const iAmFrom = playerId === fromId;
+  const cashIn = iAmFrom ? toMoney : fromMoney;
+  const cashOut = iAmFrom ? fromMoney : toMoney;
+  const myInterest = aiMortgageInterestOn(
+    iAmFrom ? trade.toProps : trade.fromProps,
+  );
+  const otherInterest = aiMortgageInterestOn(
+    iAmFrom ? trade.fromProps : trade.toProps,
+  );
+
+  const reserve = aiCashReserve(me);
+  const critical = (me?.money || 0) < Math.floor(reserve * 0.24);
+  const netCash = cashIn - cashOut;
+  // When broke, cash in hand is worth more than cards.
+  const cashWeight = critical && netCash > 0 ? 1.3 : 1;
+
+  const assetGain =
+    aiPortfolioValue(playerId, overrides) - aiPortfolioValue(playerId);
+  const otherAssetGain =
+    aiPortfolioValue(otherId, overrides) - aiPortfolioValue(otherId);
+  const gain = assetGain + Math.floor(netCash * cashWeight) - myInterest;
+  const otherGain = otherAssetGain - netCash - otherInterest;
+
+  const swing = aiEvaluateTradeGroupSwing(trade, playerId);
+  // Handing an opponent a full set without getting one back is the dangerous
+  // case, so their gain counts for more there.
+  const alpha =
+    swing.oppMonopoliesGained > swing.aiMonopoliesGained && !critical
+      ? 0.8
+      : 0.5;
+  const margin = Math.floor(120 * aiEconomyScale());
+  const listPrice = (ids) =>
+    (ids || []).reduce((sum, id) => sum + estimateAssetValue(Number(id)), 0);
+  const listDelta = iAmFrom
+    ? listPrice(trade.toProps) - listPrice(trade.fromProps)
+    : listPrice(trade.fromProps) - listPrice(trade.toProps);
+  // Only dip deep into the reserve for set value. Buying a lone card on the
+  // cheap and then dumping it back to raise cash is just churn.
+  const hasSetValue = assetGain - listDelta > margin;
+  const moneyAfter = (me?.money || 0) + netCash - myInterest;
+  const affordable =
+    cashOut <= 0 ||
+    moneyAfter >= Math.floor(reserve * (hasSetValue ? 0.25 : 0.6));
+
+  return {
+    gain,
+    otherGain,
+    assetGain,
+    otherAssetGain,
+    alpha,
+    margin,
+    accept: affordable && gain >= margin && gain >= alpha * otherGain + margin,
+  };
+}
+
 function aiTradeMemoryForPlayer(playerId) {
   if (!Number.isInteger(playerId)) return null;
   if (!AI_CTRL.tradeByPlayer || typeof AI_CTRL.tradeByPlayer !== "object") {
@@ -1300,87 +1431,67 @@ function aiTryProposeTrade(player) {
   const reserve = aiCashReserve(player);
   let bestOffer = null;
 
-  for (let id = 0; id < SPACES.length; id++) {
-    const sp = SPACES[id];
-    const prop = G.properties[id];
-    if (!sp || !prop || prop.owner === null || prop.owner === player.id)
-      continue;
-    if (prop.mortgaged || propertyHasBuildings(id)) continue;
-    const owner = G.players[prop.owner];
-    if (!owner || owner.bankrupt) continue;
+  const tradable = (p) =>
+    [...p.properties, ...p.railroads, ...p.utilities].filter(
+      (id) =>
+        G.properties[id]?.owner === p.id && !tradeAssetBuildingBlockReason(id),
+    );
+  const myAssets = tradable(player);
 
-    let ask = 0;
-    let score = 0;
-
-    if (sp.type === "property") {
-      const groupIds = aiPropertyGroupIds(id);
-      if (groupIds.some((gid) => propertyHasBuildings(gid))) continue;
-
-      const ownedByMe = aiCountGroupOwnedByPlayer(player.id, groupIds);
-      if (ownedByMe <= 0) continue;
-      const groupSize = groupIds.length || 1;
-      const ownedAfter = Math.min(groupSize, ownedByMe + 1);
-      const completesGroup = ownedAfter >= groupSize;
-      const progressRatio = ownedAfter / groupSize;
-
-      ask = Math.max(
-        420,
-        Math.floor(
-          (Number(sp.price) || 1200) *
-            (completesGroup ? 1.08 : 0.9 + progressRatio * 0.22),
-        ),
-      );
-      score =
-        Math.floor(900 * progressRatio) +
-        (completesGroup ? 1450 : Math.floor(260 * ownedByMe));
-    } else if (sp.type === "railroad") {
-      if ((player.railroads?.length || 0) === 0) continue;
-      ask = Math.max(700, Math.floor((Number(sp.price) || 2000) * 0.95));
-      score = 1100 + (player.railroads?.length || 0) * 240 - ask;
-    } else if (sp.type === "utility") {
-      if ((player.utilities?.length || 0) === 0) continue;
-      ask = Math.max(550, Math.floor((Number(sp.price) || 1500) * 0.9));
-      score = 900 + (player.utilities?.length || 0) * 180 - ask;
-    } else {
-      continue;
-    }
-
-    const budget = Math.max(0, player.money - Math.floor(reserve * 0.55));
-    ask = Math.min(ask, owner.money, budget);
-    if (ask <= 0) continue;
-    const offerKey = aiTradeOfferSignature({
+  const considerOffer = (owner, giveIds, takeIds) => {
+    const base = {
       fromId: player.id,
       toId: owner.id,
-      fromProps: [],
-      toProps: [id],
-      fromMoney: ask,
+      fromProps: giveIds,
+      toProps: takeIds,
+      fromMoney: 0,
       toMoney: 0,
-    });
-    if (!aiCanProposeTradeOffer(tradeMemory, offerKey)) continue;
-
-    const finalScore = score + Math.max(0, (Number(sp.price) || 0) - ask);
-    if (!bestOffer || finalScore > bestOffer.score) {
-      bestOffer = {
-        ownerId: owner.id,
-        propId: id,
-        ask,
-        score: finalScore,
-        offerKey,
-      };
+    };
+    // Price the cash so the deal just clears the recipient's own bar.
+    const r0 = aiTradeTerms(base, owner.id);
+    const need = Math.max(
+      r0.margin - r0.gain,
+      (r0.alpha * r0.otherGain + r0.margin - r0.gain) / (1 + r0.alpha),
+    );
+    let cash = Math.ceil(need / 10) * 10;
+    if (cash < 0) {
+      const ownerSpare = Math.max(
+        0,
+        owner.money - Math.floor(aiCashReserve(owner) * 0.25),
+      );
+      cash = -Math.min(-cash, Math.floor(ownerSpare / 10) * 10);
     }
-  }
+    // Don't spend down into the range where we'd have to sell something back.
+    if (cash > 0 && player.money - cash < Math.floor(reserve * 0.6)) return;
+    const offer = {
+      ...base,
+      fromMoney: Math.max(0, cash),
+      toMoney: Math.max(0, -cash),
+    };
+    if (!aiTradeTerms(offer, owner.id).accept) return;
+    const mine = aiTradeTerms(offer, player.id);
+    if (!mine.accept) return;
+    const offerKey = aiTradeOfferSignature(offer);
+    if (!aiCanProposeTradeOffer(tradeMemory, offerKey)) return;
+    if (!bestOffer || mine.gain > bestOffer.score) {
+      bestOffer = { offer, score: mine.gain, offerKey };
+    }
+  };
+
+  G.players.forEach((owner) => {
+    if (!owner || owner.bankrupt || owner.id === player.id) return;
+    tradable(owner).forEach((takeId) => {
+      considerOffer(owner, [], [takeId]);
+      myAssets.forEach((giveId) => considerOffer(owner, [giveId], [takeId]));
+    });
+  });
 
   if (bestOffer) {
-    const target = G.players[bestOffer.ownerId];
+    const target = G.players[bestOffer.offer.toId];
     aiRecordTradeProposal(tradeMemory, bestOffer.offerKey);
     G.pendingTrade = {
       id: `tr_ai_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
-      fromId: player.id,
-      toId: target.id,
-      fromProps: [],
-      toProps: [bestOffer.propId],
-      fromMoney: bestOffer.ask,
-      toMoney: 0,
+      ...bestOffer.offer,
       createdAt: Date.now(),
     };
     tradeReviewShownKey = "";
@@ -1724,49 +1835,7 @@ function runOfflineAiStep() {
     const trade = G.pendingTrade;
     const recipient = G.players[Number(trade.toId)];
     if (isAiPlayer(recipient) && !recipient.bankrupt) {
-      const receiveValue =
-        (trade.fromProps || []).reduce(
-          (sum, id) => sum + estimateAssetValue(id),
-          0,
-        ) + Math.max(0, Number(trade.fromMoney) || 0);
-      const giveValue =
-        (trade.toProps || []).reduce(
-          (sum, id) => sum + estimateAssetValue(id),
-          0,
-        ) + Math.max(0, Number(trade.toMoney) || 0);
-      const reserve = aiCashReserve(recipient);
-      const stressed = recipient.money < Math.floor(reserve * 0.5);
-      const critical = recipient.money < Math.floor(reserve * 0.24);
-      const cashDelta =
-        Math.max(0, Number(trade.fromMoney) || 0) -
-        Math.max(0, Number(trade.toMoney) || 0);
-      const swing = aiEvaluateTradeGroupSwing(trade, recipient.id);
-      const scale = aiEconomyScale();
-
-      if (
-        swing.oppMonopoliesGained > 0 &&
-        !critical &&
-        swing.aiMonopoliesGained < swing.oppMonopoliesGained
-      ) {
-        respondTrade(false);
-        return;
-      }
-
-      let score = receiveValue - giveValue;
-      score += swing.aiMonopoliesGained * Math.floor(2200 * scale);
-      score -= swing.aiMonopoliesLost * Math.floor(2600 * scale);
-      score -=
-        swing.oppMonopoliesGained * Math.floor((critical ? 1100 : 4200) * scale);
-      score += swing.oppMonopoliesLost * Math.floor(850 * scale);
-      score += Math.floor(swing.aiProgressDelta * 1000 * scale);
-      score -= Math.floor(Math.max(0, swing.oppProgressDelta) * 1200 * scale);
-      if (stressed && cashDelta > 0) score += Math.floor(cashDelta * 0.75);
-
-      const acceptThreshold = stressed
-        ? -Math.floor(reserve * 0.14)
-        : Math.floor(reserve * 0.05);
-      const accept = score >= acceptThreshold;
-      respondTrade(accept);
+      respondTrade(aiTradeTerms(trade, recipient.id).accept);
       return;
     }
   }
