@@ -24,8 +24,10 @@ A Monopoly-style board game that runs in the browser, set in Dhaka and around Ba
 - **The full game.** Buying, rent, auctions, houses and hotels (built evenly), mortgages, jail, Chance and Community Chest, trades between players, and bankruptcy that hands assets to whoever you owe.
 - **2 to 8 players.** Any mix of people and AI on one device. The AI buys, bids, builds, trades and handles its own debts.
 - **Online rooms.** Host an open or password-protected room and share the code. The host starts the match once everyone is ready, and there's in-game chat. If someone drops out, the AI takes their seat.
+- **Same Wi-Fi.** Play with people on your network without a server of your own, like PairDrop. Games hosted on the same network appear automatically; the match runs on the host's device and goes to the others directly over WebRTC. The internet is only needed for the few seconds it takes to find each other and connect.
 - **Six boards, plus your own.** Dhaka City, Bangladesh, ধনী হবার মজার খেলা, Classic, World Tour and Ancient Wonders. Each has its own place names, currency and money scale.
 - **Custom boards.** The [board editor](https://wakifrajin.github.io/monopoly-bd/boardeditor.html) lets you rename spaces and change prices and rents. It exports a seed code that anyone can load.
+- **2D and 3D views of one table.** The board is a WebGL scene built with three.js: dice that tumble and land on the rolled numbers before anyone moves, chip tokens that hop square by square, and house and hotel models, all lit and casting shadows. The flat view is the same table seen from above; the 3D view tilts it, and switching animates the camera between the two. In 3D, drag to turn the table and scroll or pinch to zoom. Browsers without WebGL get a plain HTML board.
 - **Match options.** Auctions on or off, a turn timer, animation speed, sound and music.
 
 <details>
@@ -33,12 +35,14 @@ A Monopoly-style board game that runs in the browser, set in Dhaka and around Ba
 
 | | |
 |---|---|
-| ![Property details](docs/screenshots/desktop-property.png) | ![Proposing a trade](docs/screenshots/desktop-trade.png) |
-| Property details | Proposing a trade |
+| ![The optional 3D board](docs/screenshots/desktop-game-3d.png) | ![Property details](docs/screenshots/desktop-property.png) |
+| 3D board | Property details |
+| ![Proposing a trade](docs/screenshots/desktop-trade.png) | ![Property details on a phone](docs/screenshots/phone-property.png) |
+| Proposing a trade | Property details on a phone |
 | ![A player's history for the match](docs/screenshots/desktop-history.png) | ![The custom board editor](docs/screenshots/desktop-board-editor.png) |
 | A player's history for the match | Board editor |
-| ![Home screen](docs/screenshots/desktop-home.png) | ![Property details on a phone](docs/screenshots/phone-property.png) |
-| Home screen | Property details on a phone |
+| ![Home screen](docs/screenshots/desktop-home.png) | |
+| Home screen | |
 
 </details>
 
@@ -85,6 +89,19 @@ Online rooms use Firebase Realtime Database with anonymous sign-in. To point a f
    firebase deploy --only database
    ```
 
+The rules also cover Same Wi-Fi play (`lanRooms` and `lanSignal`), which uses Firebase only to list games per network and to pass the one-time WebRTC offer and answer between two devices.
+
+### How Same Wi-Fi play works
+
+GitHub Pages cannot run a server, so devices find each other the way PairDrop's do, with a little outside help:
+
+1. Each device asks a public STUN server (Google's) for its network's public address and hashes it into a network id. Devices behind the same router get the same id. Only the hash is stored.
+2. A host lists its game under `lanRooms/<network id>`. Everyone on the network sees it.
+3. A guest sends a WebRTC offer through `lanSignal/<host>/<guest>`, the host answers, and the two devices connect directly.
+4. The host's device keeps the room in memory. [`scripts/lan.js`](scripts/lan.js) swaps the database object the online code uses (`FIREBASE.api`) for one backed by that memory, so the online room code runs unchanged: guests' reads, writes and transactions travel over the data channel.
+
+If the host leaves, the match ends for everyone. Networks that isolate devices from each other (common on guest and public Wi-Fi) cannot connect; there is no relay server.
+
 The rules in [`database.rules.json`](database.rules.json) are part of the game, not optional hardening. They decide who can join a room, change its settings or take a turn, and they check room passwords on the server. Rooms also carry a schema version, `ROOM_SCHEMA_VERSION` in the same script, which both the rules and the client check. Change the two together and redeploy the rules.
 
 ## Deploying
@@ -104,12 +121,14 @@ index.html              The app: every screen, dialog and panel
 styles/main.css         The match: board, panels, dialogs
 styles/menu.css         Menu pages: home, rooms, lobby, rules (and shared by the pages below)
 styles/standalone.css   Extra styles for the standalone pages
-scripts/                Game code, loaded in this order by index.html
+scripts/                Game code, loaded in this order by index.html (board3d.min.js loads when a match starts)
   core-online-theme-lobby.js   Firebase config, online rooms and sync, board themes, lobby
   board-render-ai.js           Board rendering, player panels, AI players
   gameplay-actions.js          Rules: moving, rent, cards, building, trading, auctions, bankruptcy
   ui-systems.js                Dialogs, game log, drawers, timer, sound, settings
+  lan.js                       Same Wi-Fi play: WebRTC link and the host's in-memory room
   init.js                      Start-up
+  board3d/main.js              Board scene source, 2D and 3D views (three.js); built into board3d.min.js
 sw.js                   Service worker (network first, cache as offline fallback)
 manifest.json           Web app manifest
 icons/                  App icons
@@ -125,6 +144,15 @@ docs/screenshots/       Images used in this README and the app manifest
 ```
 
 The scripts are classic `<script>` tags that share one global scope, not modules. `G` holds the state of the current match. In online games it's synced through the database, and each client applies what the others send.
+
+## Building the 3D board
+
+The board scene is the only part with a build step, because it bundles three.js. The built file, `scripts/board3d.min.js`, is committed so the site still deploys as plain static files. After editing `scripts/board3d/main.js`, rebuild it:
+
+```bash
+npm install
+npm run build:3d
+```
 
 ## Updating the screenshots
 

@@ -405,7 +405,8 @@ async function main() {
   const browser = await chromium.launch({
     channel: process.env.CHROME_CHANNEL || "chrome",
     headless: true,
-    args: ["--hide-scrollbars", "--autoplay-policy=user-gesture-required"],
+    // SwiftShader gives headless Chrome WebGL for the 3D board shot.
+    args: ["--hide-scrollbars", "--autoplay-policy=user-gesture-required", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"],
   });
 
   try {
@@ -431,6 +432,13 @@ async function main() {
     if (!desk) throw new Error("No seed produced a usable match.");
     const state = await snapshotState(desk);
     await shot(desk, "desktop-game");
+
+    await desk.evaluate(() => setBoard3d(true, false));
+    await desk.waitForFunction(() => document.body.classList.contains("board-3d"), null, { timeout: 30000 });
+    await desk.waitForTimeout(2500);
+    await shot(desk, "desktop-game-3d");
+    await desk.evaluate(() => setBoard3d(false, false));
+    await desk.waitForTimeout(900);
 
     const propId = await showcaseProperty(desk);
     await desk.evaluate((id) => showSpaceInfo(id), propId);

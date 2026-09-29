@@ -79,6 +79,46 @@
           ".validate": "!newData.exists() || (newData.hasChildren(['online','at']) && newData.child('at').isNumber())"
         }
       }
+    },
+    "lanRooms": {
+      "$netId": {
+        ".read": "auth != null && $netId.matches(/^[0-9a-f]{24}$/)",
+        "$hostUid": {
+          ".write": "auth != null && $hostUid === auth.uid",
+          ".validate": "!newData.exists() || (newData.hasChildren(['code','hostName','players','status','updatedAt']) && newData.child('code').isString() && newData.child('code').val().matches(/^[A-Z0-9]{6}$/) && newData.child('hostName').isString() && newData.child('hostName').val().length <= 24 && newData.child('players').isNumber() && newData.child('updatedAt').isNumber() && newData.child('updatedAt').val() <= now + 300000)",
+          "status": {
+            ".validate": "newData.val() === 'lobby' || newData.val() === 'playing'"
+          },
+          "board": {
+            ".validate": "newData.isString() && newData.val().length <= 40"
+          },
+          "$other": {
+            ".validate": "$other === 'code' || $other === 'hostName' || $other === 'players' || $other === 'updatedAt'"
+          }
+        }
+      }
+    },
+    "lanSignal": {
+      "$hostUid": {
+        ".read": "auth != null && auth.uid === $hostUid",
+        ".write": "auth != null && auth.uid === $hostUid && !newData.exists()",
+        "$guestUid": {
+          ".read": "auth != null && (auth.uid === $guestUid || auth.uid === $hostUid)",
+          ".write": "auth != null && (auth.uid === $guestUid || auth.uid === $hostUid)",
+          "offer": {
+            ".validate": "newData.isString() && newData.val().length < 20000"
+          },
+          "answer": {
+            ".validate": "newData.isString() && newData.val().length < 20000"
+          },
+          "at": {
+            ".validate": "newData.isNumber()"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      }
     }
   }
 }

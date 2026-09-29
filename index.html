@@ -83,11 +83,6 @@
     <!-- ═══════════════ HOME SCREEN ═══════════════ -->
     <div class="screen menu-page" id="home-screen">
       <div class="hp-main">
-        <div class="hp-top">
-          <span class="hp-status js-net-status" id="hp-net-status" role="status">
-            <i aria-hidden="true"></i><span>Online</span>
-          </span>
-        </div>
 
         <header class="hp-hero">
           <div class="hp-ornament">Bangladesh edition</div>
@@ -120,11 +115,11 @@
             </span>
             <span class="hp-card-go"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span>
           </button>
-          <button class="hp-card" onclick="openClassicBoard()">
-            <span class="hp-card-icon"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="2.5"/><rect x="8" y="8" width="8" height="8" rx="1.5"/><path d="M3.5 8H8M16 8h4.5M3.5 16H8M16 16h4.5M8 3.5V8M16 3.5V8M8 16v4.5M16 16v4.5"/></svg></span>
+          <button class="hp-card" onclick="openLanPage()">
+            <span class="hp-card-icon"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 9a14 14 0 0 1 19 0"/><path d="M5.5 12.5a9.5 9.5 0 0 1 13 0"/><path d="M8.7 16a5 5 0 0 1 6.6 0"/><path d="M12 19.5h.01"/></svg></span>
             <span class="hp-card-text">
-              <span class="hp-card-title">Classic board</span>
-              <span class="hp-card-sub">Original streets and prices</span>
+              <span class="hp-card-title">Same Wi-Fi</span>
+              <span class="hp-card-sub">Play with people on your network</span>
             </span>
             <span class="hp-card-go"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span>
           </button>
@@ -238,6 +233,44 @@
       </div>
     </div>
 
+    <!-- ═══════════════ SAME WI-FI ═══════════════ -->
+    <div class="screen hidden menu-page" id="lan-screen">
+      <div class="mp-page mp-page-narrow">
+        <header class="mp-header">
+          <button class="mp-back" onclick="lanStopDiscovery();openHomePage()" aria-label="Back"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
+          <div class="mp-heading">
+            <h1 class="mp-title">Same Wi-Fi</h1>
+            <p class="mp-subtitle">Play with people on the same network. Games here show up for everyone connected to it.</p>
+          </div>
+        </header>
+        <div class="mp-stack-lg">
+          <section class="mp-card">
+            <div class="mp-field">
+              <label for="lan-player-name">Your name</label>
+              <input type="text" id="lan-player-name" maxlength="24" placeholder="Enter your name" autocomplete="nickname" />
+            </div>
+            <button class="mp-btn mp-btn-primary mp-btn-block" id="lan-host-btn" style="margin-top: 1rem" onclick="hostLanRoom()">Host a game on this network</button>
+          </section>
+
+          <section class="mp-card">
+            <h2 class="mp-card-title">Games on this network</h2>
+            <div id="lan-rooms"></div>
+            <p class="mp-help" id="lan-status" role="status">Looking for games on this network…</p>
+          </section>
+
+          <section class="mp-card">
+            <h2 class="mp-card-title">How it works</h2>
+            <ul class="mp-list">
+              <li>The game runs on the host&#39;s device and goes straight to the others over your Wi-Fi, not through the internet.</li>
+              <li>Everyone needs to be online for a moment to find each other and connect.</li>
+              <li>If the host leaves or closes the game, the match ends for everyone.</li>
+              <li>Some networks, often guest or public Wi-Fi, stop devices from reaching each other. Use Play online there.</li>
+            </ul>
+          </section>
+        </div>
+      </div>
+    </div>
+
     <!-- ═══════════════ LOBBY ═══════════════ -->
     <div class="screen hidden menu-page" id="lobby-screen">
       <div class="mp-page mp-page-wide mp-has-actionbar">
@@ -327,6 +360,21 @@
         <div class="mp-actionbar">
           <button class="mp-btn mp-btn-primary mp-btn-lg" id="start-btn" onclick="startGame()">Start game</button>
         </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════ BOARDS ═══════════════ -->
+    <div class="screen hidden menu-page" id="boards-screen">
+      <div class="mp-page">
+        <header class="mp-header">
+          <button class="mp-back" onclick="openHomePage()" aria-label="Back"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
+          <div class="mp-heading">
+            <h1 class="mp-title">Boards</h1>
+            <p class="mp-subtitle">Six boards to play, each with its own places, money and cards. Or build your own.</p>
+          </div>
+        </header>
+        <div class="bd-grid" id="boards-grid"></div>
+        <section class="mp-card bd-custom" id="boards-custom"></section>
       </div>
     </div>
 
@@ -772,6 +820,17 @@
         <!-- Board -->
         <div class="board-wrapper">
           <div class="board" id="game-board"></div>
+          <!-- 3D board (scripts/board3d.min.js, loaded on first use). -->
+          <div class="board3d" id="board3d" aria-label="3D board. Drag to turn, scroll or pinch to zoom, click a square for details."></div>
+          <div class="board3d-hud" id="board3d-hud"></div>
+          <button type="button" class="board-view-reset" id="board-view-reset" onclick="window.Board3D && Board3D.resetView()" title="Reset the camera">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>
+            <span>Reset view</span>
+          </button>
+          <button type="button" class="board-view-toggle" id="board-view-toggle" onclick="toggleBoard3d()" aria-pressed="false" title="Switch between the flat and 3D board (V)">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 3 7.5 12 12l9-4.5L12 3z"/><path d="M3 7.5v9L12 21l9-4.5v-9"/><path d="M12 12v9"/></svg>
+            <span id="board-view-label">3D</span>
+          </button>
         </div>
 
         <!-- Right panel (desktop) -->
@@ -1314,6 +1373,7 @@
     <script src="scripts/board-render-ai.js"></script>
     <script src="scripts/gameplay-actions.js"></script>
     <script src="scripts/ui-systems.js"></script>
+    <script src="scripts/lan.js"></script>
     <script src="scripts/init.js"></script>
   </body>
 </html>

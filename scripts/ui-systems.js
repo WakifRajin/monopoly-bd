@@ -583,6 +583,13 @@ function openDrawer(type) {
         </label>
         <input type="range" min="0" max="100" value="${sfxVolumePct}" oninput="document.getElementById('sfx-volume-label').textContent=this.value+'%';setSfxVolume(Number(this.value)/100,false)" onchange="setSfxVolume(Number(this.value)/100,true)" style="width:100%;accent-color:var(--gold-light)">
       </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:.6rem;margin-bottom:1rem;padding:.75rem;border:1px solid rgba(255,255,255,.14);border-radius:10px;background:rgba(255,255,255,.05)">
+        <div>
+          <div style="color:#fff;font-size:var(--fs-sm);font-weight:700">3D view</div>
+          <div style="color:rgba(255,255,255,.52);font-size:var(--fs-xs)">Tilt the table; off shows it from above (V)</div>
+        </div>
+        <button onclick="toggleBoard3d()" style="padding:.42rem .75rem;border:1px solid ${BOARD_VIEW.is3d ? "rgba(240,192,64,.5)" : "rgba(255,255,255,.25)"};background:${BOARD_VIEW.is3d ? "rgba(240,192,64,.18)" : "rgba(255,255,255,.07)"};color:${BOARD_VIEW.is3d ? "var(--gold-light)" : "rgba(255,255,255,.76)"};border-radius:7px;cursor:pointer;font-family:var(--font-body);font-size:var(--fs-xs);font-weight:700">${BOARD_VIEW.is3d ? "On" : "Off"}</button>
+      </div>
       <p style="color:rgba(255,255,255,.6);font-size:var(--fs-sm);margin-bottom:1rem">
         After a player finishes their move, a countdown begins. When it hits zero, the turn automatically advances — even if they haven't clicked End Turn.
       </p>
@@ -1570,6 +1577,7 @@ function showScreen(id) {
   document.getElementById(id).classList.remove("hidden");
   syncBgmForScreen(id);
   if (id === "home-screen") refreshHomeScreen();
+  if (id === "game-screen") ensureBoardScene();
   syncAppNav(id);
   if (id === "game-screen") armExitGuard();
   else disarmExitGuard();
@@ -2196,6 +2204,7 @@ function installKeyboardShortcuts() {
     else if (e.key === "t" || e.key === "T") document.getElementById("btn-trade")?.click();
     else if (e.key === "m" || e.key === "M") document.getElementById("btn-mortgage")?.click();
     else if (e.key === "h" || e.key === "H") document.getElementById("btn-build")?.click();
+    else if (e.key === "v" || e.key === "V") toggleBoard3d();
   });
 }
 
@@ -2331,6 +2340,8 @@ const APP_NAV_FOR_SCREEN = {
   "online-screen": "play",
   "how-to-screen": "rules",
   "settings-screen": "settings",
+  "boards-screen": "boards",
+  "lan-screen": "play",
 };
 
 function syncAppNav(screenId) {
@@ -2368,7 +2379,7 @@ async function appNavigate(dest) {
   }
   if (dest === "home") openHomePage();
   else if (dest === "play") openOfflineSetupPage();
-  else if (dest === "boards") openBoardPicker();
+  else if (dest === "boards") openBoardsPage();
   else if (dest === "rules") showScreen("how-to-screen");
 }
 window.addEventListener("online", updateHomeNetStatus);
@@ -2426,7 +2437,9 @@ function formatRelativeTime(ts) {
 function openRecentActivity(index) {
   const entry = readRecentActivity()[index];
   if (!entry) return;
-  if (entry.kind === "online") {
+  if (entry.kind === "lan") {
+    openLanPage();
+  } else if (entry.kind === "online") {
     openOnlineSetupPage("host");
   } else if (entry.kind === "board") {
     openBoardEditorPage();
@@ -2454,7 +2467,7 @@ function renderRecentActivity() {
   el.innerHTML = list
     .map((entry, i) => {
       const dot =
-        entry.kind === "online" ? " is-online" : entry.kind === "board" ? " is-board" : "";
+        entry.kind === "online" || entry.kind === "lan" ? " is-online" : entry.kind === "board" ? " is-board" : "";
       const when = formatRelativeTime(entry.time);
       const detail = [entry.detail, when].filter(Boolean).join(" · ");
       return `<button class="hp-recent-item" onclick="openRecentActivity(${i})">
@@ -2549,6 +2562,11 @@ function renderSettingsPage() {
           <output id="set-volume-value" for="set-volume">${volume}%</output>
         </div>
       </div>
+    </section>
+
+    <section class="mp-card">
+      <h2 class="mp-card-title">Board</h2>
+      ${settingsRow("3D view", "Tilt the table to look across it. Drag to turn, scroll or pinch to zoom. Off shows the same table from above. Press V during a match to switch.", settingsSwitch("set-board-3d", BOARD_VIEW.is3d, "toggleBoard3d()", "3D view"))}
     </section>
 
     <section class="mp-card">
@@ -2657,9 +2675,272 @@ function resetAllSettings() {
       SFX_PREF_ENABLED_KEY,
       SFX_PREF_VOLUME_KEY,
       SFX_PREF_BGM_ENABLED_KEY,
+      BOARD_VIEW_KEY,
     ].forEach((k) => localStorage.removeItem(k));
   } catch (_err) {}
   // Defaults live in several modules; a reload is the only reliable way to
   // re-read every one of them.
   window.location.reload();
+}
+
+// ═══════════════════════════════════════════════
+//  BOARD VIEW (flat / 3D)
+// ═══════════════════════════════════════════════
+// Both board views come from one WebGL scene (scripts/board3d/main.js,
+// bundled as scripts/board3d.min.js): 2D is the table seen from straight
+// above, 3D is the same table tilted. Switching animates the camera, so the
+// two views are continuous. The scene only draws the game state, so online
+// rooms work whatever view each player uses. The preference is per device.
+//
+// The HTML board (#game-board) is always built and kept up to date. It is
+// what shows until the scene has loaded, and the fallback when WebGL is not
+// available.
+const BOARD_VIEW_KEY = "monopoly_board_3d";
+const BOARD_VIEW = {
+  gl: false, // the WebGL scene is showing (either view)
+  failed: false,
+  is3d: (() => {
+    try {
+      return localStorage.getItem(BOARD_VIEW_KEY) === "1";
+    } catch (_err) {
+      return false;
+    }
+  })(),
+};
+
+let BOARD3D_LOADING = null;
+function loadBoard3d() {
+  if (window.Board3D) return Promise.resolve(window.Board3D);
+  if (!BOARD3D_LOADING) {
+    const url = new URL("scripts/board3d.min.js", document.baseURI).href;
+    BOARD3D_LOADING = import(url)
+      .then(() => window.Board3D)
+      .catch((err) => {
+        BOARD3D_LOADING = null;
+        throw err;
+      });
+  }
+  return BOARD3D_LOADING;
+}
+
+// The Roll / End turn buttons and turn message live in the HTML board's
+// centre; while the scene shows they move into its controls dock. buildBoard()
+// recreates them, so this also runs on a timer.
+function dockCenterControls(intoScene) {
+  const hud = document.getElementById("board3d-hud");
+  const centre = document.querySelector("#game-board .center-area");
+  if (!hud || !centre) return;
+  ["center-actions", "center-msg"].forEach((id) => {
+    if (intoScene) {
+      const inBoard = centre.querySelector(`#${id}`);
+      if (!inBoard) return;
+      const stale = hud.querySelector(`#${id}`);
+      if (stale && stale !== inBoard) stale.remove();
+      hud.appendChild(inBoard);
+    } else {
+      const el = hud.querySelector(`#${id}`);
+      if (!el) return;
+      if (centre.querySelector(`#${id}`)) el.remove();
+      else centre.appendChild(el);
+    }
+  });
+}
+setInterval(() => {
+  if (BOARD_VIEW.gl) dockCenterControls(true);
+}, 250);
+
+function updateBoardViewButton() {
+  document.body.classList.toggle("board-gl", BOARD_VIEW.gl);
+  document.body.classList.toggle("board-3d", BOARD_VIEW.gl && BOARD_VIEW.is3d);
+  const btn = document.getElementById("board-view-toggle");
+  if (!btn) return;
+  btn.setAttribute("aria-pressed", BOARD_VIEW.is3d ? "true" : "false");
+  const label = document.getElementById("board-view-label");
+  if (label) label.textContent = BOARD_VIEW.is3d ? "2D" : "3D";
+  btn.title = BOARD_VIEW.is3d ? "Switch to the flat view (V)" : "Switch to the 3D view (V)";
+}
+
+// Starts the scene the first time the match screen shows. Quietly keeps the
+// HTML board if WebGL is missing or the file cannot load.
+async function ensureBoardScene() {
+  if (BOARD_VIEW.gl || BOARD_VIEW.failed) return BOARD_VIEW.gl;
+  let api = null;
+  try {
+    api = await loadBoard3d();
+  } catch (err) {
+    console.error(err);
+    return false;
+  }
+  if (!api || !api.supported) {
+    BOARD_VIEW.failed = true;
+    return false;
+  }
+  if (!(await api.enable(BOARD_VIEW.is3d ? "3d" : "2d"))) return false;
+  BOARD_VIEW.gl = true;
+  dockCenterControls(true);
+  updateBoardViewButton();
+  // The dock changes size once the buttons are in it; frame again.
+  requestAnimationFrame(() => api.setMode(BOARD_VIEW.is3d ? "3d" : "2d", false));
+  return true;
+}
+
+function setBoard3d(on, notify = true) {
+  BOARD_VIEW.is3d = !!on;
+  try {
+    localStorage.setItem(BOARD_VIEW_KEY, BOARD_VIEW.is3d ? "1" : "0");
+  } catch (_err) {}
+  if (BOARD_VIEW.gl && window.Board3D) {
+    window.Board3D.setMode(BOARD_VIEW.is3d ? "3d" : "2d", true);
+  } else if (BOARD_VIEW.is3d && BOARD_VIEW.failed) {
+    BOARD_VIEW.is3d = false;
+    toast("The 3D view needs WebGL, which this browser does not provide.", "danger");
+  } else if (BOARD_VIEW.is3d) {
+    const inMatch = !document.getElementById("game-screen")?.classList.contains("hidden");
+    if (inMatch) {
+      ensureBoardScene().then((ok) => {
+        if (!ok && BOARD_VIEW.is3d) {
+          BOARD_VIEW.is3d = false;
+          updateBoardViewButton();
+          toast("Could not load the 3D view. Check your connection and try again.", "danger");
+        }
+      });
+    }
+  }
+  updateBoardViewButton();
+  if (notify) toast(BOARD_VIEW.is3d ? "3D view" : "Flat view", "gold");
+  refreshSettingsViews();
+}
+
+function toggleBoard3d() {
+  setBoard3d(!BOARD_VIEW.is3d);
+}
+
+updateBoardViewButton();
+
+// ═══════════════════════════════════════════════
+//  BOARDS PAGE
+// ═══════════════════════════════════════════════
+// A short note on each built-in board. Written for players, so no numbers
+// that the facts row already shows.
+const BOARD_STORIES = {
+  dhaka:
+    "A lap of the capital, from Mirpur Road at the cheap end to Karwan Bazar at the top. Kamalapur, the airport, Sadarghat and Sayedabad are the stations, and the power and water bills come from Desco and WASA.",
+  bangladesh:
+    "Cities across the country instead of streets: start in Narsingdi and work up to Dhaka. The railway stations are Kamalapur, Chittagong, Sylhet and Rajshahi.",
+  world:
+    "A round-the-world trip from Cairo to New York. Airports in London, New York, Dubai and Tokyo stand in for the railroads.",
+  classic:
+    "The original streets, from Mediterranean Avenue to Boardwalk, with the original money: a smaller economy where every purchase counts.",
+  cities:
+    "A Bengali-language board that travels from Sylhet through Mymensingh and Chittagong to Dhaka, from লামা বাজার up to গুলশান. It plays at classic scale and has its own Bengali Chance and Community Chest cards.",
+  ancient:
+    "Cities of the old world, from Memphis to Chang'an. Trade routes such as the Silk Road and the Spice Route replace the stations.",
+};
+
+// Windows has no flag emoji and shows "BD" instead, so draw the flag.
+const BD_FLAG_SVG =
+  '<svg viewBox="0 0 20 12" width="28" height="17" aria-hidden="true"><rect width="20" height="12" rx="1.5" fill="#006a4e"/><circle cx="9" cy="6" r="3.6" fill="#f42a41"/></svg>';
+
+function openBoardsPage() {
+  renderBoardsPage();
+  showScreen("boards-screen");
+}
+
+function boardMoney(theme, n) {
+  const value = Number(n) || 0;
+  return `${theme.currency || ""}${value.toLocaleString(theme.locale || "en-US")}`;
+}
+
+function renderBoardsPage() {
+  const grid = document.getElementById("boards-grid");
+  if (!grid) return;
+  const themes = Object.values(BOARD_THEMES).filter((t) => t && t.id !== CUSTOM_BOARD_THEME_ID);
+  grid.innerHTML = themes
+    .map((t) => {
+      const props = Array.isArray(t.spaces) ? t.spaces : [];
+      const groups = [];
+      props.forEach((sp) => {
+        if (sp && sp.color && !groups.includes(sp.color)) groups.push(sp.color);
+      });
+      const cheapest = props[0];
+      const top = props[props.length - 1];
+      const selected = t.id === selectedThemeId;
+      const start = t.startMoneyDefault || getThemeStartMoneyDefault(t.id);
+      return `<article class="bd-card${selected ? " is-selected" : ""}">
+          <div class="bd-strip" aria-hidden="true">${groups.map((c) => `<i style="background:${COLOR[c] || "#666"}"></i>`).join("")}</div>
+          <div class="bd-body">
+            <div class="bd-head">
+              <span class="bd-flag" aria-hidden="true">${t.id === "bangladesh" ? BD_FLAG_SVG : escHtml(t.flag || "")}</span>
+              <div class="bd-titles">
+                <h2 class="bd-name">${escHtml(t.name)}</h2>
+                <p class="bd-desc">${escHtml(t.desc || "")}</p>
+              </div>
+              ${selected ? '<span class="mp-badge is-host">Selected</span>' : ""}
+            </div>
+            <p class="bd-story">${escHtml(BOARD_STORIES[t.id] || "")}</p>
+            <dl class="bd-facts">
+              <div><dt>Starting money</dt><dd>${boardMoney(t, start)}</dd></div>
+              <div><dt>Passing GO</dt><dd>${boardMoney(t, t.goSalary)}</dd></div>
+              <div><dt>Properties</dt><dd>${props.length}, in ${groups.length} colour groups</dd></div>
+              ${cheapest && top ? `<div><dt>Prices</dt><dd>${escHtml(cheapest.name)} ${boardMoney(t, cheapest.price)} to ${escHtml(top.name)} ${boardMoney(t, top.price)}</dd></div>` : ""}
+            </dl>
+            <button class="mp-btn mp-btn-primary bd-play" onclick="playBoardFromPage('${t.id}')">Play this board</button>
+          </div>
+        </article>`;
+    })
+    .join("");
+
+  const custom = document.getElementById("boards-custom");
+  if (!custom) return;
+  let saved = "";
+  try {
+    saved = getStoredCustomBoardSeed() || "";
+  } catch (_err) {}
+  custom.innerHTML = `
+    <h2 class="mp-card-title">Make your own board</h2>
+    <p class="bd-story">The board editor lets you rename every space, recolour the groups, change prices and rents, and scale the whole economy up or down. It turns your board into a short seed code you can play here or send to friends; in an online room, the host's board applies to everyone.</p>
+    <div class="mp-row">
+      <button class="mp-btn mp-btn-primary" onclick="openBoardEditorPage()">Open the board editor</button>
+      ${saved ? `<button class="mp-btn mp-btn-secondary" onclick="playSavedCustomBoard()">Play your saved board</button>` : ""}
+      <button class="mp-btn mp-btn-ghost" onclick="openCustomSeedInLobby()">Paste a seed code</button>
+    </div>`;
+}
+
+function playBoardFromPage(themeId) {
+  if (!BOARD_THEMES[themeId]) return;
+  applyThemeById(themeId);
+  refreshStartingMoneyUi(themeId, true);
+  renderBoardThemeSelector();
+  saveLobbyPrefs();
+  openOfflineSetupPage();
+}
+
+function playSavedCustomBoard() {
+  openOfflineSetupPage();
+  loadSavedCustomBoardSeed();
+}
+
+// Opens the lobby with the custom-seed section expanded and focused.
+function openCustomSeedInLobby() {
+  openOfflineSetupPage();
+  requestAnimationFrame(() => {
+    const box = document.getElementById("custom-board-card");
+    if (box) {
+      box.open = true;
+      box.scrollIntoView({ behavior: "smooth", block: "center" });
+      document.getElementById("custom-board-seed")?.focus({ preventScroll: true });
+    }
+  });
+}
+
+// Sticky page headers compact once their page scrolls (styles/menu.css,
+// .mp-header.is-stuck). One listener per menu screen.
+function installStickyHeaders() {
+  document.querySelectorAll(".screen.menu-page").forEach((screen) => {
+    const header = screen.querySelector(".mp-header");
+    if (!header) return;
+    const update = () => header.classList.toggle("is-stuck", screen.scrollTop > 8);
+    screen.addEventListener("scroll", update, { passive: true });
+    update();
+  });
 }

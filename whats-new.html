@@ -381,6 +381,17 @@ body::before{
         <li>A long player name in the top bar no longer pushes the Settings button off the screen on phones.</li>
         <li>The portfolio tabs are now &quot;Properties&quot; and &quot;History&quot;, without emoji.</li>
         <li>A new home screen with artwork of Dhaka at sunset. A side menu on desktop and a tab bar on phones reach Play, Boards, Rules and Settings from anywhere on the page.</li>
+        <li>New board, drawn in real 3D with WebGL. The dice tumble across the table and land on the numbers rolled, tokens are chips that hop square by square, and houses and hotels are models with gabled roofs, all lit and casting shadows.</li>
+        <li>The flat view is now the same table seen from straight above, so both views look the same. Switching between them swings the camera over the board instead of cutting between two different boards. Use the 3D button on the board, the V key, or Settings.</li>
+        <li>The dice roll first, quickly, and the token only moves once they have landed, on every screen including online opponents' turns.</li>
+        <li>In the 3D view, drag to turn the table, scroll or pinch to zoom, and use Reset view to go back. Clicking or tapping a square opens its details in both views.</li>
+        <li>Browsers without WebGL keep the previous HTML board.</li>
+        <li>Fixed the board name under MONOPOLY on the ধনী হবার মজার খেলা board, where Bengali vowel signs were drawn apart from their letters.</li>
+        <li>New: Same Wi-Fi play, like PairDrop. Games hosted on your network show up automatically for everyone connected to it, and the match runs directly between your devices instead of through the internet. The internet is only used for a moment to find each other. It is on the home screen, in place of the Classic board shortcut (all boards, Classic included, are on the Boards page).</li>
+        <li>In a Same Wi-Fi match everything works as in online rooms: ready checks, chat, and the AI taking over a player who drops out. If the host leaves, the match ends for everyone.</li>
+        <li>Boards in the menu opens a new page with every board: a short description of each, its starting money, GO salary and price range, and a button to play it. It also links to the board editor, your saved custom board and pasting a seed code.</li>
+        <li>Removed the connection indicator from the home screen.</li>
+        <li>The back button and page title stay at the top while you scroll a page, in a compact bar. Fixed the tail of the &quot;g&quot; in the home screen title being cut off.</li>
         <li>Menu pages (settings, rooms, lobby, rules) sit centred on wide screens instead of hugging the left edge.</li>
         <li>Settings on the home screen opens its own page: sound, animation speed and the default turn timer for new games, your online name, clearing recent activity, resetting settings, and version, keyboard shortcuts and links. The settings panel inside a match is unchanged.</li>
         <li>Recent activity on the home screen no longer runs off the bottom of laptop screens; the home page fits on one screen at common desktop sizes.</li>
@@ -530,5 +541,15 @@ body::before{
 
     <p class="footer-note">This page is updated with each release to track balancing and bug fixes.</p>
   </main>
+<script>
+  // Sticky header: compact once the page scrolls (styles/menu.css).
+  (function () {
+    var h = document.querySelector(".mp-header");
+    if (!h) return;
+    var update = function () { h.classList.toggle("is-stuck", window.scrollY > 8); };
+    window.addEventListener("scroll", update, { passive: true });
+    update();
+  })();
+</script>
 </body>
 </html>

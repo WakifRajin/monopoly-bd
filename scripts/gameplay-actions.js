@@ -33,6 +33,17 @@ async function rollDice() {
     `${p.name} rolled ${d1 + d2} (${d1} + ${d2}${doubles ? ", doubles" : ""}).`,
   );
 
+  // Let the dice finish rolling before anything moves. MOVE_FX blocks a
+  // second roll (and every other action) while they are in the air.
+  MOVE_FX.active = true;
+  updateActionButtons();
+  try {
+    await waitMs(diceRollDurationMs());
+  } finally {
+    MOVE_FX.active = false;
+  }
+  if (!getLivePlayer(p.id) || G.gameOver) return;
+
   if (p.inJail) {
     await handleJailRoll(p.id, d1, d2, doubles);
     return;
@@ -53,6 +64,12 @@ async function rollDice() {
   }
 
   await movePlayer(p.id, d1 + d2, doubles);
+}
+
+// How long the dice animation lasts: the 3D table's throw, or the flat dice.
+function diceRollDurationMs() {
+  const board3d = typeof BOARD_VIEW !== "undefined" && BOARD_VIEW.gl;
+  return board3d ? 700 : 420;
 }
 
 async function handleJailRoll(player, d1, d2, doubles) {

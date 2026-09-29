@@ -42,9 +42,9 @@ body::before {
   z-index: 1;
   padding: var(--mp-pad) var(--mp-pad) 3rem;
 }
+/* Above the page content while sticky (see .mp-header in menu.css). */
 .mp-header {
-  position: relative;
-  z-index: 1;
+  z-index: 20;
 }
 
 /* ── Section labels: sentence case, like every other heading ── */

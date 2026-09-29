@@ -5418,5 +5418,15 @@ body::before{
   });
 })();
 </script>
+<script>
+  // Sticky header: compact once the page scrolls (styles/menu.css).
+  (function () {
+    var h = document.querySelector(".mp-header");
+    if (!h) return;
+    var update = function () { h.classList.toggle("is-stuck", window.scrollY > 8); };
+    window.addEventListener("scroll", update, { passive: true });
+    update();
+  })();
+</script>
 </body>
 </html>

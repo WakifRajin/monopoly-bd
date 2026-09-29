@@ -11,9 +11,12 @@
   "homepage": "https://wakifrajin.github.io/monopoly-bd/",
   "scripts": {
     "start": "npx --yes serve -l 8080 .",
-    "screenshots": "node tools/capture-screenshots.cjs"
+    "screenshots": "node tools/capture-screenshots.cjs",
+    "build:3d": "esbuild scripts/board3d/main.js --bundle --minify --format=esm --target=es2020 --legal-comments=eof --outfile=scripts/board3d.min.js"
   },
   "devDependencies": {
-    "playwright-core": "^1.63.0"
+    "esbuild": "^0.28.2",
+    "playwright-core": "^1.63.0",
+    "three": "^0.186.1"
   }
 }

@@ -2802,3 +2802,162 @@ body[data-theme="classic"] .space .sp-rent {
   width: calc(var(--pip) * 2.4);
   background: #dc2626;
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   BOARD SCENE (body.board-gl: the WebGL scene is showing; body.board-3d: in
+   its tilted view). The scene (scripts/board3d/main.js) draws both views.
+   The HTML board stays in the page but hidden, so every script that updates
+   it keeps working; the centre controls move into the scene's dock, which
+   the scene positions itself (over the board centre in 2D, under the board
+   in 3D).
+   ══════════════════════════════════════════════════════════════════════════ */
+.board3d,
+.board3d-hud,
+.board-view-reset {
+  display: none;
+}
+body.board-gl .board {
+  visibility: hidden;
+}
+body.board-gl .board3d {
+  display: block;
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(70% 60% at 50% 55%, rgba(240, 192, 64, 0.1), transparent 70%),
+    radial-gradient(120% 90% at 50% 100%, #0d2a19 0%, #06140c 70%);
+}
+.board3d-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
+body.board-3d .board3d-canvas {
+  cursor: grab;
+}
+body.board-3d .board3d-canvas:active {
+  cursor: grabbing;
+}
+body.board-gl .board3d-hud {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  transform: translate(-50%, -50%) scale(var(--hud-scale, 1));
+  max-width: calc(100% - 1.5rem);
+  pointer-events: none;
+}
+body.board-gl .board3d-hud > * {
+  pointer-events: auto;
+}
+body.board-gl .board3d-hud #center-actions {
+  margin: 0;
+  padding: 0.4rem;
+  border-radius: 999px;
+  background: rgba(5, 16, 10, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.4);
+}
+/* The centre buttons are styled for the light felt; on the dark dock the
+   outline (not-current) button needs light text. */
+body.board-gl .board3d-hud #center-actions .center-btn:not(.is-primary) {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.22);
+  color: rgba(255, 255, 255, 0.72);
+}
+body.board-gl .board3d-hud #center-msg {
+  margin: 0 !important;
+  padding: 0.2rem 0.7rem;
+  border-radius: 999px;
+  background: rgba(5, 16, 10, 0.72);
+  color: rgba(255, 255, 255, 0.88) !important;
+  font-size: 0.78rem !important;
+  text-align: center;
+  white-space: nowrap;
+}
+body.board-gl .board3d-hud #center-msg:empty {
+  display: none;
+}
+body.board-3d .board-view-reset {
+  position: absolute;
+  top: 0.6rem;
+  right: 5.1rem;
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  height: 2.1rem;
+  padding: 0 0.7rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(5, 16, 10, 0.72);
+  color: rgba(255, 255, 255, 0.88);
+  font: 600 0.8rem var(--font-body);
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+}
+body.board-3d .board-view-reset:hover {
+  border-color: rgba(240, 192, 64, 0.6);
+  color: #fff;
+}
+@media (max-width: 899px) {
+  body.board-3d .board-view-reset {
+    top: 0.35rem;
+    right: 4.3rem;
+    height: 1.9rem;
+    padding: 0 0.55rem;
+  }
+  body.board-3d .board-view-reset span {
+    display: none;
+  }
+  body.board-gl .board3d-hud #center-msg {
+    white-space: normal;
+  }
+}
+
+/* ── View toggle, in the board's top-right corner ── */
+.board-view-toggle {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  height: 2.1rem;
+  padding: 0 0.7rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(5, 16, 10, 0.72);
+  color: rgba(255, 255, 255, 0.88);
+  font: 600 0.8rem var(--font-body);
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.board-view-toggle:hover {
+  border-color: rgba(240, 192, 64, 0.6);
+  color: #fff;
+}
+.board-view-toggle[aria-pressed="true"] {
+  border-color: rgba(240, 192, 64, 0.7);
+  color: var(--gold-light);
+}
+.board-view-toggle:focus-visible {
+  outline: 2px solid var(--gold-light);
+  outline-offset: 2px;
+}
+@media (max-width: 899px) {
+  .board-view-toggle {
+    top: 0.35rem;
+    right: 0.35rem;
+    height: 1.9rem;
+    padding: 0 0.55rem;
+  }
+}

@@ -16,6 +16,7 @@ installOnlineMutationHooks();
 installLobbyEvents();
 installKeyboardShortcuts();
 installModalCloseButtons();
+installStickyHeaders();
 registerServiceWorker();
 initializeCustomBoardFromStorage();
 loadLobbyPrefs();

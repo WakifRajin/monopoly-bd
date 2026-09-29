@@ -661,7 +661,10 @@ async function bootstrapFirebase() {
     // expire another player's turn or delete a live room.
     dbMod.onValue(dbMod.ref(FIREBASE.db, ".info/serverTimeOffset"), (snap) => {
       const offset = Number(snap.val());
-      if (Number.isFinite(offset)) ONLINE.serverTimeOffset = offset;
+      if (!Number.isFinite(offset)) return;
+      // During a same-Wi-Fi match the host's clock is the server clock.
+      if (typeof LAN !== "undefined" && LAN.real) LAN.real.serverTimeOffset = offset;
+      else ONLINE.serverTimeOffset = offset;
     });
     ONLINE.ready = true;
     updateOnlineStatus("Online service ready. You can create or join a room.");
@@ -5249,6 +5252,7 @@ async function leaveOnlineRoom(
     ONLINE.snapshotApplyInFlight = false;
     ONLINE.queuedSnapshot = null;
     updateOnlineLobbyUI();
+    if (typeof lanAfterLeave === "function" && lanAfterLeave()) return;
     showScreen("online-screen");
     return;
   }
@@ -5291,7 +5295,7 @@ async function leaveOnlineRoom(
   LOBBY_CONTEXT = "online";
   updateOnlineLobbyUI();
   renderLobby();
-  showScreen("online-screen");
+  if (!(typeof lanAfterLeave === "function" && lanAfterLeave())) showScreen("online-screen");
   if (showToast)
     toast(wasPlaying ? "You left the match." : "Left online room.", "gold");
 }
@@ -5306,7 +5310,9 @@ function renderLobby() {
   const taglineEl = document.getElementById("lobby-context-tagline");
   if (taglineEl)
     taglineEl.textContent = showOnlinePanel
-      ? "Online room"
+      ? typeof LAN !== "undefined" && LAN.active
+        ? "Same Wi-Fi room"
+        : "Online room"
       : "Local multiplayer";
 
   lobbyPlayers.forEach((p, i) => {
@@ -5568,9 +5574,10 @@ async function startGame() {
     "important",
   );
   const aiSeats = G.players.filter((p) => isAiPlayer(p)).length;
+  const onLan = typeof LAN !== "undefined" && LAN.active;
   recordRecentActivity({
-    kind: isOnlineGame() ? "online" : "local",
-    title: isOnlineGame() ? "Online match" : "Local game",
+    kind: onLan ? "lan" : isOnlineGame() ? "online" : "local",
+    title: onLan ? "Same Wi-Fi match" : isOnlineGame() ? "Online match" : "Local game",
     detail:
       `${G.players.length} players` +
       (aiSeats && !isOnlineGame() ? `, ${aiSeats} AI` : "") +
