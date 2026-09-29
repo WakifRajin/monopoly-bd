@@ -324,13 +324,14 @@ function renderPlayerCards() {
           <span class="mobile-player-token" style="color:${sanitizeColor(p.color)}">${escHtml(p.token)}</span>
           <span class="mobile-player-name" title="${escHtml(p.name)}">${escHtml(p.name)}</span>${playerTagsHtml(p)}
         </div>
-        <div class="mobile-player-meta">${fmtCurrency(p.money)} • net ${fmtCurrency(playerNetWorth(p))}</div>
+        <div class="mobile-player-meta"><span class="mobile-player-cash">${fmtCurrency(p.money)}</span> • net ${fmtCurrency(playerNetWorth(p))}</div>
       `;
       chip.title = `Tap to view ${p.name}'s portfolio and money log`;
       chip.onclick = () => showPlayerPortfolio(i);
       mobileEl.appendChild(chip);
     }
   });
+  if (typeof trackMoneyFx === "function") trackMoneyFx();
 }
 
 function waitMs(ms) {
@@ -607,6 +608,7 @@ function updateTopBar() {
   document.getElementById("tb-name").textContent =
     `${p.name}${isAiPlayer(p) ? " (AI)" : ""}`;
   document.getElementById("tb-money").textContent = fmtCurrency(p.money);
+  if (typeof applyMoneyTweens === "function") applyMoneyTweens();
   const jailTag = document.getElementById("tb-jail-tag");
   jailTag.style.display = p.inJail ? "" : "none";
   const leaveBtn = document.getElementById("leave-game-btn");
@@ -1713,9 +1715,11 @@ function maybeScheduleOfflineAiTurn() {
 
   clearOfflineAiTimer(false);
   AI_CTRL.lastKey = stateKey;
+  // Slow enough to follow what the AI is doing; the movement-speed setting
+  // speeds it up along with everything else.
   AI_CTRL.timerId = setTimeout(
     runOfflineAiStep,
-    380 + Math.floor(Math.random() * 280),
+    (650 + Math.floor(Math.random() * 300)) / (MOVE_SPEED.factor || 1),
   );
 }
 
@@ -1846,7 +1850,8 @@ function runOfflineAiStep() {
     if (isAiPlayer(bidder) && !bidder.bankrupt) {
       const a = G.auctionState;
       const reserve = aiCashReserve(bidder);
-      const nextBid = (Number(a.currentBid) || 0) + 100;
+      const steps = auctionBidSteps(SPACES[a.propId]?.price);
+      const nextBid = (Number(a.currentBid) || 0) + steps[0];
       if (
         bidder.money < nextBid &&
         aiTryMortgageToTarget(bidder, nextBid + Math.floor(reserve * 0.4))
@@ -1883,10 +1888,8 @@ function runOfflineAiStep() {
       }
 
       const room = maxBid - (Number(a.currentBid) || 0);
-      let increment = 100;
-      if (room >= 1000) increment = 1000;
-      else if (room >= 500) increment = 500;
-      else if (room >= 200) increment = 200;
+      let increment = steps[0];
+      for (const step of steps) if (room >= step) increment = step;
       placeBid(increment);
       return;
     }
@@ -1935,11 +1938,11 @@ function runOfflineAiStep() {
       startAuction();
     } else {
       G.pendingBuy = null;
-      G.phase = "end";
       addLog(
         `${p.name} passed on ${sp?.name || "this property"}. Auctions are off, so it stays unsold.`,
         "important",
       );
+      settleTurnPhase(p);
       renderAll();
       updateActionButtons();
       syncAiDirectMutation("ai-buy-skip-auction-off");
@@ -1949,8 +1952,12 @@ function runOfflineAiStep() {
 
   if (G.phase === "roll") {
     const bailAmount = getThemeJailBail(G.boardThemeId || selectedThemeId);
+    // Only try to leave early when it can actually pay (or has a card);
+    // a failed payment would leave the AI with nothing to do.
+    const canLeave = p.jailFreeCards > 0 || p.money >= bailAmount;
     if (
       p.inJail &&
+      canLeave &&
       (p.jailTurns >= 2 || (p.money >= bailAmount * 6 && Math.random() < 0.55))
     ) {
       payBailout();

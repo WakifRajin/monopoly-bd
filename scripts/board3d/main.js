@@ -28,6 +28,7 @@ import {
   Color,
   CylinderGeometry,
   DirectionalLight,
+  ExtrudeGeometry,
   Group,
   HemisphereLight,
   MathUtils,
@@ -42,6 +43,7 @@ import {
   RingGeometry,
   SRGBColorSpace,
   Scene,
+  Shape,
   TorusGeometry,
   Vector2,
   Vector3,
@@ -413,12 +415,19 @@ function building(width, height, depth, roofHeight, bodyMat, roofMat) {
   const g = new Group();
   const body = new Mesh(new BoxGeometry(width, height, depth), bodyMat);
   body.position.y = TOP + height / 2;
-  const r = depth / Math.sqrt(3);
-  const roof = new Mesh(new CylinderGeometry(r, r, width, 3, 1), roofMat);
-  roof.rotation.z = Math.PI / 2;
-  roof.rotation.x = Math.PI / 2;
-  roof.scale.set(1, 1, roofHeight / (1.5 * r));
-  roof.position.y = TOP + height + roofHeight / 3;
+  // Triangular prism, apex up, ridge running along the width. The eaves
+  // overhang the walls slightly.
+  const eave = depth * 0.56;
+  const tri = new Shape();
+  tri.moveTo(-eave, 0);
+  tri.lineTo(eave, 0);
+  tri.lineTo(0, roofHeight);
+  tri.closePath();
+  const roofGeo = new ExtrudeGeometry(tri, { depth: width * 1.04, bevelEnabled: false });
+  roofGeo.translate(0, 0, (-width * 1.04) / 2);
+  roofGeo.rotateY(Math.PI / 2);
+  const roof = new Mesh(roofGeo, roofMat);
+  roof.position.y = TOP + height;
   for (const m of [body, roof]) {
     m.castShadow = true;
     m.receiveShadow = true;

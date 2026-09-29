@@ -3611,6 +3611,11 @@ const AI_RUNNER_RENEW_MS = 1200;
 const AI_TRADE_SAME_OFFER_LIMIT = 2;
 const AI_TRADE_DECLINE_STREAK_COOLDOWN = 2;
 const AI_TRADE_PROPOSAL_COOLDOWN_MOVES = 2;
+// A player index that may be absent. Number(null) is 0, which would turn a
+// debt to the bank into a debt to player 1.
+function optionalPlayerIndex(value) {
+  return value === null || value === undefined || value === "" ? NaN : Number(value);
+}
 const DEBT_PROMPT = {
   active: false,
   payerId: null,
@@ -3692,6 +3697,9 @@ function initGameState(players, startMoney, options = {}) {
     communityIdx: 0,
     chanceDeck: shuffledChance,
     communityDeck: shuffledComm,
+    jailCardHolder: {},
+    stats: players.map(() => ({ rentPaid: 0, rentEarned: 0, bought: 0, passedGo: 0, jailed: 0, biggestRent: 0 })),
+    turnCount: 0,
     gameStartedAt,
     log: [],
     chat: [],
@@ -3999,6 +4007,16 @@ function hydrateRemoteGameState(raw) {
   next.chat = Array.isArray(G?.chat) ? G.chat : [];
   next.chanceDeck = indexedObjectToArray(next.chanceDeck);
   next.communityDeck = indexedObjectToArray(next.communityDeck);
+  // Firebase drops empty objects and nulls, so a missing holder means the
+  // card is in its deck.
+  next.stats = normalizeStats(next.stats, players.length);
+  next.turnCount = Math.max(0, Number(next.turnCount) || 0);
+  const holders = next.jailCardHolder && typeof next.jailCardHolder === "object" ? next.jailCardHolder : {};
+  next.jailCardHolder = {};
+  for (const t of ["chance", "community"]) {
+    const id = Number(holders[t]);
+    if (Number.isInteger(id) && id >= 0 && id < players.length) next.jailCardHolder[t] = id;
+  }
   next.bankAuctionQueue = indexedObjectToArray(next.bankAuctionQueue).filter(
     Number.isInteger,
   );
@@ -4026,7 +4044,7 @@ function hydrateRemoteGameState(raw) {
         !amount
       )
         return null;
-      const recipientRaw = Number(entry.recipientId);
+      const recipientRaw = optionalPlayerIndex(entry.recipientId);
       const recipientId =
         Number.isInteger(recipientRaw) &&
         recipientRaw >= 0 &&
@@ -4046,7 +4064,7 @@ function hydrateRemoteGameState(raw) {
       Number.isInteger(payerId) &&
       payerId >= 0 &&
       payerId < next.players.length;
-    const recipientIdRaw = Number(debtPromptRaw.recipientId);
+    const recipientIdRaw = optionalPlayerIndex(debtPromptRaw.recipientId);
     const recipientId =
       Number.isInteger(recipientIdRaw) &&
       recipientIdRaw >= 0 &&

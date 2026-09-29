@@ -2989,3 +2989,374 @@ body.board-3d .board-view-reset:hover {
   line-height: 1;
   text-align: center;
 }
+
+/* ═══════════════ Game feel (scripts/game-feel.js) ═══════════════ */
+
+/* The board dock already says whose turn it is and what to do. */
+.mobile-turnline {
+  display: none;
+}
+.mobile-actions-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.mobile-actions-grid .act-jail,
+.action-grid .act-jail {
+  grid-column: 1 / -1;
+}
+
+/* Balances count up or down and flash while they change. */
+.pmoney,
+.mobile-player-cash,
+#tb-money {
+  transition: color 0.25s;
+  font-variant-numeric: tabular-nums;
+}
+.money-up {
+  color: #6ee7a0 !important;
+}
+.money-down {
+  color: #fca5a5 !important;
+}
+.money-chip {
+  position: fixed;
+  z-index: 3000;
+  transform: translate(-50%, -100%);
+  padding: 0.18rem 0.5rem;
+  border-radius: 999px;
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  animation: money-chip-rise 1.35s ease-out forwards;
+}
+.money-chip.is-gain {
+  background: #1f9d55;
+  color: #fff;
+}
+.money-chip.is-loss {
+  background: #c0392b;
+  color: #fff;
+}
+@keyframes money-chip-rise {
+  0% { opacity: 0; transform: translate(-50%, -60%) scale(0.8); }
+  15% { opacity: 1; transform: translate(-50%, -110%) scale(1); }
+  75% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -210%) scale(1); }
+}
+.money-coin {
+  position: fixed;
+  z-index: 2999;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 800;
+  color: #6b4a00;
+  background: radial-gradient(circle at 35% 30%, #ffe89a, #f0c040 55%, #b8860b);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+}
+
+/* Title deed: buy dialog and property details. */
+.deed {
+  width: min(300px, 100%);
+  margin: 0 auto 1rem;
+  background: #fbf8ef;
+  color: #1b1b1b;
+  border-radius: 10px;
+  padding: 6px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+  font-family: var(--font-body);
+}
+.deed-band {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  padding: 0.55rem 0.6rem 0.6rem;
+  border: 2px solid #1b1b1b;
+  border-radius: 6px 6px 0 0;
+  text-align: center;
+}
+.deed-band.is-dark {
+  background: #2b2b2b;
+  color: #fff;
+}
+.deed-kicker {
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+.deed-name {
+  font-family: var(--font-heading);
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.deed-body {
+  border: 2px solid #1b1b1b;
+  border-top: 0;
+  border-radius: 0 0 6px 6px;
+  padding: 0.5rem 0.75rem 0.6rem;
+}
+.deed-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.14rem 0;
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+}
+.deed-row.is-strong {
+  font-weight: 800;
+  font-size: var(--fs-md);
+}
+.deed-foot {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin-top: 0.45rem;
+  padding-top: 0.45rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.18);
+  font-size: var(--fs-xs);
+  color: #444;
+  text-align: center;
+}
+.deed-status {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: var(--fs-sm);
+}
+#buy-overlay .modal,
+#buy-overlay .modal-actions {
+  text-align: center;
+  justify-content: center;
+}
+
+/* Rent: who pays whom. */
+.rent-modal {
+  text-align: center;
+}
+.rent-flow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.25rem 0 1rem;
+}
+.rent-party {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  min-width: 0;
+}
+.rent-token {
+  font-size: 2rem;
+  line-height: 1;
+}
+.rent-name {
+  color: #fff;
+  font-weight: 700;
+  font-size: var(--fs-sm);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rent-arrow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: rgba(255, 255, 255, 0.55);
+}
+.rent-amount {
+  font-family: var(--font-heading);
+  font-size: var(--fs-xl);
+  font-weight: 700;
+  color: #fca5a5;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Chance / Community Chest: the card flips over. */
+.card-modal {
+  text-align: center;
+  max-width: 380px;
+  padding-top: 2.4rem;
+}
+.deck-card {
+  --deck: #e8702a;
+  perspective: 900px;
+  margin: 0 auto 1rem;
+  width: min(300px, 100%);
+}
+.deck-card[data-deck="community"] {
+  --deck: #2f6fd6;
+}
+.deck-card-inner {
+  position: relative;
+  display: grid;
+  transform-style: preserve-3d;
+  transition: transform 0.6s cubic-bezier(0.3, 0.7, 0.3, 1);
+}
+.deck-card.is-revealed .deck-card-inner {
+  transform: rotateY(180deg);
+}
+.deck-card-face {
+  grid-area: 1 / 1;
+  min-height: 200px;
+  border-radius: 14px;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem 1.1rem;
+}
+.deck-card-back {
+  background:
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.08) 0 8px, transparent 8px 16px),
+    var(--deck);
+  border: 4px solid #fff;
+  color: #fff;
+  gap: 0.3rem;
+}
+.deck-card-mark {
+  font-family: var(--font-heading);
+  font-size: 3.2rem;
+  font-weight: 700;
+  line-height: 1;
+}
+.deck-card-brand {
+  font-family: var(--font-heading);
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.deck-card-front {
+  transform: rotateY(180deg);
+  background: #fbf8ef;
+  border: 4px solid var(--deck);
+  color: #1b1b1b;
+  gap: 0.6rem;
+}
+.deck-card-kicker {
+  font-size: var(--fs-xs);
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--deck);
+}
+.modal p.deck-card-text {
+  margin: 0;
+  color: #1b1b1b;
+  font-size: var(--fs-md);
+  font-weight: 600;
+  line-height: 1.45;
+}
+.deck-card-effect {
+  padding: 0.25rem 0.7rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.07);
+  font-size: var(--fs-sm);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.deck-card-effect[hidden] {
+  display: none;
+}
+.deck-card-effect.is-gain {
+  background: #dcfce7;
+  color: #166534;
+}
+.deck-card-effect.is-loss {
+  background: #fee2e2;
+  color: #991b1b;
+}
+.deck-card-effect.is-move {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+/* Winner: match summary. */
+#winner-screen {
+  justify-content: safe center;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+.winner-stats {
+  width: min(720px, 100%);
+  margin: 0 auto 1.25rem;
+}
+.winner-stats:empty {
+  display: none;
+}
+.ws-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.6rem;
+  margin-top: 0.5rem;
+}
+.ws-card {
+  padding: 0.65rem 0.75rem;
+  background: rgba(8, 24, 14, 0.58);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 12px;
+  text-align: left;
+}
+.ws-card.is-winner {
+  border-color: rgba(240, 192, 64, 0.6);
+  background: rgba(240, 192, 64, 0.1);
+}
+.ws-name {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 0.35rem;
+  color: #fff;
+  font-weight: 700;
+  font-size: var(--fs-sm);
+  min-width: 0;
+}
+.ws-name-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ws-stat {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: var(--fs-xs);
+  color: rgba(255, 255, 255, 0.7);
+  padding: 0.1rem 0;
+}
+.ws-stat strong {
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .deck-card-inner {
+    transition: none;
+  }
+  .money-chip {
+    animation-duration: 1.6s;
+    animation-name: money-chip-fade;
+  }
+  @keyframes money-chip-fade {
+    0%, 100% { opacity: 0; }
+    15%, 75% { opacity: 1; }
+  }
+}

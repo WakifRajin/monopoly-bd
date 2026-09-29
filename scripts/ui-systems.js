@@ -31,46 +31,21 @@ function showSpaceInfo(id) {
   const prop = G.properties[id];
   const modal = document.getElementById("prop-modal");
 
-  if (sp.type === "property") {
+  if (sp.type === "property" || sp.type === "railroad" || sp.type === "utility") {
     const owner =
       prop?.owner !== null && prop?.owner !== undefined
         ? G.players[prop.owner]
         : null;
-    const c = COLOR[sp.color];
+    const buildings = prop?.hotel ? "Hotel" : prop?.houses > 0 ? `${prop.houses} house${prop.houses > 1 ? "s" : ""}` : "";
     modal.innerHTML = `
-      <div class="prop-color-header" style="background:linear-gradient(135deg,${c},${c}cc);color:${readableTextOn(c)};${readableTextOn(c) === "#111" ? "text-shadow:none" : ""}">${escHtml(sp.name)}</div>
-      ${owner ? `<div style="color:rgba(255,255,255,.78);font-size:var(--fs-sm);margin-bottom:.75rem">Owned by <span style="color:${playerTextColor(owner.color)};font-weight:700">${escHtml(owner.token)} ${escHtml(owner.name)}</span>${prop.mortgaged ? " (Mortgaged)" : ""}</div>` : '<div style="color:rgba(255,255,255,.75);font-size:var(--fs-sm);margin-bottom:.75rem">For sale — ' + fmtCurrency(sp.price) + "</div>"}
-      <table class="prop-table">
-        <tr><td>Purchase price</td><td>${fmtCurrency(sp.price)}</td></tr>
-        <tr><td>Rent</td><td>${fmtCurrency(sp.rent[0])}</td></tr>
-        <tr><td>Rent w/ Monopoly</td><td>${fmtCurrency(sp.rent[0] * 2)}</td></tr>
-        <tr><td>Rent 1 House</td><td>${fmtCurrency(sp.rent[1])}</td></tr>
-        <tr><td>Rent 2 Houses</td><td>${fmtCurrency(sp.rent[2])}</td></tr>
-        <tr><td>Rent 3 Houses</td><td>${fmtCurrency(sp.rent[3])}</td></tr>
-        <tr><td>Rent 4 Houses</td><td>${fmtCurrency(sp.rent[4])}</td></tr>
-        <tr><td>Rent with hotel</td><td>${fmtCurrency(sp.rent[5])}</td></tr>
-        <tr><td>House cost</td><td>${fmtCurrency(sp.house)}</td></tr>
-        <tr><td>Mortgage value</td><td>${fmtCurrency(mortgageValueForSpace(sp))}</td></tr>
-        ${prop ? `<tr><td>Buildings</td><td>${prop.hotel ? "🏨 Hotel" : prop.houses > 0 ? "🏠×" + prop.houses : "None"}</td></tr>` : ""}
-      </table>
-      <button class="btn btn-full" style="background:rgba(255,255,255,.1);color:#fff;margin-top:1rem" onclick="closeOverlay('prop-overlay')">Close</button>
-    `;
-  } else if (sp.type === "railroad") {
-    const owner =
-      prop?.owner !== null && prop?.owner !== undefined
-        ? G.players[prop.owner]
-        : null;
-    modal.innerHTML = `
-      <div class="prop-color-header" style="background:linear-gradient(135deg,#333,#555)">🚂 ${escHtml(sp.name)}</div>
-      ${owner ? `<div style="color:rgba(255,255,255,.78);font-size:var(--fs-sm);margin-bottom:.75rem">Owned by <span style="color:${playerTextColor(owner.color)};font-weight:700">${escHtml(owner.token)} ${escHtml(owner.name)}</span></div>` : '<div style="color:rgba(255,255,255,.75);font-size:var(--fs-sm);margin-bottom:.75rem">For sale — ' + fmtCurrency(sp.price) + "</div>"}
-      <table class="prop-table">
-        <tr><td>Price</td><td>${fmtCurrency(sp.price)}</td></tr>
-        <tr><td>Rent (1 RR)</td><td>${fmtCurrency(sp.rent[0])}</td></tr>
-        <tr><td>Rent (2 RRs)</td><td>${fmtCurrency(sp.rent[1])}</td></tr>
-        <tr><td>Rent (3 RRs)</td><td>${fmtCurrency(sp.rent[2])}</td></tr>
-        <tr><td>Rent (4 RRs)</td><td>${fmtCurrency(sp.rent[3])}</td></tr>
-        <tr><td>Mortgage</td><td>${fmtCurrency(mortgageValueForSpace(sp))}</td></tr>
-      </table>
+      ${propertyDeedHtml(id)}
+      <div class="deed-status">
+        ${
+          owner
+            ? `Owned by <span style="color:${playerTextColor(owner.color)};font-weight:700">${escHtml(owner.token)} ${escHtml(owner.name)}</span>${prop.mortgaged ? " · mortgaged" : ""}${buildings ? ` · ${buildings}` : ""}`
+            : `For sale · ${fmtCurrency(sp.price)}`
+        }
+      </div>
       <button class="btn btn-full" style="background:rgba(255,255,255,.1);color:#fff;margin-top:1rem" onclick="closeOverlay('prop-overlay')">Close</button>
     `;
   } else {
@@ -100,6 +75,7 @@ function showWinner(p) {
   document.getElementById("winner-sub").textContent =
     `${p.name} finished with ${fmtCurrency(p.money)} on the ${(window.ACTIVE_THEME || BOARD_THEMES.dhaka).name} board.`;
   renderWinnerLeaderboard(p.id);
+  renderMatchSummary(p.id);
   // Confetti
   const cont = document.getElementById("confetti-container");
   cont.innerHTML = "";
@@ -673,25 +649,14 @@ function closeAllOverlays() {
     .forEach((el) => el.classList.remove("show"));
 }
 
+// Recorded sounds. Every other event (buy, rent, cards, jail, building,
+// auctions...) has its own synthesised patch in SFX_PATCHES (game-feel.js).
 const SFX_EVENT_FILES = Object.freeze({
   dice: ["sounds/dice_roll_sfx.mp3"],
-  buy: ["sounds/clicktap_sfx.mp3"],
-  rent: ["sounds/decline_sfx.mp3"],
-  tax: ["sounds/decline_sfx.mp3"],
-  card: ["sounds/clicktap_sfx.mp3"],
-  jail: ["sounds/decline_sfx.mp3"],
-  bail: ["sounds/clicktap_sfx.mp3"],
-  build: ["sounds/clicktap_sfx.mp3"],
-  sell: ["sounds/clicktap_sfx.mp3"],
-  mortgage: ["sounds/decline_sfx.mp3"],
-  unmortgage: ["sounds/clicktap_sfx.mp3"],
-  "auction-open": ["sounds/clicktap_sfx.mp3"],
-  bid: ["sounds/clicktap_sfx.mp3"],
-  "auction-win": ["sounds/clicktap_sfx.mp3"],
   bankrupt: ["sounds/game_over_sfx.mp3"],
-  turn: ["sounds/clicktap_sfx.mp3"],
   win: ["sounds/win_sfx.mp3"],
   inability: ["sounds/inability_sfx.mp3"],
+  ui: ["sounds/clicktap_sfx.mp3"],
 });
 
 const SFX_BGM_FILE = "sounds/background_01.mp3";
@@ -1047,7 +1012,8 @@ function playSfxSynthFallback(name) {
       playSfxTone(165, 0.24, { type: "square", gain: 0.07, start: 0.02 });
       break;
     default:
-      playSfxTone(500, 0.05, { type: "sine", gain: 0.04 });
+      if (typeof SFX_PATCHES !== "undefined" && SFX_PATCHES[name]) SFX_PATCHES[name]();
+      else playSfxTone(500, 0.05, { type: "sine", gain: 0.04 });
       break;
   }
 }
@@ -1068,6 +1034,8 @@ function playSfx(name, options = {}) {
     unmortgage: 110,
     turn: 150,
     rent: 130,
+    coin: 200,
+    passgo: 300,
     jail: 220,
     card: 120,
     bankrupt: 260,
@@ -2195,7 +2163,7 @@ function installKeyboardShortcuts() {
 
     if (e.code === "Space" || e.key === " ") {
       const roll = document.getElementById("roll-btn");
-      const end = document.getElementById("btn-end");
+      const end = document.getElementById("center-end-btn");
       e.preventDefault();
       if (roll && !roll.disabled) roll.click();
       else if (end && !end.disabled) end.click();
@@ -2495,7 +2463,7 @@ function refreshHomeScreen() {
 // This page is the app-wide version: sound, defaults for new games, the
 // online name, saved data and app info.
 let CURRENT_DRAWER = "";
-const APP_VERSION = "0.1.0";
+const APP_VERSION = "0.2.0";
 
 function refreshSettingsViews() {
   if (CURRENT_DRAWER === "settings") openDrawer("settings");

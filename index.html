@@ -54,8 +54,8 @@
 
       gtag("config", "G-QPMD9QD5H7");
     </script>
-    <link rel="stylesheet" href="styles/main.css?v=1.5.3" />
-    <link rel="stylesheet" href="styles/menu.css?v=1.5.3" />
+    <link rel="stylesheet" href="styles/main.css?v=1.6.0" />
+    <link rel="stylesheet" href="styles/menu.css?v=1.6.0" />
   </head>
   <body>
     <!-- Side menu (desktop) / tab bar (phones), shared by the menu pages. -->
@@ -807,14 +807,6 @@
               >
                 Pay bail
               </button>
-              <button
-                class="act-btn act-end"
-                id="btn-end"
-                onclick="endTurn()"
-                disabled
-              >
-                End turn
-              </button>
             </div>
           </div>
         </div>
@@ -905,14 +897,6 @@
           >
             Pay bail
           </button>
-          <button
-            class="act-btn act-end"
-            id="mb-end"
-            onclick="endTurn()"
-            disabled
-          >
-            End turn
-          </button>
         </div>
       </div>
     </div>
@@ -927,6 +911,7 @@
         <div class="winner-leader-title">Other players</div>
         <div id="winner-leaderboard"></div>
       </div>
+      <div class="winner-stats" id="winner-stats"></div>
       <div class="winner-actions">
         <button class="btn btn-secondary btn-lg" onclick="viewBoardAfterWin()">
           View board
@@ -952,6 +937,7 @@
     <div class="overlay" id="buy-overlay">
       <div class="modal">
         <h2 id="buy-title">Buy property?</h2>
+        <div id="buy-deed"></div>
         <p id="buy-desc"></p>
         <div class="modal-actions">
           <button class="btn btn-primary" onclick="confirmBuy()">Buy</button>
@@ -965,7 +951,7 @@
           <button
             class="btn"
             style="background: rgba(255, 255, 255, 0.1); color: #fff"
-            onclick="closeOverlay('buy-overlay')"
+            onclick="declineBuy()"
           >
             Skip
           </button>
@@ -1008,23 +994,7 @@
           ></span
           >)
         </div>
-        <div class="bid-btns" id="bid-btns">
-          <button class="btn btn-sm btn-secondary" onclick="placeBid(100)">
-            +100
-          </button>
-          <button class="btn btn-sm btn-secondary" onclick="placeBid(200)">
-            +200
-          </button>
-          <button class="btn btn-sm btn-secondary" onclick="placeBid(500)">
-            +500
-          </button>
-          <button class="btn btn-sm btn-secondary" onclick="placeBid(1000)">
-            +1000
-          </button>
-          <button class="btn btn-sm btn-danger" onclick="passAuction()">
-            Pass
-          </button>
-        </div>
+        <div class="bid-btns" id="bid-btns"></div>
       </div>
     </div>
 
@@ -1084,42 +1054,38 @@
 
     <!-- Rent notification -->
     <div class="overlay" id="rent-overlay">
-      <div class="modal" style="text-align: center">
-                <h2 id="rent-title">Rent due</h2>
+      <div class="modal rent-modal">
+        <h2 id="rent-title">Rent due</h2>
+        <div class="rent-flow">
+          <div class="rent-party" id="rent-payer"></div>
+          <div class="rent-arrow">
+            <span class="rent-amount" id="rent-amount"></span>
+            <svg viewBox="0 0 48 12" width="48" height="12" aria-hidden="true"><path d="M1 6h44M39 1l6 5-6 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="rent-party" id="rent-owner"></div>
+        </div>
         <p id="rent-desc"></p>
-        <button
-          class="btn btn-primary btn-full"
-          onclick="closeOverlay('rent-overlay')"
-        >
-          Pay Rent
-        </button>
+        <button class="btn btn-primary btn-full" onclick="closeOverlay('rent-overlay')">OK</button>
       </div>
     </div>
 
     <!-- Card (chance/community chest) -->
     <div class="overlay" id="card-overlay">
-      <div class="modal" style="text-align: center">
-        <div style="font-size: 2.5rem; margin-bottom: 0.5rem" id="card-icon">
-          📋
+      <div class="modal card-modal">
+        <div class="deck-card" id="deck-card" data-deck="chance">
+          <div class="deck-card-inner">
+            <div class="deck-card-face deck-card-back" aria-hidden="true">
+              <span class="deck-card-mark" id="card-back-icon">?</span>
+              <span class="deck-card-brand" id="card-back-title">Chance</span>
+            </div>
+            <div class="deck-card-face deck-card-front">
+              <div class="deck-card-kicker"><span id="card-icon">❓</span> <span id="card-title">Chance</span></div>
+              <p class="deck-card-text" id="card-desc"></p>
+              <div class="deck-card-effect" id="card-effect" hidden></div>
+            </div>
+          </div>
         </div>
-        <h2 id="card-title">Community Chest</h2>
-        <p
-          id="card-desc"
-          style="
-            font-size: var(--fs-base);
-            color: #fff;
-            background: rgba(255, 255, 255, 0.08);
-            padding: 1rem;
-            border-radius: 8px;
-            margin: 0.5rem 0;
-          "
-        ></p>
-        <button
-          class="btn btn-primary btn-full"
-          onclick="closeOverlay('card-overlay')"
-        >
-          OK
-        </button>
+        <button class="btn btn-primary btn-full" onclick="closeOverlay('card-overlay')">OK</button>
       </div>
     </div>
 
@@ -1373,13 +1339,14 @@
 
     <!-- Release version, stamped by tools/bump-version.cjs with the ?v= below. -->
     <script>
-      window.APP_BUILD = "1.5.3";
+      window.APP_BUILD = "1.6.0";
     </script>
-    <script src="scripts/core-online-theme-lobby.js?v=1.5.3"></script>
-    <script src="scripts/board-render-ai.js?v=1.5.3"></script>
-    <script src="scripts/gameplay-actions.js?v=1.5.3"></script>
-    <script src="scripts/ui-systems.js?v=1.5.3"></script>
-    <script src="scripts/lan.js?v=1.5.3"></script>
-    <script src="scripts/init.js?v=1.5.3"></script>
+    <script src="scripts/core-online-theme-lobby.js?v=1.6.0"></script>
+    <script src="scripts/board-render-ai.js?v=1.6.0"></script>
+    <script src="scripts/gameplay-actions.js?v=1.6.0"></script>
+    <script src="scripts/ui-systems.js?v=1.6.0"></script>
+    <script src="scripts/game-feel.js?v=1.6.0"></script>
+    <script src="scripts/lan.js?v=1.6.0"></script>
+    <script src="scripts/init.js?v=1.6.0"></script>
   </body>
 </html>

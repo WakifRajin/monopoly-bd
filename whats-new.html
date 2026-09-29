@@ -305,8 +305,8 @@ body::before{
   .news-subtitle-row{letter-spacing:.08em;font-size:.72rem}
 }
 </style>
-<link rel="stylesheet" href="styles/menu.css?v=1.5.3">
-<link rel="stylesheet" href="styles/standalone.css?v=1.5.3">
+<link rel="stylesheet" href="styles/menu.css?v=1.6.0">
+<link rel="stylesheet" href="styles/standalone.css?v=1.6.0">
 </head>
 <body>
   <main class="page">
@@ -329,110 +329,138 @@ body::before{
 
     <h2 class="section-label">Latest update</h2>
     <section class="log-card">
-      <h2 class="log-version">0.1.0 · New board, clearer table</h2>
-      <h3 class="log-subtitle">A Bangladesh cities board, information where you need it, and a lot less decoration</h3>
+      <h2 class="log-version">0.2.0 · Fair rules, livelier table</h2>
+      <h3 class="log-subtitle">Rule fixes, safer online rooms, and a game that shows you what just happened</h3>
       <ul class="changes">
-        <li>Added <b>&#2471;&#2472;&#2496; &#2489;&#2476;&#2494;&#2480; &#2478;&#2460;&#2494;&#2480; &#2454;&#2503;&#2482;&#2494;</b> as a permanent board, picked from the theme list like any other. No seed to paste.</li>
-        <li>It runs from Sylhet through Mymensingh and Chittagong to Dhaka: &#2482;&#2494;&#2478;&#2494; &#2476;&#2494;&#2460;&#2494;&#2480; and &#2460;&#2495;&#2472;&#2509;&#2470;&#2494; &#2476;&#2494;&#2460;&#2494;&#2480; at the cheap end, &#2476;&#2472;&#2494;&#2472;&#2496; and &#2455;&#2497;&#2482;&#2486;&#2494;&#2472; at the top, four city stations, and power and water utilities.</li>
-        <li>Classic-scale economy for that board: &#2547;200 for passing GO, &#2547;1500 starting cash, &#2547;50 bail, and its own Bengali Chance and Community Chest decks.</li>
-        <li>Every property and station now shows its base rent on the board itself, so you can judge a landing without opening the space.</li>
-        <li>Properties you own are outlined in your colour; properties owned by someone else are outlined dark. Mortgaged spaces are dimmed and struck through.</li>
-        <li>Player cards now show net worth, not just cash. It counts property at list price, mortgaged property at mortgage value, and buildings at what the bank would pay back.</li>
-        <li>Each player card carries a row of colour pips showing which sets they have a stake in, filled in when a set is complete and ready to build on.</li>
-        <li>Keyboard shortcuts: Space rolls or ends your turn, Enter confirms the open dialog, Escape closes it, and B, H, M and T open buy, build, mortgage and trade.</li>
-        <li>Starting money, timer, auction setting and board choice are remembered between games.</li>
-        <li>Movement speed is now adjustable in settings, with fast, normal and slow options.</li>
-        <li>Stripped most decorative emoji out of the interface. Board symbols, player tokens and house markers stay; button labels, status lines and log entries are now plain words.</li>
-        <li>Rewrote interface copy to drop the exclamation marks and title case, so messages read as statements rather than announcements.</li>
-        <li>Bigger tap targets on phones, and the game toolbar now scrolls instead of clipping its last button.</li>
-        <li>Fixed a crowded top bar reading "Player 1 &#39;s Turn" with a stray space.</li>
-        <li>The player list on desktop now scrolls. With a full table of eight it ran past the panel and the players at the bottom could not be reached at all.</li>
-        <li>Board text now scales with the board instead of the window, so it no longer turns tiny when maximised or overlaps itself at middling window sizes.</li>
-        <li>On phones, the back button and the edge-swipe gesture no longer end your match by accident. They now ask first, and "Keep playing" is the default; in an online match it takes you to the usual choice of what happens to your seat.</li>
-        <li>Closing or reloading the tab mid-match now warns you first.</li>
-        <li>End turn now sits in the middle of the board beside Roll dice. Whichever one you can press right now is filled in; the other waits as an outline.</li>
-        <li>On someone else&#39;s turn the centre buttons step aside, and the line underneath says what is happening instead.</li>
-        <li>Fixed the board sliding sideways on phones and the top buttons disappearing off the right edge. The game screen can no longer be wider than your screen.</li>
-        <li>The phone toolbar is down to three icons: log, chat and settings. Report a bug and leaving the match now live in settings, and the player strip at the bottom already lists everyone.</li>
-        <li>End turn is teal everywhere. It used to be red, a colour now kept for actions you cannot take back, like declining or leaving.</li>
-        <li>Buttons you cannot use yet are greyed out, rather than being a slightly dimmer version of their normal colour.</li>
-        <li>The trade dialog is solid again; the board was showing through behind the offer.</li>
-        <li>You can no longer withdraw an AI&#39;s trade offer on its behalf. Accept or decline it instead.</li>
-        <li>The auto-end countdown on the board now counts down with the timer instead of sitting at the starting number.</li>
-        <li>Quitting from the settings menu asks first, the same as the back button.</li>
-        <li>Labels and dialog titles across the lobby and game now use sentence case.</li>
-        <li>Dialogs you can safely dismiss now have a close button in the top corner, and Escape does the same thing. It stays in reach at the top of long dialogs such as a player&#39;s history; once you scroll, a header strip appears behind it so the list slides underneath instead of showing through.</li>
-        <li>Dialogs now open at the top instead of wherever you last left them scrolled, and a player&#39;s history starts at the top when you switch tabs.</li>
-        <li>Dialogs that need an answer before the game can continue (auctions, debts, buy or auction, and a trade offered to you) deliberately have no close button.</li>
-        <li>Fixed hard-to-read text in dialogs. Some headings, including "Your offer" and "Their offer" in trades, were near-black on dark green.</li>
-        <li>Property cards pick dark or light title text to suit the colour, so light blue and yellow names are readable.</li>
-        <li>Owner names, table labels, prices and times in dialogs are brighter, and the Build, Sell and Mortgage buttons use deeper colours so their labels stand out.</li>
-        <li>The game log is grouped by turn. Each turn has a header with the player&#39;s colour and the time, and the lines under it are shorter and easier to scan.</li>
-        <li>Player names in the log appear in their colour and money amounts are highlighted: green for money received, red for money paid. A small dot marks good news, bad news and notices instead of colouring whole lines.</li>
-        <li>The log no longer jumps back to the bottom while you are scrolled up reading an earlier turn.</li>
-        <li>Log messages are reworded to be consistent: no more doubled lines like &quot;landed on Free Parking&quot; followed by &quot;is just visiting free parking&quot;, no exclamation marks, and no internal wording such as &quot;invalid winner state&quot;.</li>
-        <li>The phone log drawer uses the same grouped layout and shows the whole match, not just the last 30 lines.</li>
-        <li>Fonts load in every weight they are used at. Bold text used to render as semi-bold everywhere, which flattened headings, prices and labels.</li>
-        <li>The board uses the same clean font as the rest of the game instead of Times New Roman, and names no longer split mid-word (&quot;Farmgat e&quot;).</li>
-        <li>On phones, long place names break at a syllable with a hyphen (&quot;Sadar-ghat&quot;, &quot;Kama-lapur&quot;) instead of wherever the square ran out of room.</li>
-        <li>Dialog, panel and card headings, including the player portfolio and place details, use the body font. The decorative serif is kept only for the big titles.</li>
-        <li>Buttons were showing in Arial instead of the game font. They now match everything else.</li>
-        <li>Long player names fit: in the side panel the name gets its own line above the money and stops at two lines, and on phones it shortens with an ellipsis while the AI tag stays visible.</li>
-        <li>A long player name in the top bar no longer pushes the Settings button off the screen on phones.</li>
-        <li>The portfolio tabs are now &quot;Properties&quot; and &quot;History&quot;, without emoji.</li>
-        <li>A new home screen with artwork of Dhaka at sunset. A side menu on desktop and a tab bar on phones reach Play, Boards, Rules and Settings from anywhere on the page.</li>
-        <li>New board, drawn in real 3D with WebGL. The dice tumble across the table and land on the numbers rolled, tokens are chips that hop square by square, and houses and hotels are models with gabled roofs, all lit and casting shadows.</li>
-        <li>The flat view is now the same table seen from straight above, so both views look the same. Switching between them swings the camera over the board instead of cutting between two different boards. Use the 3D button on the board, the V key, or Settings.</li>
-        <li>The dice roll first, quickly, and the token only moves once they have landed, on every screen including online opponents' turns.</li>
-        <li>In the 3D view, drag to turn the table, scroll or pinch to zoom, and use Reset view to go back. Clicking or tapping a square opens its details in both views.</li>
-        <li>Browsers without WebGL keep the previous HTML board.</li>
-        <li>Fixed the board name under MONOPOLY on the ধনী হবার মজার খেলা board, where Bengali vowel signs were drawn apart from their letters.</li>
-        <li>Fixed taps not working in parts of the menus, mostly on phones. Screens you had left stayed in the page invisibly, and some of their buttons (the Roll dice and End turn dock, the Start game bar) kept catching taps meant for the page in front.</li>
-        <li>The fade above the lobby&#39;s Start game button no longer catches taps meant for the boards showing through it.</li>
-        <li>The board editor&#39;s preview no longer cuts names off mid-letter. Names wrap between words and shrink to fit, and on a phone the small squares show their number, with the full name in the editor panel.</li>
-        <li>The token in each player card is centred.</li>
-        <li>Pages restored by the Back button no longer stay dimmed, and their Patch notes, board editor and test lab buttons work again.</li>
-        <li>Online rooms and Same Wi-Fi now say when the game cannot connect to its online service, with the reason and a Try again button, instead of leaving the buttons greyed out with no explanation. The connection is retried by itself when the phone comes back online.</li>
-        <li>The online service starts faster, especially on phones: it no longer downloads a database library the game never used.</li>
-        <li>Fixed online play failing for some players right after an update. Their browser could combine the new page with an old cached script, which stopped the game from finishing start-up. Every file now carries the release version, and start-up carries on even if one part fails.</li>
-        <li>New: Same Wi-Fi play, like PairDrop. Games hosted on your network show up automatically for everyone connected to it, and the match runs directly between your devices instead of through the internet. The internet is only used for a moment to find each other. It is on the home screen, in place of the Classic board shortcut (all boards, Classic included, are on the Boards page).</li>
-        <li>In a Same Wi-Fi match everything works as in online rooms: ready checks, chat, and the AI taking over a player who drops out. If the host leaves, the match ends for everyone.</li>
-        <li>Boards in the menu opens a new page with every board: a short description of each, its starting money, GO salary and price range, and a button to play it. It also links to the board editor, your saved custom board and pasting a seed code.</li>
-        <li>Removed the connection indicator from the home screen.</li>
-        <li>The back button and page title stay at the top while you scroll a page, in a compact bar. Fixed the tail of the &quot;g&quot; in the home screen title being cut off.</li>
-        <li>Menu pages (settings, rooms, lobby, rules) sit centred on wide screens instead of hugging the left edge.</li>
-        <li>Settings on the home screen opens its own page: sound, animation speed and the default turn timer for new games, your online name, clearing recent activity, resetting settings, and version, keyboard shortcuts and links. The settings panel inside a match is unchanged.</li>
-        <li>Recent activity on the home screen no longer runs off the bottom of laptop screens; the home page fits on one screen at common desktop sizes.</li>
-        <li>The side menu no longer repeats the logo next to the home page title.</li>
-        <li>The Play online card has a globe in the background.</li>
-        <li>Menus follow one set of rules: every page opens with the same header (back button, title, one line of description), content sits in cards titled in plain sentence case, and each page has one gold main action. Scattered uppercase labels, ornaments and slogans are gone.</li>
-        <li>The lobby is reorganised into Players, Board and House rules. On desktop it uses two columns; the Start game button stays pinned at the bottom of the screen. Custom board seeds moved into a collapsible section under Board.</li>
-        <li>Removed the &quot;Max houses&quot; lobby setting. It never changed the game, which always builds four houses before a hotel.</li>
-        <li>Online rooms: the host and join forms are simpler, &quot;Who can join&quot; replaces the open/closed wording, and the room status reads as a sentence. Room players are listed once, with Host and Ready badges.</li>
-        <li>How to play has a row of section links at the top to jump to a rule.</li>
-        <li>Menus scale properly from small phones to wide screens, with a bottom tab bar on phones, a compact side menu on tablets and the full menu on desktops. Nothing runs off the side of the screen.</li>
-        <li>Patch notes, the board editor and the test lab use the same header and sentence-case headings, labels and buttons. The board editor no longer runs off the side of the screen on phones.</li>
-        <li>The online rooms, lobby and rules pages share the home screen&#39;s look: the same side menu (a tab bar on phones), artwork, headings, cards and buttons. The menu hides during a match.</li>
-        <li>Leaving the lobby from the side menu while in an online room leaves the room properly, the same as the Back button.</li>
-        <li>Patch notes, the board editor and the test lab use the same backdrop, headings, cards and buttons, with a Home link at the top.</li>
-        <li>Rule sections have plain titles (&quot;Jail&quot;, &quot;Buying, auctions and rent&quot;) instead of numbered Title Case headings.</li>
-        <li>Online play is the main button on the home screen. Offline play and the Classic board, which opens the lobby with that board already chosen, sit just below it.</li>
-        <li>The home screen lists your recent activity: the last games you started and boards you edited, each one tap away from where you left off. It is stored only in your browser.</li>
-        <li>An indicator in the corner shows whether you are online. Offline and AI games work without a connection.</li>
-        <li>Settings opened from the home screen no longer shows a Quit button when there is no match to quit, and on wide screens it opens as a centred panel.</li>
-        <li>The game can be installed as an app from Chrome, Edge and Safari (Add to Home Screen). It opens in its own window with a proper icon, and offline and AI games keep working with no connection.</li>
-        <li>Property owners are marked with a small dot in their colour at the end of the colour bar. The old &quot;PR 3&quot; labels were cryptic and covered place names on the short side squares.</li>
-        <li>Houses and hotels are drawn on the colour bar, like a real board, instead of an emoji badge that covered prices and, on phones, names.</li>
-        <li>A player&#39;s history no longer shows internal labels such as &quot;IMPORTANT&quot; or &quot;DANGER&quot;. Money in and out is marked Received and Paid, and turn markers are left out.</li>
-        <li>Text sizes follow one consistent scale across the game instead of dozens of slightly different sizes.</li>
-        <li>The board editor uses the same fonts as the game.</li>
-        <li>Fixed a player&#39;s history not counting money spent winning auctions.</li>
-        <li>AI players now accept fair trades. They weigh list price, cash and what a deal does for their colour sets, ask for a real premium before completing someone else&#39;s set, and offer swaps that complete sets on both sides. AI-only games used to stall because nobody ever finished a set or built a house.</li>
+        <li>Rolling doubles and then buying, auctioning or skipping a property now gives you your extra roll, as the rules say. Before, the turn simply ended.</li>
+        <li>Skip on the buy dialog now passes on the property properly. It used to only close the dialog and leave the turn stuck.</li>
+        <li>Leaving jail on doubles, or being sent there by a card, no longer earns a bonus roll.</li>
+        <li>A player who raises the forced bail after three turns in jail is released, instead of being charged again next turn.</li>
+        <li>Fixed debts to the bank being paid to Player 1 when they were settled by mortgaging.</li>
+        <li>An AI in jail without the money for bail now rolls instead of stalling the game.</li>
+        <li>Trades that would leave someone unable to pay the 10% interest on mortgaged property are refused up front, and interest inherited through a bankruptcy is charged like any other debt, so you can mortgage to cover it.</li>
+        <li>A hotel can be sold when the bank is short of houses; the missing houses are sold with it.</li>
+        <li>Chance and Community Chest are reshuffled when they run out. A Get Out of Jail Free card leaves the deck while someone holds it and goes back when it is used.</li>
+        <li>"Advance to the nearest station" now charges the owner's double rent.</li>
+        <li>Auction bid buttons are sized to the property, so a 60 street no longer opens with +100.</li>
+        <li>Houses and hotels on the 3D board have their roofs the right way up.</li>
+        <li>Money changes are animated: balances count up or down, a +/− amount floats off the player, and coins fly from payer to payee.</li>
+        <li>Chance and Community Chest cards flip over, with the effect shown underneath.</li>
+        <li>The buy dialog and property details show a proper title deed with every rent level.</li>
+        <li>The rent dialog shows who paid whom and how much.</li>
+        <li>New sounds for buying, passing GO, cards, jail, building, auctions and rent.</li>
+        <li>The winner screen adds a match summary: length, turns, and each player's rent earned and paid, properties bought and biggest rent.</li>
+        <li>AI turns are paced to be followed, and a toast says which card an AI drew.</li>
+        <li>End turn appears once, on the board, instead of in three places.</li>
+        <li>Online rooms are harder to tamper with: only the host can close a room, the host role only moves when the host leaves or drops out, players can only add themselves, chat messages can't be edited or sent under someone else's name, and fake rooms can't be added to the open rooms list.</li>
       </ul>
     </section>
 
     <h2 class="section-label">Earlier updates</h2>
     <div class="stack">
+      <section class="log-card">
+        <h2 class="log-version">0.1.0 · New board, clearer table</h2>
+        <h3 class="log-subtitle">A Bangladesh cities board, information where you need it, and a lot less decoration</h3>
+        <ul class="changes">
+          <li>Added <b>&#2471;&#2472;&#2496; &#2489;&#2476;&#2494;&#2480; &#2478;&#2460;&#2494;&#2480; &#2454;&#2503;&#2482;&#2494;</b> as a permanent board, picked from the theme list like any other. No seed to paste.</li>
+          <li>It runs from Sylhet through Mymensingh and Chittagong to Dhaka: &#2482;&#2494;&#2478;&#2494; &#2476;&#2494;&#2460;&#2494;&#2480; and &#2460;&#2495;&#2472;&#2509;&#2470;&#2494; &#2476;&#2494;&#2460;&#2494;&#2480; at the cheap end, &#2476;&#2472;&#2494;&#2472;&#2496; and &#2455;&#2497;&#2482;&#2486;&#2494;&#2472; at the top, four city stations, and power and water utilities.</li>
+          <li>Classic-scale economy for that board: &#2547;200 for passing GO, &#2547;1500 starting cash, &#2547;50 bail, and its own Bengali Chance and Community Chest decks.</li>
+          <li>Every property and station now shows its base rent on the board itself, so you can judge a landing without opening the space.</li>
+          <li>Properties you own are outlined in your colour; properties owned by someone else are outlined dark. Mortgaged spaces are dimmed and struck through.</li>
+          <li>Player cards now show net worth, not just cash. It counts property at list price, mortgaged property at mortgage value, and buildings at what the bank would pay back.</li>
+          <li>Each player card carries a row of colour pips showing which sets they have a stake in, filled in when a set is complete and ready to build on.</li>
+          <li>Keyboard shortcuts: Space rolls or ends your turn, Enter confirms the open dialog, Escape closes it, and B, H, M and T open buy, build, mortgage and trade.</li>
+          <li>Starting money, timer, auction setting and board choice are remembered between games.</li>
+          <li>Movement speed is now adjustable in settings, with fast, normal and slow options.</li>
+          <li>Stripped most decorative emoji out of the interface. Board symbols, player tokens and house markers stay; button labels, status lines and log entries are now plain words.</li>
+          <li>Rewrote interface copy to drop the exclamation marks and title case, so messages read as statements rather than announcements.</li>
+          <li>Bigger tap targets on phones, and the game toolbar now scrolls instead of clipping its last button.</li>
+          <li>Fixed a crowded top bar reading "Player 1 &#39;s Turn" with a stray space.</li>
+          <li>The player list on desktop now scrolls. With a full table of eight it ran past the panel and the players at the bottom could not be reached at all.</li>
+          <li>Board text now scales with the board instead of the window, so it no longer turns tiny when maximised or overlaps itself at middling window sizes.</li>
+          <li>On phones, the back button and the edge-swipe gesture no longer end your match by accident. They now ask first, and "Keep playing" is the default; in an online match it takes you to the usual choice of what happens to your seat.</li>
+          <li>Closing or reloading the tab mid-match now warns you first.</li>
+          <li>End turn now sits in the middle of the board beside Roll dice. Whichever one you can press right now is filled in; the other waits as an outline.</li>
+          <li>On someone else&#39;s turn the centre buttons step aside, and the line underneath says what is happening instead.</li>
+          <li>Fixed the board sliding sideways on phones and the top buttons disappearing off the right edge. The game screen can no longer be wider than your screen.</li>
+          <li>The phone toolbar is down to three icons: log, chat and settings. Report a bug and leaving the match now live in settings, and the player strip at the bottom already lists everyone.</li>
+          <li>End turn is teal everywhere. It used to be red, a colour now kept for actions you cannot take back, like declining or leaving.</li>
+          <li>Buttons you cannot use yet are greyed out, rather than being a slightly dimmer version of their normal colour.</li>
+          <li>The trade dialog is solid again; the board was showing through behind the offer.</li>
+          <li>You can no longer withdraw an AI&#39;s trade offer on its behalf. Accept or decline it instead.</li>
+          <li>The auto-end countdown on the board now counts down with the timer instead of sitting at the starting number.</li>
+          <li>Quitting from the settings menu asks first, the same as the back button.</li>
+          <li>Labels and dialog titles across the lobby and game now use sentence case.</li>
+          <li>Dialogs you can safely dismiss now have a close button in the top corner, and Escape does the same thing. It stays in reach at the top of long dialogs such as a player&#39;s history; once you scroll, a header strip appears behind it so the list slides underneath instead of showing through.</li>
+          <li>Dialogs now open at the top instead of wherever you last left them scrolled, and a player&#39;s history starts at the top when you switch tabs.</li>
+          <li>Dialogs that need an answer before the game can continue (auctions, debts, buy or auction, and a trade offered to you) deliberately have no close button.</li>
+          <li>Fixed hard-to-read text in dialogs. Some headings, including "Your offer" and "Their offer" in trades, were near-black on dark green.</li>
+          <li>Property cards pick dark or light title text to suit the colour, so light blue and yellow names are readable.</li>
+          <li>Owner names, table labels, prices and times in dialogs are brighter, and the Build, Sell and Mortgage buttons use deeper colours so their labels stand out.</li>
+          <li>The game log is grouped by turn. Each turn has a header with the player&#39;s colour and the time, and the lines under it are shorter and easier to scan.</li>
+          <li>Player names in the log appear in their colour and money amounts are highlighted: green for money received, red for money paid. A small dot marks good news, bad news and notices instead of colouring whole lines.</li>
+          <li>The log no longer jumps back to the bottom while you are scrolled up reading an earlier turn.</li>
+          <li>Log messages are reworded to be consistent: no more doubled lines like &quot;landed on Free Parking&quot; followed by &quot;is just visiting free parking&quot;, no exclamation marks, and no internal wording such as &quot;invalid winner state&quot;.</li>
+          <li>The phone log drawer uses the same grouped layout and shows the whole match, not just the last 30 lines.</li>
+          <li>Fonts load in every weight they are used at. Bold text used to render as semi-bold everywhere, which flattened headings, prices and labels.</li>
+          <li>The board uses the same clean font as the rest of the game instead of Times New Roman, and names no longer split mid-word (&quot;Farmgat e&quot;).</li>
+          <li>On phones, long place names break at a syllable with a hyphen (&quot;Sadar-ghat&quot;, &quot;Kama-lapur&quot;) instead of wherever the square ran out of room.</li>
+          <li>Dialog, panel and card headings, including the player portfolio and place details, use the body font. The decorative serif is kept only for the big titles.</li>
+          <li>Buttons were showing in Arial instead of the game font. They now match everything else.</li>
+          <li>Long player names fit: in the side panel the name gets its own line above the money and stops at two lines, and on phones it shortens with an ellipsis while the AI tag stays visible.</li>
+          <li>A long player name in the top bar no longer pushes the Settings button off the screen on phones.</li>
+          <li>The portfolio tabs are now &quot;Properties&quot; and &quot;History&quot;, without emoji.</li>
+          <li>A new home screen with artwork of Dhaka at sunset. A side menu on desktop and a tab bar on phones reach Play, Boards, Rules and Settings from anywhere on the page.</li>
+          <li>New board, drawn in real 3D with WebGL. The dice tumble across the table and land on the numbers rolled, tokens are chips that hop square by square, and houses and hotels are models with gabled roofs, all lit and casting shadows.</li>
+          <li>The flat view is now the same table seen from straight above, so both views look the same. Switching between them swings the camera over the board instead of cutting between two different boards. Use the 3D button on the board, the V key, or Settings.</li>
+          <li>The dice roll first, quickly, and the token only moves once they have landed, on every screen including online opponents' turns.</li>
+          <li>In the 3D view, drag to turn the table, scroll or pinch to zoom, and use Reset view to go back. Clicking or tapping a square opens its details in both views.</li>
+          <li>Browsers without WebGL keep the previous HTML board.</li>
+          <li>Fixed the board name under MONOPOLY on the ধনী হবার মজার খেলা board, where Bengali vowel signs were drawn apart from their letters.</li>
+          <li>Fixed taps not working in parts of the menus, mostly on phones. Screens you had left stayed in the page invisibly, and some of their buttons (the Roll dice and End turn dock, the Start game bar) kept catching taps meant for the page in front.</li>
+          <li>The fade above the lobby&#39;s Start game button no longer catches taps meant for the boards showing through it.</li>
+          <li>The board editor&#39;s preview no longer cuts names off mid-letter. Names wrap between words and shrink to fit, and on a phone the small squares show their number, with the full name in the editor panel.</li>
+          <li>The token in each player card is centred.</li>
+          <li>Pages restored by the Back button no longer stay dimmed, and their Patch notes, board editor and test lab buttons work again.</li>
+          <li>Online rooms and Same Wi-Fi now say when the game cannot connect to its online service, with the reason and a Try again button, instead of leaving the buttons greyed out with no explanation. The connection is retried by itself when the phone comes back online.</li>
+          <li>The online service starts faster, especially on phones: it no longer downloads a database library the game never used.</li>
+          <li>Fixed online play failing for some players right after an update. Their browser could combine the new page with an old cached script, which stopped the game from finishing start-up. Every file now carries the release version, and start-up carries on even if one part fails.</li>
+          <li>New: Same Wi-Fi play, like PairDrop. Games hosted on your network show up automatically for everyone connected to it, and the match runs directly between your devices instead of through the internet. The internet is only used for a moment to find each other. It is on the home screen, in place of the Classic board shortcut (all boards, Classic included, are on the Boards page).</li>
+          <li>In a Same Wi-Fi match everything works as in online rooms: ready checks, chat, and the AI taking over a player who drops out. If the host leaves, the match ends for everyone.</li>
+          <li>Boards in the menu opens a new page with every board: a short description of each, its starting money, GO salary and price range, and a button to play it. It also links to the board editor, your saved custom board and pasting a seed code.</li>
+          <li>Removed the connection indicator from the home screen.</li>
+          <li>The back button and page title stay at the top while you scroll a page, in a compact bar. Fixed the tail of the &quot;g&quot; in the home screen title being cut off.</li>
+          <li>Menu pages (settings, rooms, lobby, rules) sit centred on wide screens instead of hugging the left edge.</li>
+          <li>Settings on the home screen opens its own page: sound, animation speed and the default turn timer for new games, your online name, clearing recent activity, resetting settings, and version, keyboard shortcuts and links. The settings panel inside a match is unchanged.</li>
+          <li>Recent activity on the home screen no longer runs off the bottom of laptop screens; the home page fits on one screen at common desktop sizes.</li>
+          <li>The side menu no longer repeats the logo next to the home page title.</li>
+          <li>The Play online card has a globe in the background.</li>
+          <li>Menus follow one set of rules: every page opens with the same header (back button, title, one line of description), content sits in cards titled in plain sentence case, and each page has one gold main action. Scattered uppercase labels, ornaments and slogans are gone.</li>
+          <li>The lobby is reorganised into Players, Board and House rules. On desktop it uses two columns; the Start game button stays pinned at the bottom of the screen. Custom board seeds moved into a collapsible section under Board.</li>
+          <li>Removed the &quot;Max houses&quot; lobby setting. It never changed the game, which always builds four houses before a hotel.</li>
+          <li>Online rooms: the host and join forms are simpler, &quot;Who can join&quot; replaces the open/closed wording, and the room status reads as a sentence. Room players are listed once, with Host and Ready badges.</li>
+          <li>How to play has a row of section links at the top to jump to a rule.</li>
+          <li>Menus scale properly from small phones to wide screens, with a bottom tab bar on phones, a compact side menu on tablets and the full menu on desktops. Nothing runs off the side of the screen.</li>
+          <li>Patch notes, the board editor and the test lab use the same header and sentence-case headings, labels and buttons. The board editor no longer runs off the side of the screen on phones.</li>
+          <li>The online rooms, lobby and rules pages share the home screen&#39;s look: the same side menu (a tab bar on phones), artwork, headings, cards and buttons. The menu hides during a match.</li>
+          <li>Leaving the lobby from the side menu while in an online room leaves the room properly, the same as the Back button.</li>
+          <li>Patch notes, the board editor and the test lab use the same backdrop, headings, cards and buttons, with a Home link at the top.</li>
+          <li>Rule sections have plain titles (&quot;Jail&quot;, &quot;Buying, auctions and rent&quot;) instead of numbered Title Case headings.</li>
+          <li>Online play is the main button on the home screen. Offline play and the Classic board, which opens the lobby with that board already chosen, sit just below it.</li>
+          <li>The home screen lists your recent activity: the last games you started and boards you edited, each one tap away from where you left off. It is stored only in your browser.</li>
+          <li>An indicator in the corner shows whether you are online. Offline and AI games work without a connection.</li>
+          <li>Settings opened from the home screen no longer shows a Quit button when there is no match to quit, and on wide screens it opens as a centred panel.</li>
+          <li>The game can be installed as an app from Chrome, Edge and Safari (Add to Home Screen). It opens in its own window with a proper icon, and offline and AI games keep working with no connection.</li>
+          <li>Property owners are marked with a small dot in their colour at the end of the colour bar. The old &quot;PR 3&quot; labels were cryptic and covered place names on the short side squares.</li>
+          <li>Houses and hotels are drawn on the colour bar, like a real board, instead of an emoji badge that covered prices and, on phones, names.</li>
+          <li>A player&#39;s history no longer shows internal labels such as &quot;IMPORTANT&quot; or &quot;DANGER&quot;. Money in and out is marked Received and Paid, and turn markers are left out.</li>
+          <li>Text sizes follow one consistent scale across the game instead of dozens of slightly different sizes.</li>
+          <li>The board editor uses the same fonts as the game.</li>
+          <li>Fixed a player&#39;s history not counting money spent winning auctions.</li>
+          <li>AI players now accept fair trades. They weigh list price, cash and what a deal does for their colour sets, ask for a real premium before completing someone else&#39;s set, and offer swaps that complete sets on both sides. AI-only games used to stall because nobody ever finished a set or built a house.</li>
+        </ul>
+      </section>
+
       <section class="log-card">
       <h2 class="log-version">0.0.9 · Security and economy fixes</h2>
       <h3 class="log-subtitle">Closed exploits, protected online rooms, and money that adds up</h3>

@@ -132,6 +132,7 @@ scripts/                Game code, loaded in this order by index.html (board3d.m
   board-render-ai.js           Board rendering, player panels, AI players
   gameplay-actions.js          Rules: moving, rent, cards, building, trading, auctions, bankruptcy
   ui-systems.js                Dialogs, game log, drawers, timer, sound, settings
+  game-feel.js                 Money animations, title deeds, card reveals, match stats, sound patches
   lan.js                       Same Wi-Fi play: WebRTC link and the host's in-memory room
   init.js                      Start-up
   board3d/main.js              Board scene source, 2D and 3D views (three.js); built into board3d.min.js

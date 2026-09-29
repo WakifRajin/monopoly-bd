@@ -80,6 +80,8 @@ async function handleJailRoll(player, d1, d2, doubles) {
     p.inJail = false;
     p.jailTurns = 0;
     p.doublesCount = 0;
+    // Leaving jail on doubles moves you, but does not earn another roll.
+    G.lastDoubles = false;
     addLog(`${p.name} rolled doubles and leaves jail.`, "success");
     await movePlayer(p.id, d1 + d2, false);
   } else {
@@ -132,6 +134,8 @@ async function movePlayer(player, steps, rolledDoubles) {
       `${p.name} passed GO and collected ${fmtCurrency(goSalary)}.`,
       "success",
     );
+    recordStat(p.id, "passedGo");
+    playSfx("passgo");
   }
 
   G.phase = "action";
@@ -154,7 +158,7 @@ async function movePlayer(player, steps, rolledDoubles) {
   }
 }
 
-async function movePlayerTo(player, target, collectGo = true) {
+async function movePlayerTo(player, target, collectGo = true, landOpts = null) {
   const p = getLivePlayer(player);
   if (!p || p.bankrupt) return;
   const playerId = p.id;
@@ -169,6 +173,8 @@ async function movePlayerTo(player, target, collectGo = true) {
       `${p.name} passed GO and collected ${fmtCurrency(goSalary)}.`,
       "success",
     );
+    recordStat(p.id, "passedGo");
+    playSfx("passgo");
   }
 
   if (stepsForward > 0 && stepsForward <= 12) {
@@ -191,12 +197,20 @@ async function movePlayerTo(player, target, collectGo = true) {
     livePlayer.pos = target;
     renderAll();
     await waitMs(140);
-    landOn(livePlayer, false, { goPaid });
+    landOn(livePlayer, false, { ...(landOpts || {}), goPaid });
   } finally {
     MOVE_FX.active = false;
     MOVE_FX.playerId = null;
     updateActionButtons();
   }
+}
+
+// Once a turn's action is settled: doubles earn another roll, unless the
+// player went to jail or is out of the game.
+function settleTurnPhase(p = curPlayer()) {
+  const again = !!(G.lastDoubles && p && !p.inJail && !p.bankrupt && !G.gameOver);
+  if (again && G.phase !== "roll") addLog(`${p.name} rolled doubles and rolls again.`, "success");
+  G.phase = again ? "roll" : "end";
 }
 
 function landOn(p, rolledDoubles, opts = null) {
@@ -231,6 +245,8 @@ function landOn(p, rolledDoubles, opts = null) {
         `${p.name} landed on GO and collected ${fmtCurrency(goSalary)}.`,
         "success",
       );
+      recordStat(p.id, "passedGo");
+      playSfx("passgo");
       p.money += goSalary;
     }
     G.phase = "end";
@@ -276,24 +292,21 @@ function landOn(p, rolledDoubles, opts = null) {
       G.phase = "end";
     } else {
       // Pay rent
-      const rent = calcRent(sp, prop);
+      const rent = calcRent(sp, prop) * (Number(opts?.rentMultiplier) || 1);
       const owner = G.players[prop.owner];
       addLog(
         `${p.name} pays ${fmtCurrency(rent)} rent to ${owner.name} for ${sp.name}.`,
         "danger",
       );
       playSfx("rent");
+      recordRentStat(p.id, owner.id, rent);
       showRentModal(p, owner, sp.name, rent);
       chargeMoney(p, rent, owner);
       G.phase = "end";
     }
   }
 
-  // If rolled doubles and not in jail, get another roll
-  if (rolledDoubles && !p.inJail && !G.gameOver) {
-    addLog(`${p.name} rolled doubles and rolls again.`, "success");
-    G.phase = "roll";
-  }
+  settleTurnPhase(p);
 
   renderAll();
   updateActionButtons();
@@ -376,15 +389,33 @@ function calcRent(sp, prop) {
 // ═══════════════════════════════════════════════
 //  CARDS
 // ═══════════════════════════════════════════════
-function drawCard(type, p) {
-  let card;
-  if (type === "chance") {
-    card = G.chanceDeck[G.chanceIdx % G.chanceDeck.length];
-    G.chanceIdx++;
-  } else {
-    card = G.communityDeck[G.communityIdx % G.communityDeck.length];
-    G.communityIdx++;
+// Deals the next card. A spent deck is reshuffled, and a Get Out of Jail Free
+// card is skipped while a player is holding it (G.jailCardHolder).
+function drawFromDeck(type) {
+  const deck = type === "chance" ? G.chanceDeck : G.communityDeck;
+  const idxKey = type === "chance" ? "chanceIdx" : "communityIdx";
+  if (!G.jailCardHolder || typeof G.jailCardHolder !== "object") G.jailCardHolder = {};
+  for (let tries = 0; tries <= deck.length; tries++) {
+    if (!(G[idxKey] < deck.length)) {
+      shuffle(deck);
+      G[idxKey] = 0;
+    }
+    const card = deck[G[idxKey]++];
+    if (card.action === "jailcard" && Number.isInteger(G.jailCardHolder[type])) continue;
+    return card;
   }
+  return deck[0];
+}
+
+// A used or surrendered Get Out of Jail Free card goes back to its deck.
+function returnJailCard(p) {
+  const held = G.jailCardHolder || {};
+  const type = ["chance", "community"].find((t) => held[t] === p.id);
+  if (type) delete held[type];
+}
+
+function drawCard(type, p) {
+  const card = drawFromDeck(type);
   const playerId = Number(p?.id);
   const drawPlayer = getLivePlayer(playerId) || p;
   const cardText = formatThemeCurrencyText(card.text);
@@ -417,6 +448,7 @@ function drawCard(type, p) {
   document.getElementById("card-title").textContent =
     type === "chance" ? "Chance Card" : "Community Chest";
   document.getElementById("card-desc").textContent = cardText;
+  presentCardReveal(type, card, drawPlayer);
 
   const apply = async () => {
     const actor = getLivePlayer(playerId);
@@ -446,10 +478,12 @@ function drawCard(type, p) {
       sendToJail(actor);
     } else if (card.action === "jailcard") {
       actor.jailFreeCards++;
+      G.jailCardHolder[type] = actor.id;
       addLog(`${actor.name} received a Get Out of Jail Free card.`, "success");
     } else if (card.action === "nearest") {
+      // The card's rule: the owner is paid twice the usual rent.
       const nearest = nearestRailroad(actor.pos);
-      await movePlayerTo(actor.id, nearest);
+      await movePlayerTo(actor.id, nearest, true, { rentMultiplier: 2 });
       return;
     } else if (card.action === "repairs") {
       let cost = 0;
@@ -476,7 +510,7 @@ function drawCard(type, p) {
         collected > 0 ? "success" : "important",
       );
     }
-    G.phase = rolledDoublesThisTurn() ? "roll" : "end";
+    settleTurnPhase(actor);
     renderAll();
     updateActionButtons();
     checkBankruptcy();
@@ -485,8 +519,10 @@ function drawCard(type, p) {
   const cardActor = getLivePlayer(playerId) || p;
   if (isAiSeat(cardActor)) {
     // Never show an AI's card to a human. Only the client holding the lease
-    // resolves it; everyone else just waits for the resulting snapshot.
+    // resolves it; everyone else just waits for the resulting snapshot. A toast
+    // still says what it drew, so the AI's turn can be followed.
     closeOverlay("card-overlay");
+    toast(`${cardActor.name} drew: ${cardText}`, "gold");
     if (!shouldAutoActForAi(cardActor)) {
       finalizeCardResolution(false).catch((err) => console.error(err));
       return;
@@ -547,6 +583,8 @@ function promptBuy(p, sp) {
   const buyBtn = document.querySelector("#buy-overlay .btn-primary");
   const auctionBtn = document.getElementById("buy-auction-btn");
   const auctionsEnabled = isAuctionSystemEnabled();
+  const deedEl = document.getElementById("buy-deed");
+  if (deedEl) deedEl.innerHTML = propertyDeedHtml(sp.id);
 
   if (p.money < sp.price) {
     if (buyBtn) buyBtn.style.display = "none";
@@ -562,12 +600,26 @@ function promptBuy(p, sp) {
   }
 
   if (buyBtn) buyBtn.style.display = "";
+  if (buyBtn) buyBtn.textContent = `Buy for ${fmtCurrency(sp.price)}`;
   if (auctionBtn) auctionBtn.style.display = auctionsEnabled ? "" : "none";
   document.getElementById("buy-title").textContent = `Buy ${sp.name}?`;
   document.getElementById("buy-desc").textContent = auctionsEnabled
-    ? `Price: ${fmtCurrency(sp.price)}. You have ${fmtCurrency(p.money)}. Buy now or send to auction.`
-    : `Price: ${fmtCurrency(sp.price)}. You have ${fmtCurrency(p.money)}. Auctions are OFF for this match.`;
+    ? `You have ${fmtCurrency(p.money)}. Buy it, or send it to auction.`
+    : `You have ${fmtCurrency(p.money)}. Auctions are off for this match.`;
   openOverlay("buy-overlay");
+}
+
+// "Skip" on the buy dialog: leave the property unsold and carry on.
+function declineBuy() {
+  if (!requireTurnControl()) return;
+  closeOverlay("buy-overlay");
+  if (!hasPendingBuy()) return;
+  const sp = SPACES[Number(G.pendingBuy)];
+  G.pendingBuy = null;
+  addLog(`${curPlayer().name} passed on ${sp?.name || "the property"}. It stays unsold.`);
+  settleTurnPhase();
+  renderAll();
+  updateActionButtons();
 }
 
 function confirmBuy() {
@@ -605,8 +657,9 @@ function actionBuy() {
     "success",
   );
   playSfx("buy");
-  toast(`Bought ${sp.name}`, "gold");
-  G.phase = "end";
+  recordStat(p.id, "bought");
+  toast(isAiSeat(p) ? `${p.name} bought ${sp.name}` : `Bought ${sp.name}`, "gold");
+  settleTurnPhase(p);
   renderAll();
   animatePropertyPurchase(id);
   updateActionButtons();
@@ -622,7 +675,7 @@ function startAuction() {
     if (sp) {
       addLog(`Auctions are off. ${sp.name} stays unsold.`, "important");
     }
-    G.phase = "end";
+    settleTurnPhase();
     renderAll();
     updateActionButtons();
     return;
@@ -634,7 +687,7 @@ function startAuction() {
     })
   ) {
     addLog("The auction could not start: no one can bid.", "danger");
-    G.phase = "end";
+    settleTurnPhase();
     renderAll();
     updateActionButtons();
   }
@@ -708,6 +761,17 @@ function launchNextBankAuction() {
   return false;
 }
 
+// Bid steps sized to the property: +100/+200/+500/+1000 on a ৳2,000 street,
+// +2/+5/+10/+20 on a 60 one.
+function auctionBidSteps(price) {
+  const ladder = [];
+  for (let k = 1; k <= 1e7; k *= 10) ladder.push(k, 2 * k, 5 * k);
+  const target = Math.max(1, (Number(price) || 0) / 20);
+  let i = 0;
+  while (i + 1 < ladder.length && ladder[i + 1] <= target) i++;
+  return ladder.slice(i, i + 4);
+}
+
 function renderAuction() {
   const a = G.auctionState;
   if (!a) return;
@@ -732,6 +796,16 @@ function renderAuction() {
 
   openOverlay("auction-overlay");
 
+  const steps = auctionBidSteps(basePrice);
+  const stepKey = steps.join(",");
+  const btnWrap = document.getElementById("bid-btns");
+  if (btnWrap && btnWrap.dataset.steps !== stepKey) {
+    btnWrap.dataset.steps = stepKey;
+    btnWrap.innerHTML =
+      steps
+        .map((v) => `<button class="btn btn-sm btn-secondary" onclick="placeBid(${v})">+${v.toLocaleString("en-US")}</button>`)
+        .join("") + '<button class="btn btn-sm btn-danger" onclick="passAuction()">Pass</button>';
+  }
   const canAct = !aiBidderTurn && canLocalControlAuctionAction();
   document.querySelectorAll("#bid-btns button").forEach((btn) => {
     btn.disabled = !canAct;
@@ -773,6 +847,7 @@ function finalizeAuction(a) {
     if (winner && sp && prop && prop.owner === null) {
       winner.money -= a.currentBid;
       prop.owner = winner.id;
+      recordStat(winner.id, "bought");
       prop.houses = 0;
       prop.hotel = false;
       addOwnedAsset(winner, a.propId);
@@ -808,7 +883,7 @@ function finalizeAuction(a) {
     checkBankruptcy();
   }
 
-  G.phase = "end";
+  settleTurnPhase();
   renderAll();
   if (Number.isInteger(awardedPropId)) animatePropertyPurchase(awardedPropId);
   updateActionButtons();
@@ -1152,18 +1227,21 @@ function sellHouse(propId) {
     toast("Sell evenly across the colour group.", "danger");
     return;
   }
-  // Breaking a hotel needs four houses back from the bank.
-  if (prop.hotel && housesAvailable() < 4) {
-    toast("The bank has too few houses to break this hotel.", "danger");
-    return;
-  }
-  const refund = Math.floor(sp.house / 2);
+  // Breaking a hotel gives back four houses. If the bank has fewer left,
+  // the extra houses are sold with it (official shortage rule).
+  const housesBack = prop.hotel ? Math.min(4, housesAvailable()) : 0;
+  const unitsSold = prop.hotel ? 5 - housesBack : 1;
+  const refund = Math.floor(sp.house / 2) * unitsSold;
   p.money += refund;
   playSfx("sell");
   if (prop.hotel) {
     prop.hotel = false;
-    prop.houses = 4;
-    addLog(`${p.name} sold the hotel on ${sp.name} for ${fmtCurrency(refund)}.`);
+    prop.houses = housesBack;
+    addLog(
+      housesBack === 4
+        ? `${p.name} sold the hotel on ${sp.name} for ${fmtCurrency(refund)}.`
+        : `${p.name} sold the hotel on ${sp.name} for ${fmtCurrency(refund)}. The bank is short of houses, so it drops to ${housesBack} house${housesBack === 1 ? "" : "s"}.`,
+    );
   } else {
     prop.houses--;
     addLog(`${p.name} sold a house on ${sp.name} for ${fmtCurrency(refund)}.`);
@@ -1470,6 +1548,16 @@ function maybeShowPendingTradeReview() {
   }
 }
 
+// 10% interest the receiver owes on mortgaged properties in a trade.
+function tradeMortgageInterest(ids) {
+  return (ids || []).reduce((sum, id) => {
+    const prop = G.properties[id];
+    return prop && prop.mortgaged
+      ? sum + Math.ceil(mortgageValueForSpace(SPACES[id]) * 0.1)
+      : sum;
+  }, 0);
+}
+
 function validatePendingTrade(trade) {
   if (!trade) return "Trade proposal is missing.";
   const from = G.players[trade.fromId];
@@ -1497,6 +1585,15 @@ function validatePendingTrade(trade) {
     const blockReason = tradeAssetBuildingBlockReason(id);
     if (blockReason) return blockReason;
   }
+
+  const fromAfter = from.money - (trade.fromMoney || 0) + (trade.toMoney || 0);
+  const toAfter = to.money - (trade.toMoney || 0) + (trade.fromMoney || 0);
+  const fromInterest = tradeMortgageInterest(trade.toProps);
+  const toInterest = tradeMortgageInterest(trade.fromProps);
+  if (fromAfter < fromInterest)
+    return `${from.name} can't cover ${fmtCurrency(fromInterest)} mortgage interest on this trade.`;
+  if (toAfter < toInterest)
+    return `${to.name} can't cover ${fmtCurrency(toInterest)} mortgage interest on this trade.`;
 
   return "";
 }
@@ -1881,6 +1978,7 @@ function sendToJail(p) {
   p.jailTurns = 0;
   p.pos = 10;
   p.doublesCount = 0;
+  recordStat(p.id, "jailed");
   addLog(`${p.name} goes to jail.`, "danger");
   playSfx("jail");
   showJailPrompt(p, "sent");
@@ -1893,6 +1991,7 @@ function payBailout() {
   const bailAmount = getThemeJailBail(G.boardThemeId || selectedThemeId);
   if (p.jailFreeCards > 0) {
     p.jailFreeCards--;
+    returnJailCard(p);
     p.inJail = false;
     p.jailTurns = 0;
     addLog(`${p.name} used a Get Out of Jail Free card.`, "success");
@@ -1990,7 +2089,7 @@ function syncDebtPromptToGameState() {
     return;
   }
   const payerIdRaw = Number(DEBT_PROMPT.payerId);
-  const recipientIdRaw = Number(DEBT_PROMPT.recipientId);
+  const recipientIdRaw = optionalPlayerIndex(DEBT_PROMPT.recipientId);
   G.debtPrompt = {
     active: true,
     payerId: Number.isInteger(payerIdRaw) ? payerIdRaw : null,
@@ -2027,7 +2126,7 @@ function restoreDebtPromptFromGameState(state = G) {
     return false;
   }
 
-  const recipientIdRaw = Number(raw.recipientId);
+  const recipientIdRaw = optionalPlayerIndex(raw.recipientId);
   const recipientId =
     Number.isInteger(recipientIdRaw) &&
     recipientIdRaw >= 0 &&
@@ -2171,6 +2270,13 @@ function tryResolveDebtPrompt() {
     `${payer.name} settled debt of ${fmtCurrency(due)} to ${creditorName}.`,
     "success",
   );
+  // The only debt a jailed player can owe on their third turn is the forced
+  // bail. Once it's paid they are out, not charged again next turn.
+  if (payer.inJail && payer.jailTurns >= 3) {
+    payer.inJail = false;
+    payer.jailTurns = 0;
+    addLog(`${payer.name} is out of jail.`, "success");
+  }
   resetDebtPrompt();
   closeOverlay("bankrupt-overlay");
   closeOverlay("mortgage-overlay");
@@ -2313,9 +2419,16 @@ function showRentModal(payer, owner, propName, rent) {
     closeOverlay("rent-overlay");
     return;
   }
+  const party = (pl) =>
+    `<span class="rent-token" style="color:${sanitizeColor(pl.color)}">${escHtml(pl.token)}</span><span class="rent-name">${escHtml(pl.name)}</span>`;
   document.getElementById("rent-title").textContent = `Rent for ${propName}`;
+  document.getElementById("rent-payer").innerHTML = party(payer);
+  document.getElementById("rent-owner").innerHTML = party(owner);
+  document.getElementById("rent-amount").textContent = fmtCurrency(rent);
   document.getElementById("rent-desc").textContent =
-    `${payer.name} pays ${fmtCurrency(rent)} to ${owner.name}.`;
+    payer.money >= rent
+      ? `${payer.name} has paid ${owner.name}.`
+      : `${payer.name} is short and needs to raise the money.`;
   openOverlay("rent-overlay");
 }
 
@@ -2376,6 +2489,13 @@ function declareBankruptcy(p, creditor = null, debtAmount = 0) {
     );
     if (p.money > 0) creditor.money += p.money;
     p.money = 0;
+    // Get Out of Jail Free cards pass to the creditor too.
+    if (p.jailFreeCards > 0) {
+      creditor.jailFreeCards += p.jailFreeCards;
+      const held = G.jailCardHolder || {};
+      for (const t of Object.keys(held)) if (held[t] === p.id) held[t] = creditor.id;
+      p.jailFreeCards = 0;
+    }
 
     let interestDue = 0;
     assets.forEach((id) => {
@@ -2392,17 +2512,16 @@ function declareBankruptcy(p, creditor = null, debtAmount = 0) {
     });
 
     if (interestDue > 0) {
-      creditor.money -= interestDue;
       addLog(
-        `${creditor.name} paid ${fmtCurrency(interestDue)} mortgage interest to the bank.`,
+        `${creditor.name} owes ${fmtCurrency(interestDue)} mortgage interest to the bank.`,
         "danger",
       );
-      if (creditor.money < 0 && !creditor.bankrupt) {
-        addLog(
-          `${creditor.name} cannot cover the mortgage interest and is bankrupt to the bank.`,
-          "danger",
-        );
-        declareBankruptcy(creditor, null, Math.abs(creditor.money), true);
+      if (creditor.money >= interestDue) {
+        creditor.money -= interestDue;
+      } else {
+        // Charged like any other debt once this bankruptcy is done, so the
+        // creditor can mortgage or sell to cover it.
+        queuePendingCollection(creditor.id, null, interestDue);
       }
     }
 
@@ -2419,6 +2538,10 @@ function declareBankruptcy(p, creditor = null, debtAmount = 0) {
       "danger",
     );
     p.money = 0;
+    while (p.jailFreeCards > 0) {
+      p.jailFreeCards--;
+      returnJailCard(p);
+    }
 
     const auctionIds = [];
     assets.forEach((id) => {
@@ -2541,6 +2664,8 @@ function endTurn() {
   }
   stopTimer();
   G.pendingBuy = null;
+  if (curPlayer()) curPlayer().doublesCount = 0;
+  G.turnCount = (Number(G.turnCount) || 0) + 1;
 
   // Advance to next non-bankrupt player
   let next = (G.currentPlayerIdx + 1) % G.players.length;
