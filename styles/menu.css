@@ -2041,3 +2041,12 @@ body.nav-on-home .hp-nav-logo {
 .hp-status[hidden] {
   display: none;
 }
+
+/* The pinned Start game bar fades out above its button; that fade must not
+   swallow taps meant for the board tiles showing through it. */
+.mp-actionbar {
+  pointer-events: none;
+}
+.mp-actionbar > * {
+  pointer-events: auto;
+}

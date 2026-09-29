@@ -160,6 +160,10 @@ npm install
 npm run build:3d
 ```
 
+## Checking the UI
+
+`npm run audit:ui` (with the local server running) opens every screen, dialog and drawer at phone, tablet and desktop sizes. It reports controls that something else covers (so taps would miss them), text that is cut off, content spilling out of its box, off-centre icons, and pages wider than the screen. The full list is written to `tools/ui-audit-report.json`.
+
 ## Updating the screenshots
 
 The screenshots come from the game itself, not mock-ups. [`tools/capture-screenshots.cjs`](tools/capture-screenshots.cjs) serves the working tree, fast-forwards an AI match with a fixed random seed, then captures it on a desktop and a phone viewport. It uses your installed Chrome, so it downloads no browsers.

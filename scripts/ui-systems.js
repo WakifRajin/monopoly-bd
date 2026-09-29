@@ -2973,3 +2973,16 @@ function renderOnlineServiceNotice() {
         : '<span class="mp-spinner" aria-hidden="true"></span><span>Connecting to the online service…</span>';
   });
 }
+
+// Leaving for Patch notes, the board editor or Test lab fades the page and
+// sets a busy flag against double taps. Phones that restore the page from
+// memory on Back (bfcache) would bring both back with it: a dimmed page and
+// buttons that silently do nothing. Clear them whenever the page is shown.
+window.addEventListener("pageshow", () => {
+  document.body.classList.remove("route-leaving");
+  [openWhatsNewPage, openTestLabPage, openBoardEditorPage].forEach((fn) => {
+    if (fn) fn._busy = false;
+  });
+  const credits = document.getElementById("credits-logs-btn");
+  if (credits) credits.disabled = false;
+});

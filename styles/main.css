@@ -87,8 +87,25 @@ body.route-leaving::after {
   flex-direction: column;
   transition:
     opacity 0.35s,
-    transform 0.35s;
+    transform 0.35s,
+    visibility 0s;
   will-change: opacity;
+}
+/* A screen you have left stays in the page, faded out. Nothing in it may
+   catch a tap or take keyboard focus: pointer-events alone is not enough,
+   because a child that sets its own (the game's Roll / End turn dock, the
+   lobby's Start game bar) would still swallow taps meant for the screen in
+   front. visibility waits for the fade to finish. */
+.screen.hidden,
+.screen.hidden * {
+  pointer-events: none !important;
+}
+.screen.hidden {
+  visibility: hidden;
+  transition:
+    opacity 0.35s,
+    transform 0.35s,
+    visibility 0s linear 0.35s;
 }
 .screen.hidden {
   opacity: 0;
@@ -2960,4 +2977,15 @@ body.board-3d .board-view-reset:hover {
     height: 1.9rem;
     padding: 0 0.55rem;
   }
+}
+
+/* Token emoji in the player cards: centre the glyph in a fixed square rather
+   than relying on text-align, which left wide emoji ~2px right of centre. */
+.pcard .ptoken {
+  display: grid;
+  place-items: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  line-height: 1;
+  text-align: center;
 }

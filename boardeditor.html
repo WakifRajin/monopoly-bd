@@ -562,19 +562,38 @@
         overflow: hidden;
       }
 
+      /* Preview squares scale with the board (container query units), centre
+         their text, and wrap names between words with an ellipsis instead of
+         chopping them. On a phone-sized board a name cannot fit at all, so
+         squares show their colour bar and number only; the full name is in the
+         editor panel when a square is picked, and in its tooltip. */
+      .board-preview {
+        container-type: inline-size;
+        container-name: preview;
+      }
       .pv-space,
       .pv-fixed {
         position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.1em;
+        min-width: 0;
+        min-height: 0;
         border-radius: 2px;
         border: 1px solid #111;
         background: linear-gradient(160deg, #d9efdc 0%, #c9e5cf 100%);
-        padding: 0.18rem 0.2rem;
+        padding: 0.35em 0.2em 0.2em;
         overflow: hidden;
+        font-size: clamp(0.45rem, 1.25cqi, 0.78rem);
+        text-align: center;
+        color: #111;
+        font-family: var(--font-display);
       }
 
       .pv-space {
         cursor: pointer;
-        text-align: left;
       }
 
       .pv-space:hover {
@@ -587,34 +606,74 @@
 
       .pv-fixed {
         opacity: 0.95;
-        display: flex;
-        align-items: center;
-        justify-content: center;
       }
 
       .pv-id {
-        font-size: 0.58rem;
-        color: rgba(10, 16, 12, 0.7);
-        letter-spacing: 0.05em;
+        font-size: 0.82em;
+        line-height: 1;
+        color: rgba(10, 16, 12, 0.62);
         font-weight: 700;
+        font-variant-numeric: tabular-nums;
       }
 
       .pv-name {
-        margin-top: 0.08rem;
-        font-size: 0.61rem;
-        line-height: 1.15;
-        max-height: 2.3em;
-        overflow: hidden;
-        color: #111;
-        font-family: var(--font-display);
+        max-width: 100%;
+        font-size: 1em;
+        line-height: 1.12;
         font-weight: 700;
+        overflow-wrap: break-word;
+        hyphens: auto;
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 3;
+        line-clamp: 3;
+        overflow: hidden;
       }
 
       .pv-price {
-        margin-top: 0.12rem;
-        font-size: 0.58rem;
+        font-size: 0.86em;
+        line-height: 1;
         color: #2f2f2f;
         font-weight: 700;
+        font-variant-numeric: tabular-nums;
+      }
+
+      /* Mid-size boards: drop the number from ownable squares to give the
+         name the room. */
+      @container preview (max-width: 720px) {
+        .pv-space .pv-id {
+          display: none;
+        }
+        .pv-name {
+          -webkit-line-clamp: 2;
+          line-clamp: 2;
+        }
+      }
+      /* Phone-sized boards: numbers only on edge squares; corners keep their
+         name in two short lines. */
+      @container preview (max-width: 520px) {
+        .pv-space,
+        .pv-fixed {
+          font-size: clamp(0.5rem, 2.6cqi, 0.8rem);
+          padding: 0.3em 0.1em 0.1em;
+        }
+        .pv-space .pv-name,
+        .pv-space .pv-price,
+        .pv-fixed:not(.is-corner) .pv-name {
+          display: none;
+        }
+        .pv-space .pv-id,
+        .pv-fixed:not(.is-corner) .pv-id {
+          display: block;
+          font-size: 1em;
+          color: #111;
+        }
+        .pv-fixed.is-corner .pv-id {
+          display: none;
+        }
+        .pv-fixed.is-corner .pv-name {
+          font-size: 0.8em;
+        }
       }
 
       .pv-color,
@@ -1002,8 +1061,8 @@
         }
       }
     </style>
-<link rel="stylesheet" href="styles/menu.css?v=1.5.2">
-<link rel="stylesheet" href="styles/standalone.css?v=1.5.2">
+<link rel="stylesheet" href="styles/menu.css?v=1.5.3">
+<link rel="stylesheet" href="styles/standalone.css?v=1.5.3">
   </head>
   <body>
     <main class="page">
@@ -2383,6 +2442,40 @@
           return { row: 0, col: 0 };
         }
 
+        // A single long word ("Mediterranean") wider than its square would be
+        // split mid-word. Shrink that square's name until its longest word
+        // fits, down to 60%; below that the word wraps.
+        function fitPreviewNames() {
+          const names = els.boardPreview.querySelectorAll(".pv-name");
+          names.forEach((el) => {
+            el.style.fontSize = "";
+            if (!el.checkVisibility()) return;
+            const words = el.textContent.split(/\s+/).filter(Boolean);
+            if (!words.length) return;
+            const probe = document.createElement("span");
+            probe.style.cssText = "position:absolute;visibility:hidden;white-space:nowrap;font:inherit";
+            el.appendChild(probe);
+            const avail = el.clientWidth - 2;
+            let scale = 1;
+            const widest = () => Math.max(...words.map((w) => ((probe.textContent = w), probe.offsetWidth)));
+            while (scale > 0.6 && widest() > avail) {
+              scale -= 0.05;
+              el.style.fontSize = scale + "em";
+            }
+            probe.remove();
+          });
+        }
+        if (typeof ResizeObserver !== "undefined") {
+          let fitTimer = 0;
+          new ResizeObserver(() => {
+            clearTimeout(fitTimer);
+            fitTimer = setTimeout(fitPreviewNames, 80);
+          }).observe(document.getElementById("board-preview"));
+        }
+        // Measurements made with the fallback font are wrong once the web
+        // font arrives.
+        if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => fitPreviewNames());
+
         function renderBoardPreview() {
           const ownableById = {};
           BOARD.spaces.forEach((space) => {
@@ -2421,6 +2514,10 @@
                   (selected ? " selected" : "") +
                   '" data-space-id="' +
                   id +
+                  '" title="' +
+                  escapeHtml(name) +
+                  '" aria-label="' +
+                  escapeHtml(id + ". " + name) +
                   '" style="grid-row:' +
                   (pos.row + 1) +
                   ";grid-column:" +
@@ -2438,7 +2535,11 @@
               );
             } else {
               cells.push(
-                '<div class="pv-fixed" style="grid-row:' +
+                '<div class="pv-fixed' +
+                  (id % 10 === 0 ? " is-corner" : "") +
+                  '" title="' +
+                  escapeHtml(name) +
+                  '" style="grid-row:' +
                   (pos.row + 1) +
                   ";grid-column:" +
                   (pos.col + 1) +
@@ -2476,6 +2577,7 @@
           );
 
           els.boardPreview.innerHTML = cells.join("");
+          fitPreviewNames();
         }
 
         function focusSpaceRow(spaceId, options) {

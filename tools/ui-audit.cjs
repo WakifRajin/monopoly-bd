@@ -35,6 +35,9 @@ function inspect(label) {
     return r.width > 2 && r.height > 2;
   };
   const shown = (el) => {
+    // Closed <details> keep their contents laid out but unrendered.
+    if (el.checkVisibility && !el.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true, contentVisibilityAuto: true })) return false;
+    if (el.closest("svg") && el.tagName.toLowerCase() !== "svg") return false;
     for (let e = el; e && e !== document.body; e = e.parentElement) {
       const cs = getComputedStyle(e);
       if (cs.display === "none" || cs.visibility === "hidden" || Number(cs.opacity) < 0.05) return false;
@@ -92,7 +95,7 @@ function inspect(label) {
     if (/^(BUTTON|A|SELECT|INPUT)$/.test(el.tagName) || el.classList.contains("mp-card") || el.classList.contains("hp-card") || el.classList.contains("bd-card")) {
       const pr = el.getBoundingClientRect();
       for (const c of el.querySelectorAll("*")) {
-        if (!shown(c) || getComputedStyle(c).position === "absolute" || getComputedStyle(c).position === "fixed") continue;
+        if (!shown(c) || getComputedStyle(c).position === "absolute" || getComputedStyle(c).position === "fixed" || c.closest(".hp-card-globe")) continue;
         const r = c.getBoundingClientRect();
         if (r.right > pr.right + 2 || r.left < pr.left - 2 || r.bottom > pr.bottom + 2) {
           out.push({ kind: "spill", el: name(c), detail: `outside ${name(el)} by ${Math.round(Math.max(r.right - pr.right, pr.left - r.left, r.bottom - pr.bottom))}px` });
@@ -106,6 +109,7 @@ function inspect(label) {
   for (const el of controls) {
     const r = el.getBoundingClientRect();
     if (r.width > 64 || r.height > 64) continue;
+    if (el.classList.contains("mp-switch")) continue; // the knob sits to one side by design
     const kids = [...el.children].filter(shown);
     const text = (el.innerText || "").trim();
     let box = null;

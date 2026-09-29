@@ -305,8 +305,8 @@ body::before{
   .news-subtitle-row{letter-spacing:.08em;font-size:.72rem}
 }
 </style>
-<link rel="stylesheet" href="styles/menu.css?v=1.5.2">
-<link rel="stylesheet" href="styles/standalone.css?v=1.5.2">
+<link rel="stylesheet" href="styles/menu.css?v=1.5.3">
+<link rel="stylesheet" href="styles/standalone.css?v=1.5.3">
 </head>
 <body>
   <main class="page">
@@ -387,6 +387,11 @@ body::before{
         <li>In the 3D view, drag to turn the table, scroll or pinch to zoom, and use Reset view to go back. Clicking or tapping a square opens its details in both views.</li>
         <li>Browsers without WebGL keep the previous HTML board.</li>
         <li>Fixed the board name under MONOPOLY on the ধনী হবার মজার খেলা board, where Bengali vowel signs were drawn apart from their letters.</li>
+        <li>Fixed taps not working in parts of the menus, mostly on phones. Screens you had left stayed in the page invisibly, and some of their buttons (the Roll dice and End turn dock, the Start game bar) kept catching taps meant for the page in front.</li>
+        <li>The fade above the lobby&#39;s Start game button no longer catches taps meant for the boards showing through it.</li>
+        <li>The board editor&#39;s preview no longer cuts names off mid-letter. Names wrap between words and shrink to fit, and on a phone the small squares show their number, with the full name in the editor panel.</li>
+        <li>The token in each player card is centred.</li>
+        <li>Pages restored by the Back button no longer stay dimmed, and their Patch notes, board editor and test lab buttons work again.</li>
         <li>Online rooms and Same Wi-Fi now say when the game cannot connect to its online service, with the reason and a Try again button, instead of leaving the buttons greyed out with no explanation. The connection is retried by itself when the phone comes back online.</li>
         <li>The online service starts faster, especially on phones: it no longer downloads a database library the game never used.</li>
         <li>Fixed online play failing for some players right after an update. Their browser could combine the new page with an old cached script, which stopped the game from finishing start-up. Every file now carries the release version, and start-up carries on even if one part fails.</li>

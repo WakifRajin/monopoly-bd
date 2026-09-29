@@ -13,7 +13,8 @@
     "start": "npx --yes serve -l 8080 .",
     "screenshots": "node tools/capture-screenshots.cjs",
     "build:3d": "esbuild scripts/board3d/main.js --bundle --minify --format=esm --target=es2020 --legal-comments=eof --outfile=scripts/board3d.min.js",
-    "version:bump": "node tools/bump-version.cjs"
+    "version:bump": "node tools/bump-version.cjs",
+    "audit:ui": "node tools/ui-audit.cjs"
   },
   "devDependencies": {
     "esbuild": "^0.28.2",
