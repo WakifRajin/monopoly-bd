@@ -275,6 +275,8 @@ body.has-app-nav #app-nav {
 .mp-page {
   width: 100%;
   max-width: calc(72rem + 2 * var(--mp-pad));
+  /* Centred in the space beside the side menu. */
+  margin-inline: auto;
   padding: var(--mp-pad) var(--mp-pad) calc(2.5rem + var(--mp-tabbar));
 }
 .mp-page-narrow {
@@ -1563,11 +1565,11 @@ body.has-app-nav #app-nav {
 }
 /* In an online room a row also carries badges and the token picker. The name
    keeps a readable width; everything else wraps to a second line under it. */
-.player-slot {
+.player-slot:has(.mp-badge, .mp-token-picker) {
   flex-wrap: wrap;
   row-gap: 0.5rem;
 }
-.player-slot .name-input {
+.player-slot:has(.mp-badge, .mp-token-picker) .name-input {
   flex: 1 1 14rem;
 }
 
@@ -1780,5 +1782,64 @@ body.nav-on-home .hp-nav-logo {
   }
   .mp-keys {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ── Phones: centred page headers and home hero ──
+   Standard mobile title bar: back button on the left, the title centred on
+   the same row, the description centred under both. */
+@media (max-width: 767px) {
+  .mp-header {
+    grid-template-columns: var(--mp-control) minmax(0, 1fr) var(--mp-control);
+    align-items: center;
+    gap: 0.5rem 0.5rem;
+    text-align: center;
+  }
+  .mp-header > .mp-back {
+    grid-column: 1;
+    grid-row: 1;
+    margin-top: 0;
+  }
+  .mp-heading {
+    display: contents;
+  }
+  .mp-title {
+    grid-column: 2;
+    grid-row: 1;
+    justify-content: center;
+    font-size: clamp(1.5rem, 1.1rem + 2.2vw, 1.9rem);
+  }
+  .mp-subtitle {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    margin: 0.15rem auto 0;
+  }
+  /* The online status chip moves under the title bar instead of hiding. */
+  .mp-header > .hp-status {
+    display: inline-flex;
+    grid-column: 1 / -1;
+    grid-row: 3;
+    justify-self: center;
+  }
+
+  .hp-top {
+    justify-content: center;
+  }
+  .hp-hero {
+    text-align: center;
+  }
+  .hp-ornament {
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .hp-brand {
+    justify-content: center;
+  }
+  .hp-title {
+    text-align: left;
+  }
+  .hp-tagline {
+    margin-left: auto;
+    margin-right: auto;
   }
 }
