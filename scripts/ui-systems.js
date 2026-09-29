@@ -1577,6 +1577,7 @@ function showScreen(id) {
   document.getElementById(id).classList.remove("hidden");
   syncBgmForScreen(id);
   if (id === "home-screen") refreshHomeScreen();
+  if (id === "online-screen" || id === "lan-screen") renderOnlineServiceNotice();
   if (id === "game-screen") ensureBoardScene();
   syncAppNav(id);
   if (id === "game-screen") armExitGuard();
@@ -2943,5 +2944,32 @@ function installStickyHeaders() {
     const update = () => header.classList.toggle("is-stuck", screen.scrollTop > 8);
     screen.addEventListener("scroll", update, { passive: true });
     update();
+  });
+}
+
+// Connection state of the online service, shown at the top of the Online
+// rooms and Same Wi-Fi pages until it is ready.
+function renderOnlineServiceNotice() {
+  const state = typeof ONLINE_SERVICE !== "undefined" ? ONLINE_SERVICE.state : "ready";
+  const error = typeof ONLINE_SERVICE !== "undefined" ? ONLINE_SERVICE.error : "";
+  // The "Online" chip only knows whether the device has internet; while the
+  // game's service is not connected it would contradict the notice below.
+  document.querySelectorAll("#online-screen .js-net-status").forEach((chip) => {
+    chip.hidden = state !== "ready";
+  });
+  ["online-service-note", "lan-service-note"].forEach((id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (state === "ready" || state === "idle") {
+      el.hidden = true;
+      el.innerHTML = "";
+      return;
+    }
+    el.hidden = false;
+    el.classList.toggle("is-error", state === "error");
+    el.innerHTML =
+      state === "error"
+        ? `<span>${escHtml(error || "Could not connect to the online service.")}</span><button type="button" class="mp-btn mp-btn-secondary mp-btn-sm" onclick="retryOnlineService()">Try again</button>`
+        : '<span class="mp-spinner" aria-hidden="true"></span><span>Connecting to the online service…</span>';
   });
 }

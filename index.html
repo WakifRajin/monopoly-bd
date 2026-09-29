@@ -54,8 +54,8 @@
 
       gtag("config", "G-QPMD9QD5H7");
     </script>
-    <link rel="stylesheet" href="styles/main.css?v=1.5.1" />
-    <link rel="stylesheet" href="styles/menu.css?v=1.5.1" />
+    <link rel="stylesheet" href="styles/main.css?v=1.5.2" />
+    <link rel="stylesheet" href="styles/menu.css?v=1.5.2" />
   </head>
   <body>
     <!-- Side menu (desktop) / tab bar (phones), shared by the menu pages. -->
@@ -183,6 +183,7 @@
       </header>
 
         <section class="mp-card">
+          <div class="mp-service-note" id="online-service-note" role="status" hidden></div>
           <div class="mp-field">
             <label for="online-player-name">Your name</label>
             <input type="text" id="online-player-name" maxlength="24" placeholder="Enter your name" autocomplete="nickname" />
@@ -245,6 +246,7 @@
         </header>
         <div class="mp-stack-lg">
           <section class="mp-card">
+            <div class="mp-service-note" id="lan-service-note" role="status" hidden></div>
             <div class="mp-field">
               <label for="lan-player-name">Your name</label>
               <input type="text" id="lan-player-name" maxlength="24" placeholder="Enter your name" autocomplete="nickname" />
@@ -1371,13 +1373,13 @@
 
     <!-- Release version, stamped by tools/bump-version.cjs with the ?v= below. -->
     <script>
-      window.APP_BUILD = "1.5.1";
+      window.APP_BUILD = "1.5.2";
     </script>
-    <script src="scripts/core-online-theme-lobby.js?v=1.5.1"></script>
-    <script src="scripts/board-render-ai.js?v=1.5.1"></script>
-    <script src="scripts/gameplay-actions.js?v=1.5.1"></script>
-    <script src="scripts/ui-systems.js?v=1.5.1"></script>
-    <script src="scripts/lan.js?v=1.5.1"></script>
-    <script src="scripts/init.js?v=1.5.1"></script>
+    <script src="scripts/core-online-theme-lobby.js?v=1.5.2"></script>
+    <script src="scripts/board-render-ai.js?v=1.5.2"></script>
+    <script src="scripts/gameplay-actions.js?v=1.5.2"></script>
+    <script src="scripts/ui-systems.js?v=1.5.2"></script>
+    <script src="scripts/lan.js?v=1.5.2"></script>
+    <script src="scripts/init.js?v=1.5.2"></script>
   </body>
 </html>

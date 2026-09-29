@@ -6,3 +6,4 @@ tsdt.html
 
 # Dev tooling (screenshots)
 node_modules/
+tools/ui-audit-report.json

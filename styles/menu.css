@@ -1997,3 +1997,47 @@ body.nav-on-home .hp-nav-logo {
     backdrop-filter: blur(10px);
   }
 }
+
+/* ── Online service status (Online rooms, Same Wi-Fi) ── */
+.mp-service-note {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem 0.75rem;
+  margin-bottom: 1rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: var(--mp-radius-sm);
+  border: 1px solid var(--mp-line);
+  background: var(--mp-surface);
+  color: var(--mp-text-2);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+.mp-service-note[hidden] {
+  display: none;
+}
+.mp-service-note > span:not(.mp-spinner) {
+  flex: 1 1 12rem;
+}
+.mp-service-note.is-error {
+  border-color: rgba(248, 113, 113, 0.45);
+  background: rgba(127, 29, 29, 0.25);
+  color: #fecaca;
+}
+.mp-spinner {
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  border-top-color: var(--mp-gold);
+  animation: mp-spin 0.8s linear infinite;
+}
+@keyframes mp-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.hp-status[hidden] {
+  display: none;
+}

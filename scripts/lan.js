@@ -625,10 +625,9 @@ async function openLanPage() {
   await lanStartDiscovery();
 }
 
-async function lanWaitReady(ms = 12000) {
-  const start = Date.now();
-  while (!ONLINE.ready && Date.now() - start < ms) await new Promise((r) => setTimeout(r, 150));
-  return ONLINE.ready;
+async function lanWaitReady() {
+  if (ONLINE.ready) return true;
+  return bootstrapFirebase();
 }
 
 async function lanStartDiscovery() {
@@ -639,7 +638,7 @@ async function lanStartDiscovery() {
   if (LAN.unsubRooms && LAN.netId) return;
   lanSetStatus("Looking for games on this network…");
   if (!(await lanWaitReady())) {
-    lanSetStatus("Could not reach the connection service. Check your internet connection.", true);
+    lanSetStatus("Finding games needs the online service for a moment. See the message above.", true);
     return;
   }
   try {

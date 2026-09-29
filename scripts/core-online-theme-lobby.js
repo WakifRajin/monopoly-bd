@@ -616,67 +616,123 @@ function indexedObjectToArray(value) {
   return arr;
 }
 
-async function bootstrapFirebase() {
-  try {
-    const [appMod, dbMod, fsMod, authMod] = await Promise.all([
-      import("https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js"),
-      import("https://www.gstatic.com/firebasejs/12.11.0/firebase-database.js"),
-      import(
-        "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js"
-      ),
-      import("https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js"),
-    ]);
-    const app = appMod.initializeApp(firebaseConfig);
-    const auth = authMod.getAuth(app);
-    if (!auth.currentUser) {
-      await authMod.signInAnonymously(auth);
-    }
-    if (auth.currentUser?.uid) {
-      ONLINE.localUid = auth.currentUser.uid;
-      if (Array.isArray(lobbyPlayers) && lobbyPlayers[0]) {
-        lobbyPlayers[0].uid = ONLINE.localUid;
-      }
-    }
-    FIREBASE.db = dbMod.getDatabase(app, firebaseConfig.databaseURL);
-    FIREBASE.fs = fsMod.getFirestore(app);
-    FIREBASE.auth = auth;
-    FIREBASE.api = {
-      ref: dbMod.ref,
-      query: dbMod.query,
-      orderByChild: dbMod.orderByChild,
-      equalTo: dbMod.equalTo,
-      limitToFirst: dbMod.limitToFirst,
-      get: dbMod.get,
-      set: dbMod.set,
-      update: dbMod.update,
-      onValue: dbMod.onValue,
-      runTransaction: dbMod.runTransaction,
-      serverTimestamp: dbMod.serverTimestamp,
-      onDisconnect: dbMod.onDisconnect,
-      remove: dbMod.remove,
-      push: dbMod.push,
-    };
-    // Every deadline in online play (lease expiry, presence staleness, room
-    // cleanup) is compared in server time, so a wrong device clock cannot
-    // expire another player's turn or delete a live room.
-    dbMod.onValue(dbMod.ref(FIREBASE.db, ".info/serverTimeOffset"), (snap) => {
-      const offset = Number(snap.val());
-      if (!Number.isFinite(offset)) return;
-      // During a same-Wi-Fi match the host's clock is the server clock.
-      if (typeof LAN !== "undefined" && LAN.real) LAN.real.serverTimeOffset = offset;
-      else ONLINE.serverTimeOffset = offset;
-    });
-    ONLINE.ready = true;
-    updateOnlineStatus("Online service ready. You can create or join a room.");
-  } catch (err) {
-    console.error(err);
-    const msg = firebaseErrorMessage(
-      err,
-      "Online service failed to initialize. Check room service URL and enable anonymous sign-in.",
-    );
-    updateOnlineStatus(msg, true);
-  }
+// The connection to the online service (Firebase). Online rooms and finding
+// Same Wi-Fi games both need it. Its state is shown on those pages, with the
+// real reason when it fails, instead of just leaving the buttons disabled.
+const ONLINE_SERVICE = { state: "idle", error: "", attempt: 0, promise: null };
+const FIREBASE_SDK = "https://www.gstatic.com/firebasejs/12.11.0";
+
+function withTimeout(promise, ms, label) {
+  let timer = null;
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      timer = setTimeout(() => {
+        const err = new Error(`${label} took too long`);
+        err.code = "timeout";
+        reject(err);
+      }, ms);
+    }),
+  ]).finally(() => clearTimeout(timer));
 }
+
+function setOnlineServiceState(state, error = "") {
+  ONLINE_SERVICE.state = state;
+  ONLINE_SERVICE.error = error;
+  if (typeof renderOnlineServiceNotice === "function") renderOnlineServiceNotice();
+}
+
+function bootstrapFirebase() {
+  if (ONLINE.ready) return Promise.resolve(true);
+  if (ONLINE_SERVICE.promise) return ONLINE_SERVICE.promise;
+  ONLINE_SERVICE.attempt++;
+  setOnlineServiceState("connecting");
+  ONLINE_SERVICE.promise = (async () => {
+    let stage = "load";
+    try {
+      const [appMod, dbMod, authMod] = await withTimeout(
+        Promise.all([
+          import(`${FIREBASE_SDK}/firebase-app.js`),
+          import(`${FIREBASE_SDK}/firebase-database.js`),
+          import(`${FIREBASE_SDK}/firebase-auth.js`),
+        ]),
+        25000,
+        "Loading the online service",
+      );
+      stage = "connect";
+      const app = appMod.getApps().length ? appMod.getApp() : appMod.initializeApp(firebaseConfig);
+      const auth = authMod.getAuth(app);
+      if (!auth.currentUser) {
+        await withTimeout(authMod.signInAnonymously(auth), 20000, "Signing in");
+      }
+      if (auth.currentUser?.uid) {
+        ONLINE.localUid = auth.currentUser.uid;
+        if (Array.isArray(lobbyPlayers) && lobbyPlayers[0]) {
+          lobbyPlayers[0].uid = ONLINE.localUid;
+        }
+      }
+      FIREBASE.db = dbMod.getDatabase(app, firebaseConfig.databaseURL);
+      FIREBASE.auth = auth;
+      FIREBASE.api = {
+        ref: dbMod.ref,
+        query: dbMod.query,
+        orderByChild: dbMod.orderByChild,
+        equalTo: dbMod.equalTo,
+        limitToFirst: dbMod.limitToFirst,
+        get: dbMod.get,
+        set: dbMod.set,
+        update: dbMod.update,
+        onValue: dbMod.onValue,
+        runTransaction: dbMod.runTransaction,
+        serverTimestamp: dbMod.serverTimestamp,
+        onDisconnect: dbMod.onDisconnect,
+        remove: dbMod.remove,
+        push: dbMod.push,
+      };
+      // Every deadline in online play (lease expiry, presence staleness, room
+      // cleanup) is compared in server time, so a wrong device clock cannot
+      // expire another player's turn or delete a live room.
+      dbMod.onValue(dbMod.ref(FIREBASE.db, ".info/serverTimeOffset"), (snap) => {
+        const offset = Number(snap.val());
+        if (!Number.isFinite(offset)) return;
+        // During a same-Wi-Fi match the host's clock is the server clock.
+        if (typeof LAN !== "undefined" && LAN.real) LAN.real.serverTimeOffset = offset;
+        else ONLINE.serverTimeOffset = offset;
+      });
+      ONLINE.ready = true;
+      setOnlineServiceState("ready");
+      updateOnlineStatus("Online service ready. You can create or join a room.");
+      if (typeof updateOnlineLobbyUI === "function") updateOnlineLobbyUI();
+      if (ONLINE.mode === "join" && typeof refreshOpenRoomsList === "function") refreshOpenRoomsList(true);
+      return true;
+    } catch (err) {
+      console.error("Online service failed to start:", err);
+      // A failed import() stays failed for the life of the page, so if the
+      // code itself did not load, trying again means reloading.
+      ONLINE_SERVICE.needsReload = stage === "load";
+      const msg = firebaseErrorMessage(err, "Could not connect to the online service.");
+      setOnlineServiceState("error", msg);
+      updateOnlineStatus(msg, true);
+      return false;
+    } finally {
+      ONLINE_SERVICE.promise = null;
+    }
+  })();
+  return ONLINE_SERVICE.promise;
+}
+
+function retryOnlineService() {
+  if (ONLINE.ready || ONLINE_SERVICE.promise) return;
+  if (ONLINE_SERVICE.needsReload) {
+    window.location.reload();
+    return;
+  }
+  bootstrapFirebase();
+}
+// A phone that drops and regains its connection tries again by itself.
+window.addEventListener("online", () => {
+  if (!ONLINE.ready) retryOnlineService();
+});
 
 function updateOnlineStatus(text, isError = false) {
   const el = document.getElementById("online-room-status");
@@ -688,24 +744,28 @@ function updateOnlineStatus(text, isError = false) {
 function firebaseErrorMessage(err, fallback = "Online request failed.") {
   const code = String(err?.code || "").toLowerCase();
   const message = String(err?.message || "");
-  if (
-    code.includes("permission-denied") ||
-    message.includes("Permission denied") ||
-    message.includes("PERMISSION_DENIED")
-  ) {
-    return "Permission denied by RTDB rules. Allow authenticated users to read/write rooms.";
+  const lower = message.toLowerCase();
+  const detail = code ? ` (${code})` : "";
+  if (typeof navigator !== "undefined" && navigator.onLine === false) {
+    return "You are offline. Connect to the internet and try again.";
   }
-  if (
-    code.includes("unauthenticated") ||
-    code.includes("auth") ||
-    message.toLowerCase().includes("anonymous")
-  ) {
-    return "Authentication failed. Enable anonymous sign-in in authentication settings.";
+  if (code.includes("permission-denied") || message.includes("PERMISSION_DENIED") || lower.includes("permission denied")) {
+    return "The online service refused the request. The database rules may need deploying.";
   }
-  if (code.includes("network") || message.toLowerCase().includes("network")) {
-    return "Network error while contacting RTDB. Check your internet connection.";
+  if (code === "timeout" || code.includes("network") || lower.includes("network") || lower.includes("failed to fetch") || lower.includes("dynamically imported module")) {
+    return `Could not reach the online service. Check your connection, or try another network or turn off data saver.${detail}`;
   }
-  return fallback;
+  if (code.includes("operation-not-allowed") || code.includes("admin-restricted")) {
+    return `Anonymous sign-in is turned off for this project.${detail}`;
+  }
+  if (code.includes("unauthorized-domain") || code.includes("api-key") || code.includes("app-not-authorized")) {
+    return `This site is not allowed to use the online service. Check the Firebase project settings.${detail}`;
+  }
+  if (code.includes("web-storage") || code.includes("internal") || lower.includes("indexeddb") || lower.includes("storage")) {
+    return `This browser blocked storage the online service needs. Try your normal browser instead of an in-app or private window.${detail}`;
+  }
+  if (code.startsWith("auth/")) return `Could not sign in to the online service.${detail}`;
+  return `${fallback}${detail}`;
 }
 
 // Milliseconds since epoch, corrected to the database's clock.
