@@ -106,7 +106,13 @@ The rules in [`database.rules.json`](database.rules.json) are part of the game, 
 
 ## Deploying
 
-Any static host works. The live site runs on GitHub Pages. Before deploying, bump `SW_VERSION` in [`sw.js`](sw.js). Returning players' service workers only fetch new files when the version changes. Without a bump they can end up running a mix of old and new scripts.
+Any static host works. The live site runs on GitHub Pages. Before every deploy, bump the release version:
+
+```bash
+npm run version:bump
+```
+
+This updates `SW_VERSION` in [`sw.js`](sw.js) and stamps `?v=<version>` on every script and stylesheet the pages load. Both matter. GitHub Pages lets browsers reuse a file for 10 minutes, so without versioned URLs a browser can load the new page with an old cached script and fail to start. The service worker version makes returning players fetch the new files.
 
 After a deploy, check that:
 

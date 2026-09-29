@@ -1,7 +1,7 @@
 // Bump this on every deploy. Caches are keyed by it, and activate() deletes the
 // old ones — without a bump, returning players keep running cached scripts and
 // can end up on a mixed set of old and new files.
-const SW_VERSION = '1.5.0';
+const SW_VERSION = '1.5.1';
 const STATIC_CACHE = `monopoly-bd-static-${SW_VERSION}`;
 const RUNTIME_CACHE = `monopoly-bd-runtime-${SW_VERSION}`;
 
@@ -107,7 +107,11 @@ async function handleCodeAssetRequest(request) {
     const cachedResponse = await runtimeCache.match(request);
     return cachedResponse || networkResponse;
   } catch (error) {
-    const cachedResponse = await runtimeCache.match(request);
+    // Offline: prefer this exact version, else any cached version of the file.
+    const cachedResponse =
+      (await runtimeCache.match(request)) ||
+      (await runtimeCache.match(request, { ignoreSearch: true })) ||
+      (await caches.match(request, { ignoreSearch: true }));
     return cachedResponse || Response.error();
   }
 }

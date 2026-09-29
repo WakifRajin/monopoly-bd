@@ -54,8 +54,8 @@
 
       gtag("config", "G-QPMD9QD5H7");
     </script>
-    <link rel="stylesheet" href="styles/main.css" />
-    <link rel="stylesheet" href="styles/menu.css" />
+    <link rel="stylesheet" href="styles/main.css?v=1.5.1" />
+    <link rel="stylesheet" href="styles/menu.css?v=1.5.1" />
   </head>
   <body>
     <!-- Side menu (desktop) / tab bar (phones), shared by the menu pages. -->
@@ -1369,11 +1369,15 @@
     <!-- Toast -->
     <div id="toast"></div>
 
-    <script src="scripts/core-online-theme-lobby.js"></script>
-    <script src="scripts/board-render-ai.js"></script>
-    <script src="scripts/gameplay-actions.js"></script>
-    <script src="scripts/ui-systems.js"></script>
-    <script src="scripts/lan.js"></script>
-    <script src="scripts/init.js"></script>
+    <!-- Release version, stamped by tools/bump-version.cjs with the ?v= below. -->
+    <script>
+      window.APP_BUILD = "1.5.1";
+    </script>
+    <script src="scripts/core-online-theme-lobby.js?v=1.5.1"></script>
+    <script src="scripts/board-render-ai.js?v=1.5.1"></script>
+    <script src="scripts/gameplay-actions.js?v=1.5.1"></script>
+    <script src="scripts/ui-systems.js?v=1.5.1"></script>
+    <script src="scripts/lan.js?v=1.5.1"></script>
+    <script src="scripts/init.js?v=1.5.1"></script>
   </body>
 </html>

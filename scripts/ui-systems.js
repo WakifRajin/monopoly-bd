@@ -2712,7 +2712,8 @@ let BOARD3D_LOADING = null;
 function loadBoard3d() {
   if (window.Board3D) return Promise.resolve(window.Board3D);
   if (!BOARD3D_LOADING) {
-    const url = new URL("scripts/board3d.min.js", document.baseURI).href;
+    const build = window.APP_BUILD ? `?v=${window.APP_BUILD}` : "";
+    const url = new URL(`scripts/board3d.min.js${build}`, document.baseURI).href;
     BOARD3D_LOADING = import(url)
       .then(() => window.Board3D)
       .catch((err) => {

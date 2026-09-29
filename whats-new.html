@@ -305,8 +305,8 @@ body::before{
   .news-subtitle-row{letter-spacing:.08em;font-size:.72rem}
 }
 </style>
-<link rel="stylesheet" href="styles/menu.css">
-<link rel="stylesheet" href="styles/standalone.css">
+<link rel="stylesheet" href="styles/menu.css?v=1.5.1">
+<link rel="stylesheet" href="styles/standalone.css?v=1.5.1">
 </head>
 <body>
   <main class="page">
@@ -387,6 +387,7 @@ body::before{
         <li>In the 3D view, drag to turn the table, scroll or pinch to zoom, and use Reset view to go back. Clicking or tapping a square opens its details in both views.</li>
         <li>Browsers without WebGL keep the previous HTML board.</li>
         <li>Fixed the board name under MONOPOLY on the ধনী হবার মজার খেলা board, where Bengali vowel signs were drawn apart from their letters.</li>
+        <li>Fixed online play failing for some players right after an update. Their browser could combine the new page with an old cached script, which stopped the game from finishing start-up. Every file now carries the release version, and start-up carries on even if one part fails.</li>
         <li>New: Same Wi-Fi play, like PairDrop. Games hosted on your network show up automatically for everyone connected to it, and the match runs directly between your devices instead of through the internet. The internet is only used for a moment to find each other. It is on the home screen, in place of the Classic board shortcut (all boards, Classic included, are on the Boards page).</li>
         <li>In a Same Wi-Fi match everything works as in online rooms: ready checks, chat, and the AI taking over a player who drops out. If the host leaves, the match ends for everyone.</li>
         <li>Boards in the menu opens a new page with every board: a short description of each, its starting money, GO salary and price range, and a button to play it. It also links to the board editor, your saved custom board and pasting a seed code.</li>
