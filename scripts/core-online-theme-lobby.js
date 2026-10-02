@@ -2466,128 +2466,6 @@ const BOARD_THEMES = {
     taxNames: ["Tribute Tax", "Imperial Tax"],
     taxAmounts: [2000, 1000],
   },
-  buet: {
-    id: "buet",
-    name: "BUET",
-    flag: "🎓",
-    desc: "Halls, buildings and corners of the BUET campus",
-    currency: "৳",
-    locale: "en-BD",
-    // Drawn by scripts/board3d/buet-art.js instead of the generic squares.
-    art: "buet",
-    goSalary: 200,
-    startMoneyDefault: 1500,
-    jailBail: 50,
-    railroadPrice: 200,
-    railroadRent: [25, 50, 100, 200],
-    railroadMortgage: 100,
-    utilityPrice: 150,
-    utilityMortgage: 75,
-    utilityRentOneMultiplier: 4,
-    utilityRentBothMultiplier: 10,
-    // The board's own colour groups, in place of the usual palette.
-    colors: {
-      BROWN: "#b07a4c",
-      LBLUE: "#1f6fc5",
-      PINK: "#d7799f",
-      ORANGE: "#ef8a3c",
-      RED: "#e9606b",
-      YELLOW: "#f3c64e",
-      GREEN: "#2f8d6c",
-      DBLUE: "#46348a",
-    },
-    specialNames: {
-      go: "BUET Main Gate",
-      jail: "Supplementary Exam",
-      parking: "Mid-Term Break",
-      gotojail: "Attend Supplementary Exam",
-      chance: "CGPA",
-      community: "BIIS",
-    },
-    specialDescs: {
-      go: "Collect 200TK scholarship as you pass",
-      jail: "Just chilling, or sitting the supplementary exam",
-      parking: "Mid-term break: a free resting place",
-      gotojail: "Attend supplementary exam",
-    },
-    deckNames: { chance: "CGPA", community: "BIIS" },
-    stations: [
-      "Civil Building",
-      "Architecture Building",
-      "ECE Building",
-      "Mechanical Building",
-    ],
-    utilities: [
-      { name: "Gymnasium", icon: "🏋️" },
-      { name: "Medical Centre", icon: "➕" },
-    ],
-    spaces: [
-      { name: "DSW Office", color: "BROWN", price: 60, rent: [2, 10, 30, 90, 160, 250], house: 50, mortgage: 30, group: 0 },
-      { name: "Central Field", color: "BROWN", price: 60, rent: [4, 20, 60, 180, 320, 450], house: 50, mortgage: 30, group: 0 },
-      { name: "Cafeteria", color: "LBLUE", price: 100, rent: [6, 30, 90, 270, 400, 550], house: 50, mortgage: 50, group: 1 },
-      { name: "Registrar Building", color: "LBLUE", price: 100, rent: [6, 30, 90, 270, 400, 550], house: 50, mortgage: 50, group: 1 },
-      { name: "Auditorium", color: "LBLUE", price: 120, rent: [8, 40, 100, 300, 450, 600], house: 50, mortgage: 50, group: 1 },
-      { name: "BUET Shaheed Minar", color: "PINK", price: 140, rent: [10, 50, 150, 450, 625, 750], house: 100, mortgage: 70, group: 2 },
-      { name: "BUET Central Mosque", color: "PINK", price: 140, rent: [10, 50, 150, 450, 625, 750], house: 100, mortgage: 70, group: 2 },
-      { name: "Central Library", color: "PINK", price: 160, rent: [12, 60, 180, 500, 700, 900], house: 100, mortgage: 80, group: 2 },
-      { name: "BUET Red Quarter", color: "ORANGE", price: 180, rent: [14, 70, 200, 550, 750, 950], house: 100, mortgage: 90, group: 3 },
-      { name: "ARI-ITN Building", color: "ORANGE", price: 180, rent: [14, 70, 200, 550, 750, 950], house: 100, mortgage: 90, group: 3 },
-      { name: "Old Academic Building", color: "ORANGE", price: 200, rent: [16, 80, 220, 600, 800, 1000], house: 100, mortgage: 100, group: 3 },
-      { name: "Ahsanullah Hall", color: "RED", price: 220, rent: [18, 90, 250, 700, 875, 1050], house: 150, mortgage: 110, group: 4 },
-      { name: "Nazrul Hall", color: "RED", price: 220, rent: [18, 90, 250, 700, 875, 1050], house: 150, mortgage: 110, group: 4 },
-      { name: "Titumir Hall", color: "RED", price: 240, rent: [20, 100, 300, 750, 925, 1100], house: 150, mortgage: 120, group: 4 },
-      { name: "BSFM Hall", color: "YELLOW", price: 260, rent: [22, 110, 330, 800, 975, 1150], house: 150, mortgage: 130, group: 5 },
-      { name: "Sony Hall", color: "YELLOW", price: 260, rent: [22, 110, 330, 800, 975, 1150], house: 150, mortgage: 130, group: 5 },
-      { name: "S. Smriti Hall", color: "YELLOW", price: 280, rent: [24, 120, 360, 850, 1025, 1200], house: 150, mortgage: 140, group: 5 },
-      { name: "M.A. Rashid Hall", color: "GREEN", price: 300, rent: [26, 130, 390, 900, 1100, 1275], house: 200, mortgage: 150, group: 6 },
-      { name: "Sher-e-Bangla Hall", color: "GREEN", price: 300, rent: [26, 130, 390, 900, 1100, 1275], house: 200, mortgage: 150, group: 6 },
-      { name: "Suhrawardy Hall", color: "GREEN", price: 320, rent: [28, 150, 450, 1000, 1200, 1400], house: 200, mortgage: 160, group: 6 },
-      { name: "Rag Corner", color: "DBLUE", price: 350, rent: [35, 175, 500, 1100, 1300, 1500], house: 200, mortgage: 175, group: 7 },
-      { name: "Rag Wall", color: "DBLUE", price: 400, rent: [50, 200, 600, 1400, 1700, 2000], house: 200, mortgage: 200, group: 7 },
-    ],
-    taxNames: ["Registration Fee", "Hall Fee"],
-    taxAmounts: [200, 100],
-    // The printed cards, word for word. `label` and `amount` are the lines
-    // under the card's rule (COLLECT / ৳200.000) and `heading` is the red
-    // title of the Lag Free Pass. CGPA cards sit on the Chance squares and
-    // BIIS cards on the Community Chest ones, as on the board.
-    chanceCards: [
-      { text: "YOU GOT FINANCIAL SPONSORSHIP.", label: "COLLECT", amount: "৳25.000", action: "money", value: 25 },
-      { text: "YOU MADE A TEAM TO DO WALL ART ON BUET WALLS.", label: "COLLECT", amount: "৳20.000", action: "money", value: 20 },
-      { text: "BUET MEDICAL REFUNDS", label: "COLLECT", amount: "৳20.000", action: "money", value: 20 },
-      { text: "IT'S STARTING OF THE MONTH. FOR DINNING FEE", label: "PAY", amount: "৳100.000", action: "money", value: -100 },
-      { text: "ADVANCE TO 'BUET MAIN GATE'", label: "COLLECT", amount: "৳200.000", action: "goto", value: 0 },
-      { text: "IT'S YOUR BIRTHDAY. FROM EVERY PLAYER", label: "COLLECT", amount: "৳10.000", action: "birthday", value: 10 },
-      { heading: "LAG FREE PASS", text: "YOU CAN USE THIS PASS TO AVOID SUPPLEMENTARY EXAM OR YOU CAN TRADE THIS CARD", action: "jailcard", value: 0 },
-      { text: "12 CLASSES OF TUTION COMPLETED..", label: "COLLECT", amount: "৳100.000", action: "money", value: 100 },
-      { text: "YOU GOT SCHOLARSHIP", label: "COLLECT", amount: "৳50.000", action: "money", value: 50 },
-      { text: "YOU ARE LATE FOR YOUR COURSE REGISTRATION", label: "PAY", amount: "৳50.000", action: "money", value: -50 },
-      { text: "DEVICE LOAN MATURES", label: "COLLECT", amount: "৳100.000", action: "money", value: 100 },
-      { text: "FOR PRINTING", label: "PAY", amount: "৳50.000", action: "money", value: -50 },
-      { text: "YOU HAVE WON SECOND PRIZE IN LASER TAG CONTEST.", label: "COLLECT", amount: "৳10.000", action: "money", value: 10 },
-      { text: "ATTEND SUPPLEMENTARY EXAM. DON'T PASS BUET MAIN GATE DON'T COLLECT 200TK", label: "ATTEND", amount: "SUPPLEMENTARY EXAM", action: "jail", value: 0 },
-      { text: "TAHERA ERRORS IN YOUR FAVOR.", label: "COLLECT", amount: "৳200.000", action: "money", value: 200 },
-      { text: "YOU ARE ASSESSTED FOR STREET REPAIRS.", label: "PAY", amount: "৳40.000 PER HOUSE\n৳115.00 PER HOUSE", action: "repairs", value: { house: 40, hotel: 115 } },
-    ],
-    communityCards: [
-      { text: "GO BACK THREE SPACES..", action: "back", value: 3 },
-      { text: "ADVANCE TO 'BUET MAIN GATE'", label: "COLLECT", amount: "৳200.000", action: "goto", value: 0 },
-      { text: "YOU ARE ASSESSED FOR STREET REPAIRS.", label: "PAY", amount: "৳40.00 PER HOUSE\n৳115.00 PER HOTEL", action: "repairs", value: { house: 40, hotel: 115 } },
-      { text: "DEVICE LOAN MATURES", label: "COLLECT", amount: "৳100.000", action: "money", value: 100 },
-      { heading: "LAG FREE PASS", text: "YOU CAN USE THIS PASS TO AVOID SUPPLEMENTARY EXAM OR YOU CAN TRADE THIS.", action: "jailcard", value: 0 },
-      { text: "YOU ARE LATE FOR PAYING YOUR DINNING FEE.", label: "PAY", amount: "৳15.000", action: "money", value: -15 },
-      { text: "ADVANCE TO NEAREST BUILDING. IF UNOWNED ,YOU MAY BUY IT FROM BANK. IF OWNED, PAY THE OWNER THRICE THE RENTAL TO WHICH THEY ARE OTHERWISE ENTITLED.", action: "nearest", value: "railroad", multiplier: 3 },
-      { text: "ADVANCE TO 'RAG WALL'\n\nIF YOU PASS 'BUET MAIN GATE' COLLECT 200 TK.", action: "goto", value: 39 },
-      { text: "ATTEND SUPPLEMENTARY EXAM. DON'T PASS BUET MAIN GATE DON'T COLLECT 200TK.", label: "ATTEND", amount: "SUPPLEMENTARY EXAM", action: "jail", value: 0 },
-      { text: "YOU HAVE BEEN ELECTED CR.", label: "PAY EACH PLAYER", amount: "৳50.000", action: "payeach", value: 50 },
-      { text: "TAKE A TRIP TO 'CIVIL BUILDING'\n\nIF YOU PASS 'BUET MAIN GATE' COLLECT 200 TK.", action: "goto", value: 5 },
-      { text: "BUET PAYS YOU STIPEND.", label: "COLLECT", amount: "৳50.000", action: "money", value: 50 },
-      { text: "ADVANCE TO 'TITUMIR HALL'\n\nIF YOU PASS 'BUET MAIN GATE' COLLECT 200 TK.", action: "goto", value: 24 },
-      { text: "ADVANCE TO NEAREST BUILDING. IF UNOWNED ,YOU MAY BUY IT FROM BANK. IF OWNED, PAY THE OWNER THRICE THE RENTAL TO WHICH THEY ARE OTHERWISE ENTITLED.", action: "nearest", value: "railroad", multiplier: 3 },
-      { text: "ADVANCE TO 'BUET SHAHEED MINAR'\n\nIF YOU PASS 'BUET MAIN GATE' COLLECT 200 TK.", action: "goto", value: 11 },
-      { text: "ADVANCE TO NEAREST UTILITY. IF UNOWNED ,YOU MAY BUY IT FROM BANK. IF OWNED, THROW THE DICE & PAY THE OWNER A TOTAL 10 TIMES AMOUNT THROWN.", action: "nearest", value: "utility" },
-    ],
-  },
 };
 
 let selectedThemeId = "dhaka";
@@ -2797,15 +2675,6 @@ function buildSpacesFromTheme(themeId) {
     },
   };
 
-  // A board can rename its corners and card squares (BUET: "BUET Main Gate",
-  // "CGPA", ...). The type, and so every rule, stays the same.
-  const specialNames = t.specialNames || {};
-  const specialDescs = t.specialDescs || {};
-  Object.values(fixed).forEach((sp) => {
-    if (specialNames[sp.type]) sp.name = specialNames[sp.type];
-    if (specialDescs[sp.type]) sp.desc = specialDescs[sp.type];
-  });
-
   // Slots for properties (all 40 positions not in fixed)
   const propSlots = [];
   for (let i = 0; i < 40; i++) if (!fixed[i]) propSlots.push(i);
@@ -2847,8 +2716,6 @@ function applyThemeById(themeId) {
   selectedThemeId = nextId;
   window.ACTIVE_THEME = BOARD_THEMES[nextId];
   document.body.dataset.theme = nextId;
-  // Colour groups keep their keys; a board may repaint them.
-  Object.assign(COLOR, DEFAULT_GROUP_COLORS, BOARD_THEMES[nextId].colors || {});
   refreshStartingMoneyUi(nextId, false);
   const themedSpaces = buildSpacesFromTheme(nextId);
   for (let i = 0; i < 40; i++) SPACES[i] = themedSpaces[i];
@@ -2897,15 +2764,6 @@ const COLOR = {
   TAX: "#444",
   SPECIAL: "#1a5c2a",
 };
-const DEFAULT_GROUP_COLORS = { ...COLOR };
-
-// What a board calls its two card decks ("Chance" and "Community Chest"
-// unless the theme names them, like BUET's CGPA and BIIS).
-function themeDeckName(type, themeId = selectedThemeId) {
-  const names = getThemeById(themeId).deckNames || {};
-  if (type === "chance") return names.chance || "Chance";
-  return names.community || "Community Chest";
-}
 
 const SPACES = [
   {

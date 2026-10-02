@@ -249,10 +249,7 @@ function cardEffectText(card, p) {
     case "nearest":
       return v === "utility"
         ? { text: "Nearest utility · ten times the dice if it's owned", tone: "move" }
-        : {
-            text: `Nearest ${G.boardThemeId === "buet" ? "building" : "station"} · ${Number(card.multiplier) === 3 ? "triple" : "double"} rent if it's owned`,
-            tone: "move",
-          };
+        : { text: "Nearest station · double rent if it's owned", tone: "move" };
     case "back":
       return { text: `Back ${Number(v) || 3} spaces`, tone: "move" };
     case "payeach": {
@@ -275,27 +272,15 @@ function cardEffectText(card, p) {
   }
 }
 
-// Card faces for boards with printed cards of their own (BUET's CGPA and
-// BIIS): the deck's emblem, then the card laid out as printed.
-const PRINTED_CARD_ART = {
-  buet: {
-    chance: `<svg viewBox="0 0 120 52" aria-hidden="true"><g font-family="Josefin Sans, DM Sans, sans-serif" font-weight="600" font-size="54" text-anchor="middle"><text x="22" y="46" fill="#d99a5b">?</text><text x="60" y="46" fill="#8fa5b0">?</text><text x="98" y="46" fill="#b9a2d4">?</text></g></svg>`,
-    community: `<svg viewBox="0 0 120 52" aria-hidden="true"><rect x="22" y="6" width="50" height="32" rx="2" fill="none" stroke="#111" stroke-width="5"/><rect x="44" y="38" width="6" height="7" fill="#111"/><rect x="33" y="44" width="28" height="4" fill="#111"/><rect x="80" y="4" width="18" height="44" fill="#111"/><rect x="85" y="38" width="8" height="3" fill="#f0f1d8"/></svg>`,
-  },
-};
-
 function presentCardReveal(type, card, p) {
   const box = document.getElementById("deck-card");
   if (!box) return;
   const isChance = type === "chance";
-  const theme = getThemeById(G.boardThemeId || selectedThemeId);
-  const deckName = themeDeckName(type, theme.id);
   box.dataset.deck = isChance ? "chance" : "community";
   const backTitle = document.getElementById("card-back-title");
   const backIcon = document.getElementById("card-back-icon");
-  if (backTitle) backTitle.textContent = deckName;
+  if (backTitle) backTitle.textContent = isChance ? "Chance" : "Community Chest";
   if (backIcon) backIcon.textContent = isChance ? "?" : "📦";
-  presentPrintedCard(theme, type, card);
   const effect = cardEffectText(card, p);
   const effectEl = document.getElementById("card-effect");
   if (effectEl) {
@@ -306,41 +291,6 @@ function presentCardReveal(type, card, p) {
   box.classList.remove("is-revealed");
   void box.offsetWidth;
   setTimeout(() => box.classList.add("is-revealed"), prefersReducedMotion() ? 0 : 320);
-}
-
-function presentPrintedCard(theme, type, card) {
-  const box = document.getElementById("deck-card");
-  const art = PRINTED_CARD_ART[theme.art];
-  const artEl = document.getElementById("card-art");
-  const headingEl = document.getElementById("card-heading");
-  const ruleEl = document.getElementById("card-rule");
-  const kicker = document.querySelector("#deck-card .deck-card-kicker");
-  if (!box || !artEl || !headingEl || !ruleEl) return;
-  if (!art) {
-    delete box.dataset.style;
-    artEl.hidden = headingEl.hidden = ruleEl.hidden = true;
-    if (kicker) kicker.hidden = false;
-    return;
-  }
-  box.dataset.style = theme.art;
-  artEl.innerHTML = art[type === "chance" ? "chance" : "community"];
-  artEl.hidden = false;
-  if (kicker) kicker.hidden = true;
-  const title = document.createElement("div");
-  title.className = "deck-card-name";
-  title.textContent = themeDeckName(type, theme.id);
-  artEl.appendChild(title);
-  headingEl.textContent = card.heading || "";
-  headingEl.hidden = !card.heading;
-  // The printed wording, line breaks and all; amounts stay as printed.
-  document.getElementById("card-desc").textContent = card.text || "";
-  const label = document.getElementById("card-rule-label");
-  const amount = document.getElementById("card-rule-amount");
-  label.textContent = card.label || "";
-  amount.textContent = card.amount || "";
-  ruleEl.hidden = !(card.label || card.amount);
-  // "ATTEND / SUPPLEMENTARY EXAM" is printed in red capitals, not as a sum.
-  ruleEl.classList.toggle("is-words", !/৳/.test(card.amount || ""));
 }
 
 // ── Match stats (kept in G so everyone in an online match sees the same) ──

@@ -51,7 +51,6 @@ import {
 } from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
-import { BUET_CARD_FONT, BUET_FONT, BUET_FONTS, drawBuetCenter, drawBuetSpace } from "./buet-art.js";
 
 // ── Board geometry (world units; 1 unit = one edge square) ─────────────────
 const CORNER = 1.65;
@@ -119,21 +118,6 @@ function canvasTexture(c, anisotropy = 4) {
 }
 
 const BODY = '"DM Sans", "Noto Sans Bengali", system-ui, sans-serif';
-
-// Boards with their own artwork draw in web fonts the page may not have
-// loaded yet. Once they arrive the texture is drawn again (see sync()).
-let artFontsReady = 0;
-const artFontsAsked = new Set();
-function loadArtFonts(art) {
-  if (art !== "buet" || artFontsAsked.has(art) || !document.fonts || !document.fonts.load) return;
-  artFontsAsked.add(art);
-  Promise.all(BUET_FONTS.map((f) => document.fonts.load(f, "ABC")))
-    .catch(() => {})
-    .then(() => {
-      artFontsReady++;
-      if (window.Board3D) window.Board3D.wake();
-    });
-}
 const DISPLAY = '"Playfair Display", "Noto Sans Bengali", Georgia, serif';
 
 // Wraps text to at most maxLines lines of maxWidth, shrinking the font from
@@ -173,21 +157,11 @@ function drawBoardTexture(canvas) {
   const t = theme();
   const g = G_();
   const pal = palette();
-  // BUET: the printed board's own squares and campus map (buet-art.js).
-  const buet = t.art === "buet";
-  if (buet) loadArtFonts(t.art);
   ctx.save();
   ctx.clearRect(0, 0, TEX, TEX);
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
 
-  if (buet) drawBuetCenter(ctx, CORNER * PX, CORNER * PX, 9 * PX);
-  else drawGenericCenter(ctx, t, pal);
-  drawBoardSquares(ctx, t, g, pal, buet);
-  ctx.restore();
-}
-
-function drawGenericCenter(ctx, t, pal) {
   // Felt.
   const felt = ctx.createRadialGradient(TEX / 2, TEX / 2, TEX * 0.08, TEX / 2, TEX / 2, TEX * 0.72);
   felt.addColorStop(0, pal.felt[0]);
@@ -207,9 +181,7 @@ function drawGenericCenter(ctx, t, pal) {
   const edition = L(`${String(t.name || "").toUpperCase()} EDITION`);
   const latin = /^[ -~]*$/.test(edition);
   ctx.fillText(latin ? edition.split("").join(String.fromCharCode(8202, 8202)) : edition, TEX / 2, TEX / 2 - PX * 1.55);
-}
 
-function drawBoardSquares(ctx, t, g, pal, buet) {
   for (const sp of spaces()) {
     if (!sp) continue;
     const r = rectOf(sp.id);
@@ -233,18 +205,18 @@ function drawBoardSquares(ctx, t, g, pal, buet) {
     // Once a square is owned its price no longer matters: the owner's token,
     // on their colour, takes that line.
     const owner = prop && prop.owner !== null && prop.owner !== undefined && g.players[prop.owner] ? g.players[prop.owner] : null;
-    const ownerPill = (at, ox = cx) => {
+    const ownerPill = (at) => {
       const ph = PX * 0.22;
       // Above the "mortgaged" ribbon when there is one.
       const yy = prop.mortgaged ? Math.min(at, y + h - PX * 0.2 - ph / 2 - PX * 0.03) : at;
       const pw = Math.min(w - PX * 0.16, PX * 0.6);
       ctx.fillStyle = owner.color || "#888";
       ctx.beginPath();
-      if (ctx.roundRect) ctx.roundRect(ox - pw / 2, yy - ph / 2, pw, ph, ph / 2);
-      else ctx.rect(ox - pw / 2, yy - ph / 2, pw, ph);
+      if (ctx.roundRect) ctx.roundRect(cx - pw / 2, yy - ph / 2, pw, ph, ph / 2);
+      else ctx.rect(cx - pw / 2, yy - ph / 2, pw, ph);
       ctx.fill();
       ctx.font = `${Math.round(ph * 0.72)}px ${BODY}`;
-      ctx.fillText(owner.token || "●", ox, yy + ph * 0.04);
+      ctx.fillText(owner.token || "●", cx, yy + ph * 0.04);
     };
     const priceOrOwner = (text, yy, px) => (owner ? ownerPill(yy) : small(text, yy, px, "#222", 700));
     const emoji = (txt, yy, px) => {
@@ -260,15 +232,7 @@ function drawBoardSquares(ctx, t, g, pal, buet) {
       fit.lines.forEach((l, i) => ctx.fillText(l, cx, mid + (i - (fit.lines.length - 1) / 2) * lh));
     };
 
-    if (buet) {
-      const price = (text, yy, px, color, at = cx) => {
-        if (owner) return ownerPill(yy, at);
-        ctx.fillStyle = color;
-        ctx.font = `700 ${Math.round(px)}px ${BUET_FONT}`;
-        ctx.fillText(text, at, yy);
-      };
-      drawBuetSpace(ctx, sp, x, y, w, h, PX, price, colorOf);
-    } else if (sp.type === "property") {
+    if (sp.type === "property") {
       const barH = h * BAR;
       ctx.fillStyle = colorOf(sp.color);
       ctx.fillRect(x, y, w, barH);
@@ -374,14 +338,14 @@ function drawBoardSquares(ctx, t, g, pal, buet) {
       }
     }
 
-    // The printed BUET board parts its squares with fine light lines.
-    ctx.strokeStyle = buet ? "#b9ab98" : "#1b1b1b";
-    ctx.lineWidth = buet ? 2 : 3;
+    ctx.strokeStyle = "#1b1b1b";
+    ctx.lineWidth = 3;
     ctx.strokeRect(x, y, w, h);
   }
-  ctx.lineWidth = buet ? 3 : 5;
-  ctx.strokeStyle = buet ? "#9a8a78" : "#1b1b1b";
+  ctx.lineWidth = 5;
+  ctx.strokeStyle = "#1b1b1b";
   ctx.strokeRect(CORNER * PX, CORNER * PX, 9 * PX, 9 * PX);
+  ctx.restore();
 }
 
 // ── Dice ───────────────────────────────────────────────────────────────────
@@ -687,39 +651,21 @@ class BoardScene {
     // Card decks, bottom corners of the centre. Their labels are redrawn with
     // the board texture, so they follow the interface language.
     this.deckLabels = [];
-    const deck = (x, z, color, label, yaw, printed) => {
+    const deck = (x, z, color, label, yaw) => {
       const g = new Group();
       const mat = new MeshStandardMaterial({ color, roughness: 0.6 });
       const c = makeCanvas(256, 160);
       const ctx = c.getContext("2d");
       const texture = canvasTexture(c);
       const draw = () => {
-        // On the BUET board the decks lie on their printed places in the
-        // map, face up as cream cards in the deck's frame.
-        const own = theme().art === "buet" ? printed : null;
-        g.position.set(own ? own.x : x, 0, own ? own.z : z);
-        g.rotation.y = own ? own.yaw : yaw;
-        g.scale.setScalar(own ? 1.3 : 1);
-        mat.color.set(own ? own.frame : color);
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        if (own) {
-          ctx.fillStyle = own.frame;
-          ctx.fillRect(0, 0, 256, 160);
-          ctx.fillStyle = "#f0f1d8";
-          ctx.fillRect(14, 14, 228, 132);
-          ctx.fillStyle = "#333";
-          ctx.font = `400 46px ${BUET_CARD_FONT}`;
-          ctx.fillText(own.label, 128, 82);
-          texture.needsUpdate = true;
-          return;
-        }
         ctx.fillStyle = color;
         ctx.fillRect(0, 0, 256, 160);
         ctx.strokeStyle = "rgba(255,255,255,.8)";
         ctx.lineWidth = 8;
         ctx.strokeRect(12, 12, 232, 136);
         ctx.fillStyle = "#fff";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
         const lines = L(label).split(" ");
         const size = lines.length > 1 ? 30 : 40;
         ctx.font = `900 ${size}px ${BODY}`;
@@ -741,12 +687,12 @@ class BoardScene {
         card.receiveShadow = true;
         g.add(card);
       }
+      g.position.set(x, 0, z);
+      g.rotation.y = yaw;
       this.scene.add(g);
     };
-    // Printed places on the BUET map: CGPA lower left, BIIS upper right
-    // (turned to face the far side of the table).
-    deck(-2.75, 2.95, "#ea580c", "CHANCE", 0.18, { x: -2.34, z: 2.85, yaw: -Math.PI / 4, frame: "#1f3a2c", label: "CGPA" });
-    deck(2.75, 2.95, "#2563eb", "COMMUNITY CHEST", -0.18, { x: 2.82, z: -2.34, yaw: (3 * Math.PI) / 4, frame: "#4f1e22", label: "BIIS" });
+    deck(-2.75, 2.95, "#ea580c", "CHANCE", 0.18);
+    deck(2.75, 2.95, "#2563eb", "COMMUNITY CHEST", -0.18);
 
     this.hover = new Mesh(
       new PlaneGeometry(1, 1),
@@ -800,8 +746,6 @@ class BoardScene {
     const sps = spaces();
     const texSig =
       (theme().id || "") +
-      ":" +
-      artFontsReady +
       "|" +
       sps.map((s) => (s ? s.name + (s.price || "") : "")).join(",") +
       "|" +

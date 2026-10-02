@@ -2787,10 +2787,8 @@ body[data-theme="classic"] .space .sp-rent {
   background: rgba(255, 255, 255, 0.85);
   border-color: var(--own-color, #334155);
   border-width: 2px;
-}
-
-
-
+}
+
 /* ── Buildings ───────────────────────────────────────────────────────────────
    Houses and hotels sit on the colour bar, left of the ownership dot. */
 .space .bldg-badge {
@@ -3293,125 +3291,6 @@ body.board-3d .board-view-reset:hover {
 .deck-card-effect.is-move {
   background: #e0e7ff;
   color: #3730a3;
-}
-
-/* Printed card faces (BUET): cream card in a thick deck-coloured frame,
-   the deck emblem on top, and the wording laid out as on the real cards. */
-.deck-card-art[hidden],
-.deck-card-heading[hidden],
-.deck-card-rule[hidden],
-.deck-card-kicker[hidden] {
-  display: none;
-}
-.deck-card[data-style="buet"] {
-  --deck: #1f3a2c;
-  width: min(260px, 100%);
-}
-.deck-card[data-style="buet"][data-deck="community"] {
-  --deck: #4f1e22;
-}
-.deck-card[data-style="buet"] .deck-card-face {
-  border-radius: 4px;
-  min-height: 340px;
-}
-.deck-card[data-style="buet"] .deck-card-back {
-  background: #f0f1d8;
-  border: 14px solid var(--deck);
-  color: #2f2f2f;
-}
-.deck-card[data-style="buet"] .deck-card-mark {
-  display: none;
-}
-.deck-card[data-style="buet"] .deck-card-brand {
-  font-family: "Aldrich", var(--font-body);
-  font-size: 2rem;
-  font-weight: 400;
-  letter-spacing: 0.04em;
-}
-.deck-card[data-style="buet"] .deck-card-front {
-  justify-content: flex-start;
-  gap: 0.75rem;
-  padding: 1.1rem 1rem 1.2rem;
-  background: #f0f1d8;
-  border: 14px solid var(--deck);
-  color: #6b6b62;
-  font-family: "Aldrich", var(--font-body);
-  text-transform: uppercase;
-}
-.deck-card-art {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.2rem;
-}
-.deck-card-art svg {
-  width: 112px;
-  height: auto;
-}
-.deck-card-name {
-  font-family: "Aldrich", var(--font-body);
-  font-size: 1.85rem;
-  line-height: 1;
-  color: #333;
-  letter-spacing: 0.03em;
-}
-.deck-card-heading {
-  font-family: "Michroma", var(--font-body);
-  font-size: 0.82rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  color: #c4473f;
-  padding-bottom: 0.6rem;
-  border-bottom: 1px solid #9a9a90;
-}
-.deck-card[data-style="buet"] p.deck-card-text {
-  font-family: "Aldrich", var(--font-body);
-  font-size: 0.98rem;
-  font-weight: 400;
-  line-height: 1.25;
-  letter-spacing: 0.06em;
-  color: #6b6b62;
-  white-space: pre-line;
-}
-.deck-card-rule {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.45rem;
-  align-self: stretch;
-  margin: 0 0.8rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid #9a9a90;
-}
-.deck-card-rule-label {
-  font-family: "Michroma", var(--font-body);
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.32em;
-  color: #24443a;
-}
-.deck-card-rule-amount {
-  font-family: "Comfortaa", var(--font-body);
-  font-size: 1.05rem;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  color: #b4475a;
-  white-space: pre-line;
-}
-.deck-card-rule.is-words .deck-card-rule-label {
-  font-size: 0.62rem;
-  letter-spacing: 0.14em;
-}
-.deck-card-rule.is-words .deck-card-rule-amount {
-  font-family: "Michroma", var(--font-body);
-  font-size: 0.8rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  color: #c4473f;
-}
-.deck-card[data-style="buet"] .deck-card-effect {
-  font-family: var(--font-body);
-  text-transform: none;
 }
 
 /* Winner: match summary. */
