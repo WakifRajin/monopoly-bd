@@ -46,6 +46,8 @@ const results = [];
 function check(name, ok, detail = "") {
   results.push({ name, ok: !!ok });
   console.log(`${ok ? "  ok  " : "  FAIL"}  ${name}${!ok && detail ? `  (${detail})` : ""}`);
+  // On GitHub Actions a failure also shows on the run's summary page.
+  if (!ok && process.env.GITHUB_ACTIONS) console.log(`::error title=${name}::${String(detail).replace(/\s+/g, " ").slice(0, 900)}`);
 }
 
 (async () => {
