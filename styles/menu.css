@@ -2265,3 +2265,13 @@ html.lang-bn *::after {
   letter-spacing: 0.18em;
   color: var(--mp-gold, #f0c040);
 }
+
+/* The analytics question as a card on the home screen. */
+.consent-banner.is-inline {
+  position: static;
+  transform: none;
+  width: auto;
+  margin: 0 0 0.75rem;
+  box-shadow: none;
+  z-index: auto;
+}

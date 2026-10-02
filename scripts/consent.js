@@ -69,7 +69,15 @@
       '<div class="consent-actions"><button type="button" class="consent-no">No thanks</button><button type="button" class="consent-yes">Allow</button></div>';
     bar.querySelector(".consent-no").addEventListener("click", () => window.setAnalyticsConsent(false));
     bar.querySelector(".consent-yes").addEventListener("click", () => window.setAnalyticsConsent(true));
-    document.body.appendChild(bar);
+    // On the home screen it is a card in the page, not a bar floating over
+    // it: a floating bar sat on top of buttons on phones and took their taps.
+    const slot = document.getElementById("consent-slot");
+    if (slot) {
+      bar.classList.add("is-inline");
+      slot.appendChild(bar);
+    } else {
+      document.body.appendChild(bar);
+    }
   }
 
   if (readChoice() === "granted") load();

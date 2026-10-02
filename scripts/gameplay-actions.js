@@ -453,14 +453,23 @@ function returnJailCard(p) {
   if (type) delete held[type];
 }
 
+// A card's whole wording on one line: the heading, the text, and the
+// COLLECT / amount lines that printed cards put under a rule.
+function cardFullText(card) {
+  return [card.heading, card.text, card.label, card.amount]
+    .filter(Boolean)
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function drawCard(type, p) {
   const card = drawFromDeck(type);
   const playerId = Number(p?.id);
   const drawPlayer = getLivePlayer(playerId) || p;
-  const cardText = formatThemeCurrencyText(card.text);
-  addLog(
-    `${drawPlayer.name} drew ${type === "chance" ? "Chance" : "Community Chest"}: ${cardText}`,
-  );
+  const deckName = themeDeckName(type, G.boardThemeId || selectedThemeId);
+  const cardText = formatThemeCurrencyText(cardFullText(card));
+  addLog(`${drawPlayer.name} drew ${deckName}: ${cardText}`);
   playSfx("card");
 
   ONLINE.pendingCardResolutions =
@@ -485,7 +494,7 @@ function drawCard(type, p) {
   document.getElementById("card-icon").textContent =
     type === "chance" ? "❓" : "📦";
   document.getElementById("card-title").textContent =
-    type === "chance" ? "Chance Card" : "Community Chest";
+    type === "chance" && deckName === "Chance" ? "Chance Card" : deckName;
   document.getElementById("card-desc").textContent = cardText;
   presentCardReveal(type, card, drawPlayer);
 
@@ -528,9 +537,11 @@ function drawCard(type, p) {
           return;
         }
       } else {
-        // The card's rule: the owner is paid twice the usual rent.
+        // The card's rule: the owner is paid twice the usual rent (or what
+        // the card says: BUET's pays thrice).
         const nearest = nearestRailroad(actor.pos);
-        await movePlayerTo(actor.id, nearest, true, { rentMultiplier: 2 });
+        const rentMultiplier = Math.max(1, Math.floor(Number(card.multiplier) || 2));
+        await movePlayerTo(actor.id, nearest, true, { rentMultiplier });
         return;
       }
     } else if (card.action === "back") {
