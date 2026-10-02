@@ -619,8 +619,8 @@ function check(name, ok, detail = "") {
   const banner = await page.evaluate(async () => {
     G.phase = "end";
     endTurn();
-    await new Promise((r) => setTimeout(r, 120));
-    return { shown: !!document.querySelector(".turn-banner"), text: document.querySelector(".turn-banner-text")?.textContent };
+    for (let i = 0; i < 20 && !/Player 2/.test(document.querySelector(".turn-banner-text")?.textContent || ""); i++) await new Promise((r) => setTimeout(r, 50));
+    return { shown: !!document.querySelector(".turn-banner"), text: document.querySelector(".turn-banner-text")?.textContent, cur: G.currentPlayerIdx };
   });
   check("the turn passes with a banner for the next player", banner.shown && /Player 2/.test(banner.text || ""), JSON.stringify(banner));
   const low = await page.evaluate(() => {

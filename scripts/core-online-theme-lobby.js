@@ -3752,6 +3752,12 @@ function initGameState(players, startMoney, options = {}) {
   }
   AI_CTRL.lastKey = "";
   AI_CTRL.lastTradeAttemptKey = "";
+  // A move, card or debt still open from the previous game must not carry
+  // into this one: it would block End turn until the page is reloaded.
+  MOVE_FX.active = false;
+  MOVE_FX.playerId = null;
+  ONLINE.pendingCardResolutions = 0;
+  if (typeof resetDebtPrompt === "function") resetDebtPrompt(false);
   AI_CTRL.tradeByPlayer = {};
   clearLogArchive(gameStartedAt);
   jailPromptShownKey = "";
