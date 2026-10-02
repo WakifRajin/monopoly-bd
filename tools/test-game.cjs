@@ -53,7 +53,12 @@ function check(name, ok, detail = "") {
 (async () => {
   const server = await serve();
   const base = `http://127.0.0.1:${server.address().port}`;
-  const launch = { headless: true, args: ["--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"] };
+  // CI machines have no GPU, and drawing the WebGL table in software slowed
+  // every move enough to time tests out. There the game runs on its plain
+  // HTML board (what browsers without WebGL get); the 3D table is covered by
+  // the screenshot and touch checks. TEST_WEBGL=1 forces WebGL on.
+  const noGl = process.env.CI && !process.env.TEST_WEBGL;
+  const launch = { headless: true, args: noGl ? ["--disable-webgl", "--disable-3d-apis"] : ["--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"] };
   if (process.env.CHROME_PATH) launch.executablePath = process.env.CHROME_PATH;
   else launch.channel = "chrome";
   const browser = await chromium.launch(launch);
