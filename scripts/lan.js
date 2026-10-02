@@ -366,19 +366,26 @@ function lanGuestApi(guest) {
 // ── Host side ─────────────────────────────────────────────────────────────
 function lanCreateHost() {
   const store = new LanStore();
-  const host = { store, peers: new Map(), unsubSignal: null, heartbeat: null, code: null };
+  const host = { store, peers: new Map(), unsubSignal: null, heartbeat: null, code: null, connSeq: 0 };
   host.attachPeer = (peerId, pc, channel) => {
-    const peer = { pc, channel, subs: new Map() };
+    // A guest coming back replaces its old link. Closing the old one first
+    // fires its disconnect handlers now, before the guest says it is back.
+    const old = host.peers.get(peerId);
+    if (old && old.drop) old.drop();
+    const peer = { pc, channel, subs: new Map(), connId: `${peerId}#${++host.connSeq}` };
     peer.send = lanWire(channel, (msg) => lanHostHandle(host, peerId, peer, msg));
     host.peers.set(peerId, peer);
+    let dropped = false;
     const drop = () => {
-      if (!host.peers.has(peerId)) return;
-      host.peers.delete(peerId);
-      store.dropOwner(peerId);
+      if (dropped) return;
+      dropped = true;
+      if (host.peers.get(peerId) === peer) host.peers.delete(peerId);
+      store.dropOwner(peer.connId);
       try {
         pc.close();
       } catch (_err) {}
     };
+    peer.drop = drop;
     channel.onclose = drop;
     pc.onconnectionstatechange = () => {
       if (["failed", "closed", "disconnected"].includes(pc.connectionState)) {
@@ -391,10 +398,76 @@ function lanCreateHost() {
   return host;
 }
 
+// The host is the server in a Same Wi-Fi game, so it applies the same limits
+// the online rules do: a guest may only write the room and its own presence,
+// may not delete the room, move the host, add anyone but itself, or post chat
+// as someone else. Returns a reason, or "" when the write is allowed.
+function lanGuestWriteProblem(host, peerId, op, path, value) {
+  const code = host.code;
+  if (!code) return "No room.";
+  const roomPath = `rooms/${code}`;
+  const parts = lanParts(path);
+  const presence = `roomPresence/${code}/${peerId}`;
+  if (path === presence || path.startsWith(`${presence}/`)) return "";
+  if (path !== roomPath && !path.startsWith(`${roomPath}/`)) return "Not allowed.";
+  const current = host.store.get(roomPath) || {};
+  if (path === roomPath) {
+    if (op === "update") {
+      for (const key of Object.keys(value || {})) {
+        if (key.startsWith("chat/")) {
+          const msg = value[key];
+          if (msg !== null && (current.chat || {})[key.slice(5)]) return "Chat messages cannot be edited.";
+          if (msg && msg.uid !== peerId) return "Chat must be sent as yourself.";
+        } else if (key === "hostUid" || key === "members" || key.startsWith("members/")) {
+          return "Not allowed.";
+        }
+      }
+      return "";
+    }
+    if (!value || typeof value !== "object") return "Only the host can close the room.";
+    if (String(value.hostUid || "") !== String(current.hostUid || "")) return "Only the host can hand over the room.";
+    const before = current.members && typeof current.members === "object" ? current.members : {};
+    const after = value.members && typeof value.members === "object" ? value.members : {};
+    for (const uid of Object.keys(after)) {
+      if (!before[uid] && uid !== peerId) return "You can only add yourself.";
+    }
+    if (!before[peerId] && !after[peerId]) return "Join the room first.";
+    const oldChat = current.chat && typeof current.chat === "object" ? current.chat : {};
+    const newChat = value.chat && typeof value.chat === "object" ? value.chat : {};
+    for (const key of Object.keys(newChat)) {
+      const msg = newChat[key];
+      if (!oldChat[key] && msg && msg.uid !== peerId) return "Chat must be sent as yourself.";
+      if (oldChat[key] && msg && lanHash(msg) !== lanHash(oldChat[key])) return "Chat messages cannot be edited.";
+    }
+    return "";
+  }
+  // A single chat message.
+  if (parts.length === 4 && parts[2] === "chat") {
+    if ((current.chat || {})[parts[3]]) return "Chat messages cannot be edited.";
+    if (!value || value.uid !== peerId) return "Chat must be sent as yourself.";
+    return "";
+  }
+  if (!(current.members || {})[peerId]) return "Join the room first.";
+  if (parts[2] === "hostUid" || parts[2] === "members") return "Not allowed.";
+  return "";
+}
+
 function lanHostHandle(host, peerId, peer, msg) {
   const store = host.store;
   const reply = (body) => peer.send({ id: msg.id, ...body });
   try {
+    if (["set", "update", "cas", "odset"].includes(msg.op)) {
+      const problem =
+        msg.op === "odset"
+          ? lanParts(msg.path).join("/") === `roomPresence/${host.code}/${peerId}`
+            ? ""
+            : "Not allowed."
+          : lanGuestWriteProblem(host, peerId, msg.op, lanParts(msg.path).join("/"), msg.value);
+      if (problem) {
+        reply({ ok: false, error: `PERMISSION_DENIED: ${problem}` });
+        return;
+      }
+    }
     switch (msg.op) {
       case "hello":
         reply({ ok: true, now: Date.now() });
@@ -414,7 +487,7 @@ function lanHostHandle(host, peerId, peer, msg) {
         reply(store.cas(msg.path, msg.expect, msg.value));
         break;
       case "sub": {
-        const id = store.subscribe(msg.path, peerId, (value) => peer.send({ sub: msg.sub, value }));
+        const id = store.subscribe(msg.path, peer.connId, (value) => peer.send({ sub: msg.sub, value }));
         peer.subs.set(msg.sub, id);
         break;
       }
@@ -425,11 +498,11 @@ function lanHostHandle(host, peerId, peer, msg) {
         break;
       }
       case "odset":
-        store.onDisconnectSet(peerId, msg.path, msg.value);
+        store.onDisconnectSet(peer.connId, msg.path, msg.value);
         reply({ ok: true });
         break;
       case "odcancel":
-        store.onDisconnectCancel(peerId, msg.path);
+        store.onDisconnectCancel(peer.connId, msg.path);
         reply({ ok: true });
         break;
       default:
@@ -442,22 +515,36 @@ function lanHostHandle(host, peerId, peer, msg) {
 
 // ── Guest side ────────────────────────────────────────────────────────────
 function lanCreateGuest(pc, channel) {
-  const guest = { pc, channel, pending: new Map(), subs: new Map(), nextId: 1, nextSub: 1, closed: false };
-  guest.send = lanWire(channel, (msg) => {
-    if (msg.sub !== undefined && msg.id === undefined) {
-      const cb = guest.subs.get(msg.sub);
-      if (cb) cb(msg.value);
-      return;
-    }
-    const p = guest.pending.get(msg.id);
-    if (!p) return;
-    guest.pending.delete(msg.id);
-    if (msg.ok === false && msg.error) p.reject(new Error(msg.error));
-    else p.resolve(msg);
-  });
+  const guest = { pc, channel, pending: new Map(), subs: new Map(), nextId: 1, nextSub: 1, closed: false, reconnecting: false, onLost: null };
+  // Wires a data channel to this guest. Called again with a fresh link when
+  // the guest reconnects after losing the host.
+  guest.wire = (nextPc, nextChannel) => {
+    guest.pc = nextPc;
+    guest.channel = nextChannel;
+    guest.send = lanWire(nextChannel, (msg) => {
+      if (msg.sub !== undefined && msg.id === undefined) {
+        const entry = guest.subs.get(msg.sub);
+        if (entry) entry.cb(msg.value);
+        return;
+      }
+      const p = guest.pending.get(msg.id);
+      if (!p) return;
+      guest.pending.delete(msg.id);
+      if (msg.ok === false && msg.error) p.reject(new Error(msg.error));
+      else p.resolve(msg);
+    });
+    nextChannel.onclose = () => guest.channel === nextChannel && guest.lost();
+    nextPc.onconnectionstatechange = () => {
+      if (guest.pc !== nextPc) return;
+      if (nextPc.connectionState === "failed" || nextPc.connectionState === "closed") guest.lost();
+      if (nextPc.connectionState === "disconnected")
+        setTimeout(() => guest.pc === nextPc && nextPc.connectionState !== "connected" && guest.lost(), 6000);
+    };
+  };
+  guest.wire(pc, channel);
   guest.request = (msg) =>
     new Promise((resolve, reject) => {
-      if (guest.closed) return reject(new Error("Lost connection to the host."));
+      if (guest.closed || guest.reconnecting) return reject(new Error("Lost connection to the host."));
       const id = guest.nextId++;
       guest.pending.set(id, { resolve, reject });
       if (!guest.send({ ...msg, id })) {
@@ -473,33 +560,95 @@ function lanCreateGuest(pc, channel) {
     });
   guest.subscribe = (path, cb) => {
     const sub = guest.nextSub++;
-    guest.subs.set(sub, cb);
+    guest.subs.set(sub, { path, cb });
     guest.send({ op: "sub", path, sub });
     return () => {
       guest.subs.delete(sub);
       guest.send({ op: "unsub", sub });
     };
   };
-  // The host is the room. When its link goes, every listener sees the room
-  // disappear, which the online code already handles ("Room closed").
-  guest.lost = () => {
+  // The host is the room. Losing it first tries to reconnect (the host's
+  // phone may only have locked for a moment); if that fails every listener
+  // sees the room disappear, which the online code handles ("Room closed").
+  guest.fail = () => {
     if (guest.closed) return;
     guest.closed = true;
     for (const p of guest.pending.values()) p.reject(new Error("Lost connection to the host."));
     guest.pending.clear();
-    for (const cb of [...guest.subs.values()]) {
+    for (const entry of [...guest.subs.values()]) {
       try {
-        cb(null);
+        entry.cb(null);
       } catch (_err) {}
     }
     guest.subs.clear();
   };
-  channel.onclose = guest.lost;
-  pc.onconnectionstatechange = () => {
-    if (pc.connectionState === "failed" || pc.connectionState === "closed") guest.lost();
-    if (pc.connectionState === "disconnected") setTimeout(() => pc.connectionState !== "connected" && guest.lost(), 6000);
+  guest.lost = () => {
+    if (guest.closed || guest.reconnecting) return;
+    for (const p of guest.pending.values()) p.reject(new Error("Lost connection to the host."));
+    guest.pending.clear();
+    if (typeof guest.onLost !== "function") {
+      guest.fail();
+      return;
+    }
+    guest.reconnecting = true;
+    Promise.resolve()
+      .then(() => guest.onLost())
+      .catch(() => false)
+      .then((ok) => {
+        guest.reconnecting = false;
+        if (!ok) guest.fail();
+      });
   };
   return guest;
+}
+
+// Up to a minute of attempts to reach the same host again, through the same
+// signalling as the first connection. On success the guest's listeners are
+// re-subscribed and its presence is marked back online.
+async function lanGuestReconnect(guest, hostUid) {
+  const deadline = Date.now() + 60000;
+  toast("Lost the host. Reconnecting…", "danger");
+  lanSetStatus("Lost the host. Reconnecting…", true);
+  const fb = lanFb();
+  while (Date.now() < deadline && !guest.closed) {
+    let unsub = null;
+    const sigRef = fb.api.ref(fb.db, `lanSignal/${hostUid}/${ONLINE.localUid}`);
+    try {
+      const { pc, channel, sdp } = await lanGuestOffer();
+      const answer = new Promise((resolve, reject) => {
+        const t = setTimeout(() => reject(new Error("no-answer")), 12000);
+        unsub = fb.api.onValue(fb.api.ref(fb.db, `lanSignal/${hostUid}/${ONLINE.localUid}/answer`), (snap) => {
+          const v = snap.val();
+          if (typeof v === "string" && v) {
+            clearTimeout(t);
+            resolve(v);
+          }
+        });
+      });
+      await fb.api.set(sigRef, { offer: sdp, at: Date.now() });
+      await pc.setRemoteDescription({ type: "answer", sdp: await answer });
+      await lanWaitOpen(channel, 10000);
+      guest.wire(pc, channel);
+      guest.reconnecting = false;
+      await guest.request({ op: "hello" });
+      for (const [sub, entry] of guest.subs) guest.send({ op: "sub", path: entry.path, sub });
+      if (ONLINE.presenceRef) {
+        await FIREBASE.api.onDisconnect(ONLINE.presenceRef).set({ online: false, at: FIREBASE.api.serverTimestamp() });
+        await FIREBASE.api.set(ONLINE.presenceRef, { online: true, at: FIREBASE.api.serverTimestamp() });
+      }
+      toast("Reconnected to the host.", "gold");
+      lanSetStatus("");
+      return true;
+    } catch (err) {
+      guest.reconnecting = true;
+      console.warn("Reconnect attempt failed.", err);
+      await new Promise((r) => setTimeout(r, 2500));
+    } finally {
+      if (unsub) unsub();
+      fb.api.set(sigRef, null).catch(() => {});
+    }
+  }
+  return false;
 }
 
 // ── WebRTC helpers ────────────────────────────────────────────────────────
@@ -824,7 +973,7 @@ async function joinLanRoom(hostUid) {
     } catch (_err) {
       throw new Error("no-link");
     }
-    await lanConnectAsGuest(pc, channel, room.code);
+    await lanConnectAsGuest(pc, channel, room.code, hostUid);
   } catch (err) {
     console.error(err);
     lanTeardown();
@@ -842,8 +991,9 @@ async function joinLanRoom(hostUid) {
   }
 }
 
-async function lanConnectAsGuest(pc, channel, code) {
+async function lanConnectAsGuest(pc, channel, code, hostUid = null) {
   const guest = lanCreateGuest(pc, channel);
+  if (hostUid) guest.onLost = () => lanGuestReconnect(guest, hostUid);
   const t0 = Date.now();
   const hello = await guest.request({ op: "hello" });
   const t1 = Date.now();
@@ -885,6 +1035,7 @@ function lanTeardown() {
   }
   if (LAN.guest) {
     LAN.guest.closed = true;
+    LAN.guest.onLost = null;
     try {
       LAN.guest.pc.close();
     } catch (_err) {}

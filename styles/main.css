@@ -13,8 +13,8 @@
   --navy: #1e3a5f;
   --card-shadow: 0 4px 24px rgba(0, 0, 0, 0.13);
   --radius: 12px;
-  --font-display: "Playfair Display", Georgia, serif;
-  --font-body: "DM Sans", system-ui, sans-serif;
+  --font-display: "Playfair Display", "Noto Sans Bengali", Georgia, serif;
+  --font-body: "DM Sans", "Noto Sans Bengali", system-ui, sans-serif;
   /* Playfair is kept for the big branded titles (home, lobby, board centre,
      winner). Dialog, panel and card headings use the body face: the serif at
      small sizes read as Times New Roman. */
@@ -2693,9 +2693,14 @@ body[data-theme="classic"] .space .sp-rent {
   outline-offset: 2px;
 }
 /* Keep titles from running under the button. */
-.modal .prop-color-header,
-.modal > h2:first-of-type {
+/* Only dialogs with a close button need the room; centred titles get it on
+   both sides so they stay centred. */
+.modal:has(> .modal-close-bar) .prop-color-header,
+.modal:has(> .modal-close-bar) > h2:first-of-type {
   padding-right: 2.75rem;
+}
+.modal.is-centered:has(> .modal-close-bar) > h2:first-of-type {
+  padding-left: 2.75rem;
 }
 @media (max-width: 899px) {
   .modal-close {
@@ -3190,7 +3195,6 @@ body.board-3d .board-view-reset:hover {
 .card-modal {
   text-align: center;
   max-width: 380px;
-  padding-top: 2.4rem;
 }
 .deck-card {
   --deck: #e8702a;
@@ -3359,4 +3363,995 @@ body.board-3d .board-view-reset:hover {
     0%, 100% { opacity: 0; }
     15%, 75% { opacity: 1; }
   }
+}
+
+/* ═══════════════ Game options (scripts/game-options.js) ═══════════════ */
+
+.btn-quiet {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+.btn-quiet:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+/* Trade dialog */
+.trade-picks {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.6rem;
+  margin-bottom: 0.9rem;
+}
+.trade-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-top: 0.5rem;
+}
+.trade-picks .trade-field {
+  margin-top: 0;
+}
+.trade-field[hidden] {
+  display: none;
+}
+.trade-field label {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+}
+.trade-field select,
+.trade-field input {
+  width: 100%;
+  min-height: 2.25rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  padding: 0.35rem 0.55rem;
+  color: #fff;
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+}
+button.trade-prop-item {
+  width: 100%;
+  border: 1px solid transparent;
+  font-family: var(--font-body);
+  text-align: left;
+  line-height: 1.3;
+}
+.trade-prop-item.is-blocked {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.trade-empty {
+  color: rgba(255, 255, 255, 0.45);
+  font-size: var(--fs-xs);
+  padding: 0.3rem;
+}
+
+/* Free Parking pot and match clock, over the board */
+.board-chips {
+  position: absolute;
+  top: 0.6rem;
+  left: 0.6rem;
+  z-index: 6;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  pointer-events: none;
+}
+.board-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(8, 24, 14, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.75);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+}
+.board-chip[hidden] {
+  display: none;
+}
+.board-chip strong {
+  color: var(--gold-light);
+  font-variant-numeric: tabular-nums;
+}
+.board-chip.is-low strong {
+  color: #fca5a5;
+}
+
+/* Pause */
+.pause-modal {
+  text-align: center;
+  max-width: 380px;
+}
+
+/* First-game tips */
+.coach-tip {
+  --arrow-x: 50%;
+  position: fixed;
+  z-index: 4000;
+  width: min(290px, calc(100vw - 16px));
+  padding: 0.75rem 0.85rem 0.65rem;
+  border-radius: 12px;
+  background: #fbf8ef;
+  color: #1b1b1b;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.45);
+  font-family: var(--font-body);
+  animation: coach-in 0.25s ease-out;
+}
+.coach-tip::before {
+  content: "";
+  position: absolute;
+  top: -7px;
+  left: calc(var(--arrow-x) - 7px);
+  width: 14px;
+  height: 14px;
+  background: #fbf8ef;
+  transform: rotate(45deg);
+}
+.coach-tip.is-above::before {
+  top: auto;
+  bottom: -7px;
+}
+.coach-tip p {
+  position: relative;
+  margin: 0 0 0.55rem;
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+}
+.coach-tip-actions {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+.coach-tip-actions button {
+  min-height: 2.25rem;
+  padding: 0.35rem 0.8rem;
+  border-radius: 8px;
+  border: 0;
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  cursor: pointer;
+}
+.coach-tip-skip {
+  background: transparent;
+  color: #555;
+}
+.coach-tip-ok {
+  background: #1f7a3d;
+  color: #fff;
+}
+@keyframes coach-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* ═══════════════ App shell (scripts/app-shell.js) ═══════════════ */
+
+.sr-only {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Pinch-zoom is allowed again; this stops double-tap zoom on buttons. */
+html {
+  touch-action: manipulation;
+}
+
+.update-banner {
+  position: fixed;
+  left: 50%;
+  bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: 5000;
+  width: min(460px, calc(100vw - 24px));
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem 1rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: 12px;
+  background: #fbf8ef;
+  color: #1b1b1b;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.45);
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+}
+.update-banner > span {
+  flex: 1 1 14rem;
+  line-height: 1.4;
+}
+.update-banner-actions {
+  display: flex;
+  gap: 0.4rem;
+}
+.update-banner button {
+  min-height: 2.25rem;
+  padding: 0.35rem 0.85rem;
+  border: 0;
+  border-radius: 8px;
+  font-family: var(--font-body);
+  font-weight: 700;
+  cursor: pointer;
+}
+.update-later {
+  background: transparent;
+  color: #555;
+}
+.update-now {
+  background: #1f7a3d;
+  color: #fff;
+}
+
+.modal:focus {
+  outline: none;
+}
+
+/* Reduced motion: from the device setting, or Settings → Reduce motion. */
+html.reduce-motion *,
+html.reduce-motion *::before,
+html.reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+html.reduce-motion .confetti,
+html.reduce-motion .money-coin {
+  display: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .confetti,
+  .money-coin {
+    display: none !important;
+  }
+}
+
+/* Bangla: letter-spacing breaks up conjuncts and vowel signs. */
+html.lang-bn *,
+html.lang-bn *::before,
+html.lang-bn *::after {
+  letter-spacing: 0 !important;
+}
+
+/* Above the phone's bottom navigation and action bar. */
+@media (max-width: 899px) {
+  .update-banner {
+    bottom: calc(6.25rem + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* Native dropdown lists follow the dark theme, so their options stay
+   readable (light text on the dialog colour, not white on white). */
+.modal select,
+.trade-field select,
+.game-screen select {
+  color-scheme: dark;
+}
+.modal select option,
+.trade-field select option {
+  background-color: #14301f;
+  color: #fff;
+}
+
+/* ═══════════════ Final polish ═══════════════ */
+
+/* In-game settings drawer: the Settings page's own components. */
+.drawer-title {
+  color: #fff;
+  margin: 0 0 0.85rem;
+  font-family: var(--font-heading);
+  font-size: var(--fs-lg);
+}
+.drawer-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.drawer-settings .mp-card {
+  padding: 0.85rem 0.95rem;
+  margin: 0;
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+.drawer-settings .mp-card-title {
+  margin: 0 0 0.35rem;
+  font-size: var(--fs-sm);
+  text-transform: none;
+}
+.drawer-settings .mp-setting {
+  padding: 0.55rem 0;
+}
+.drawer-keys {
+  margin: 0.5rem 0 0;
+  line-height: 1.7;
+}
+.drawer-keys b {
+  color: rgba(255, 255, 255, 0.85);
+  font-weight: 700;
+}
+.drawer-actions {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+/* Build dialog: name and buildings on one line, the two buttons beside or
+   under them, never squashed. */
+.build-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  padding: 0.6rem 0.75rem;
+  margin-bottom: 0.45rem;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.06);
+}
+.build-row-name {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+  color: #fff;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+.build-row-name > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.build-dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+.build-row-level {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: var(--fs-xs);
+  white-space: nowrap;
+  letter-spacing: -0.1em;
+}
+.build-row-actions {
+  display: flex;
+  gap: 0.4rem;
+}
+.build-btn {
+  min-height: 2.25rem;
+  padding: 0.35rem 0.7rem;
+  border: 0;
+  border-radius: 7px;
+  color: #fff;
+  font-family: var(--font-body);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+}
+.build-btn.is-build {
+  background: #1e8449;
+}
+.build-btn.is-sell {
+  background: #b03a2e;
+}
+.build-btn:disabled {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.45);
+  cursor: not-allowed;
+}
+@media (max-width: 520px) {
+  .build-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .build-row-actions {
+    grid-column: 1 / -1;
+  }
+  .build-btn {
+    flex: 1;
+  }
+}
+
+/* Centred dialogs: their buttons share the width evenly, and stack to the
+   full width on a phone instead of ending up different sizes. */
+.modal.is-centered .modal-actions {
+  justify-content: center;
+}
+.modal.is-centered .modal-actions > .btn {
+  flex: 1 1 8rem;
+  max-width: 100%;
+  white-space: nowrap;
+}
+#bankrupt-overlay .modal-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+}
+#bankrupt-overlay .modal-actions > .btn[style*="display: none"] {
+  display: none;
+}
+
+/* The card sits clear of the close button. */
+.card-modal .deck-card {
+  width: min(300px, calc(100% - 1rem));
+  margin-top: 1.75rem;
+}
+
+/* Winner screen: nothing wider than the screen. */
+.winner-leaderboard {
+  width: min(480px, 100%);
+}
+/* Flex rather than grid, so a last card on its own row fills it. */
+.ws-grid {
+  display: flex;
+  flex-wrap: wrap;
+}
+.ws-grid > .ws-card {
+  flex: 1 1 150px;
+}
+.winner-leader-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.winner-leader-left {
+  min-width: 0;
+}
+
+/* Programmatic focus after a click or tap shows no ring (app-shell.js only
+   moves focus to a button for keyboard users). */
+.modal:focus,
+.modal:focus-visible {
+  outline: none;
+}
+
+/* Bangla runs wider: keep "<name>-এর পালা" whole in the phone top bar. */
+@media (max-width: 899px) {
+  html.lang-bn .game-topbar .turn-badge {
+    font-size: 0.8rem;
+    gap: 0.35rem;
+  }
+}
+
+/* Short phones: a tighter title deed, so the buy dialog fits without
+   scrolling its buttons out of sight. */
+@media (max-height: 720px) {
+  .deed {
+    margin-bottom: 0.6rem;
+  }
+  .deed-band {
+    padding: 0.35rem 0.5rem 0.4rem;
+  }
+  .deed-name {
+    font-size: var(--fs-md);
+  }
+  .deed-body {
+    padding: 0.35rem 0.65rem 0.45rem;
+  }
+  .deed-row {
+    padding: 0.05rem 0;
+    font-size: var(--fs-xs);
+  }
+  .deed-row.is-strong {
+    font-size: var(--fs-sm);
+  }
+  .deed-foot {
+    margin-top: 0.3rem;
+    padding-top: 0.3rem;
+  }
+  #buy-overlay .modal h2 {
+    margin-bottom: 0.6rem;
+  }
+  #buy-overlay .modal p {
+    margin-bottom: 0.4rem;
+  }
+}
+
+/* A tip never blocks the board under it: only its two buttons take taps. */
+.coach-tip {
+  pointer-events: none;
+}
+.coach-tip button {
+  pointer-events: auto;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   0.4.0 POLISH
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* One layer scale for what floats over the game. Toasts sit above every
+   screen (the winner screen included), banners above dialogs. */
+:root {
+  --z-drawer: 150;
+  --z-overlay: 200;
+  --z-winner: 1200;
+  --z-toast: 6000;
+  --z-banner: 6100;
+}
+#toast {
+  z-index: var(--z-toast);
+}
+
+/* Whichever centre button applies is the only one shown. */
+#center-actions .center-btn[hidden] {
+  display: none !important;
+}
+
+/* Desktop shows the log and chat beside the board, so their toolbar buttons
+   would only repeat them. Chat is for online rooms; a game on one device
+   gives its space to the log. */
+@media (min-width: 900px) {
+  .topbar-tool-btn.panel-dup {
+    display: none !important;
+  }
+}
+body.is-local-game .topbar-tool-btn.chat-tool,
+body.is-local-game .right-panel .chat-panel {
+  display: none !important;
+}
+body.is-local-game .right-panel .log-panel {
+  flex: 1 1 auto !important;
+  max-height: none !important;
+}
+.chat-empty {
+  padding: 1.25rem 0.75rem;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: var(--fs-sm);
+}
+
+/* Short of the biggest rent on the board. */
+.ptag.low {
+  background: rgba(217, 119, 6, 0.28);
+  color: #fcd38d;
+}
+.pcard:focus-visible,
+.mobile-player-chip:focus-visible {
+  outline: 2px solid var(--gold-light);
+  outline-offset: 2px;
+}
+
+/* ── Turn banner ─────────────────────────────────────────────────────────── */
+.turn-banner {
+  position: absolute;
+  left: 50%;
+  top: 18%;
+  z-index: 40;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 1.15rem 0.6rem 0.7rem;
+  border-radius: 999px;
+  background: rgba(6, 20, 12, 0.92);
+  border: 2px solid var(--turn-color, var(--gold-light));
+  box-shadow:
+    0 12px 32px rgba(0, 0, 0, 0.45),
+    0 0 0 6px color-mix(in srgb, var(--turn-color, #f4c542) 22%, transparent);
+  color: #fff;
+  font-family: var(--font-heading);
+  font-size: clamp(1rem, 2.6vmin, 1.4rem);
+  font-weight: 800;
+  pointer-events: none;
+  transform: translate(-50%, 0);
+  animation: turn-banner 1.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.turn-banner-token {
+  display: grid;
+  place-items: center;
+  width: 2.1em;
+  height: 2.1em;
+  border-radius: 50%;
+  background: var(--turn-color, var(--gold-light));
+  font-size: 0.85em;
+}
+@keyframes turn-banner {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -12px) scale(0.92);
+  }
+  14%,
+  78% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -6px) scale(0.98);
+  }
+}
+html.reduce-motion .turn-banner {
+  animation: turn-banner-fade 1s linear both;
+}
+@keyframes turn-banner-fade {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  10%,
+  85% {
+    opacity: 1;
+  }
+}
+
+/* ── Auction ─────────────────────────────────────────────────────────────── */
+.auction-modal .auction-bid-label {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: var(--fs-xs);
+  margin: 0.35rem 0 0.1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.auction-modal .auction-turn {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+  margin: 0.25rem 0 0.4rem;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: var(--fs-sm);
+}
+.auction-modal .auction-turn strong {
+  color: #fff;
+}
+.auction-modal .auction-cash {
+  color: var(--gold-light);
+  font-weight: 700;
+}
+.bid-custom {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.65rem;
+}
+.bid-custom input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.55rem 0.7rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.25);
+  color: #fff;
+  font: inherit;
+  font-size: var(--fs-sm);
+}
+.bid-custom input:focus-visible {
+  outline: 2px solid var(--gold-light);
+  outline-offset: 1px;
+}
+.bid-custom input:disabled,
+.bid-custom button:disabled {
+  opacity: 0.45;
+}
+
+/* ── Trade ───────────────────────────────────────────────────────────────── */
+.trade-prop-item .tprop-name {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+}
+.trade-prop-item .tprop-why {
+  margin-left: auto;
+  padding-left: 0.4rem;
+  font-size: var(--fs-2xs);
+  color: #fcd38d;
+  white-space: nowrap;
+}
+.trade-prop-list {
+  -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - 14px), transparent);
+  mask-image: linear-gradient(180deg, #000 calc(100% - 14px), transparent);
+  padding-bottom: 10px;
+}
+.trade-summary {
+  margin: 0.75rem 0 0.25rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: var(--fs-sm);
+}
+.trade-summary[hidden] {
+  display: none;
+}
+.trade-summary-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  color: rgba(255, 255, 255, 0.75);
+  padding: 0.1rem 0;
+}
+.trade-summary-row strong {
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+.trade-summary-net {
+  margin-top: 0.25rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+.trade-summary-net.is-up strong {
+  color: #86efac;
+}
+.trade-summary-net.is-down strong {
+  color: #fca5a5;
+}
+.trade-summary-note {
+  margin-top: 0.3rem;
+  color: #fcd38d;
+  font-size: var(--fs-xs);
+}
+
+/* ── Winner screen ───────────────────────────────────────────────────────── */
+#confetti-container .confetti {
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.35);
+}
+.winner-awards {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+  width: min(760px, 100%);
+  margin: 0 auto 1rem;
+}
+.winner-award {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.45rem 0.8rem 0.45rem 0.55rem;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(244, 197, 66, 0.28);
+  text-align: left;
+}
+.winner-award-icon {
+  font-size: 1.3rem;
+}
+.winner-award-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+  font-size: var(--fs-xs);
+  color: rgba(255, 255, 255, 0.7);
+}
+.winner-award-text strong {
+  color: var(--gold-light);
+  font-size: var(--fs-sm);
+}
+.winner-chart {
+  width: min(640px, 100%);
+  margin: 0 auto 1rem;
+  padding: 0.6rem 0.75rem 0.5rem;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.winner-chart svg {
+  display: block;
+  width: 100%;
+  height: 150px;
+}
+.worth-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.35rem 0.9rem;
+  margin-top: 0.35rem;
+  font-size: var(--fs-xs);
+  color: rgba(255, 255, 255, 0.75);
+}
+.worth-legend-item i {
+  display: inline-block;
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 50%;
+  margin-right: 0.3rem;
+  vertical-align: -1px;
+}
+.winner-actions {
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+/* ── Phones ──────────────────────────────────────────────────────────────── */
+@media (max-width: 899px) {
+  /* Under a notch or the status bar on an installed app. */
+  .game-topbar {
+    padding-top: calc(0.4rem + env(safe-area-inset-top));
+    padding-left: calc(0.6rem + env(safe-area-inset-left));
+    padding-right: calc(0.6rem + env(safe-area-inset-right));
+  }
+}
+/* Tall phones: the players wrap into two columns instead of scrolling off
+   the side, using room the square board leaves free anyway. */
+@media (max-width: 899px) and (min-height: 620px) {
+  .mobile-player-strip {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    overflow-x: hidden;
+    overflow-y: auto;
+    max-height: 7.4rem;
+  }
+  .mobile-player-chip {
+    min-width: 0;
+  }
+}
+/* Fingers need room: 44px targets wherever the pointer is a finger. */
+@media (pointer: coarse) {
+  .act-btn,
+  .modal-close,
+  .topbar-tool-btn,
+  .build-btn,
+  .bid-btns .btn,
+  .trade-prop-item {
+    min-height: 44px;
+  }
+  .trade-prop-item {
+    flex-shrink: 0;
+  }
+  .trade-prop-list {
+    max-height: 196px;
+  }
+  .modal-close {
+    min-width: 44px;
+  }
+}
+/* Phones on their side: the board on the left, the players and actions in a
+   column on the right, instead of a board squeezed between two bars. */
+@media (max-width: 899px) and (orientation: landscape) and (max-height: 520px) {
+  #game-screen {
+    grid-template-columns: minmax(0, 1fr) minmax(220px, 34vw);
+    grid-template-rows: auto 1fr;
+  }
+  #game-screen > .game-topbar {
+    grid-column: 1 / -1;
+  }
+  #game-screen > .game-main {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  #game-screen > .game-bottombar {
+    grid-column: 2;
+    grid-row: 2;
+    border-top: none;
+    border-left: 1px solid rgba(255, 255, 255, 0.14);
+    overflow-y: auto;
+    padding-bottom: calc(0.55rem + env(safe-area-inset-bottom));
+    padding-right: calc(0.55rem + env(safe-area-inset-right));
+  }
+  .mobile-player-strip {
+    display: grid;
+    grid-template-columns: 1fr;
+    overflow: visible;
+    max-height: none;
+  }
+  .mobile-player-chip {
+    min-width: 0;
+  }
+  .board {
+    width: min(96%, calc((var(--vh, 1vh) * 100) - 70px));
+    height: min(96%, calc((var(--vh, 1vh) * 100) - 70px));
+  }
+}
+
+/* 3D board: a placeholder while it loads. */
+.board3d.is-loading::after {
+  content: attr(data-loading);
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* Portfolio rows: name with its tags, buildings, and the rent it charges now. */
+.pf-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 0.7rem;
+  margin-bottom: 0.35rem;
+  border-radius: 8px;
+  border-left: 3px solid #666;
+  background: rgba(255, 255, 255, 0.06);
+}
+.pf-name {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.4rem;
+  color: #fff;
+  font-weight: 600;
+  font-size: var(--fs-md);
+}
+.pf-buildings {
+  font-size: var(--fs-md);
+  white-space: nowrap;
+}
+.pf-rent {
+  font-size: var(--fs-xs);
+  color: rgba(255, 255, 255, 0.72);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.pf-tag {
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+}
+.pf-tag.is-mortgaged {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fcd38d;
+}
+.pf-tag.is-set {
+  background: rgba(74, 222, 128, 0.18);
+  color: #a7f3c0;
+}
+
+/* The rent that applies right now. */
+.deed-row.is-current {
+  margin: 0 -0.45rem;
+  padding-left: 0.45rem;
+  padding-right: 0.45rem;
+  border-radius: 6px;
+  background: rgba(240, 192, 64, 0.32);
+  font-weight: 800;
+}
+
+/* Chat: tap a name to mute that player. */
+.chat-msg button.chat-who {
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: left;
+}
+.chat-msg button.chat-who:hover {
+  text-decoration: underline;
+}
+.chat-unmute {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: rgba(255, 255, 255, 0.5);
+  font: inherit;
+  font-size: var(--fs-xs);
+  font-style: italic;
+  cursor: pointer;
+}
+
+/* Focus moves here for screen readers; no ring for that. */
+#winner-name:focus {
+  outline: none;
 }

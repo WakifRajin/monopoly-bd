@@ -132,6 +132,7 @@ async function main() {
   const report = [];
   for (const [size, opts] of Object.entries(SIZES)) {
     const ctx = await browser.newContext(opts);
+    await ctx.addInitScript(() => { try { localStorage.setItem("monopoly_analytics_consent", "denied"); } catch (_e) {} });
     await ctx.route(/googletagmanager|google-analytics/, (r) => r.abort());
     const page = await ctx.newPage();
     const errors = [];

@@ -1,6 +1,6 @@
 {
   "name": "monopoly-bd",
-  "version": "0.2.0",
+  "version": "0.4.0",
   "private": true,
   "description": "Bangladeshi Monopoly: a browser board game with local, AI and online play.",
   "license": "Apache-2.0",
@@ -14,10 +14,16 @@
     "screenshots": "node tools/capture-screenshots.cjs",
     "build:3d": "esbuild scripts/board3d/main.js --bundle --minify --format=esm --target=es2020 --legal-comments=eof --outfile=scripts/board3d.min.js",
     "version:bump": "node tools/bump-version.cjs",
-    "audit:ui": "node tools/ui-audit.cjs"
+    "audit:ui": "node tools/ui-audit.cjs",
+    "test": "node tools/test-game.cjs",
+    "test:rules": "npx --yes firebase-tools@15 emulators:exec --only database,auth --project monopoly-bd \"node tools/test-rules.mjs\"",
+    "og-image": "node tools/make-og-image.cjs",
+    "check:version": "node tools/check-version.cjs",
+    "test:online": "npx --yes firebase-tools@15 emulators:exec --only database,auth --project monopoly-bd \"node tools/test-online.cjs\""
   },
   "devDependencies": {
     "esbuild": "^0.28.2",
+    "firebase": "^12.19.0",
     "playwright-core": "^1.63.0",
     "three": "^0.186.1"
   }

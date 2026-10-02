@@ -53,6 +53,8 @@ const ONLINE = {
   lastPresencePingAt: 0,
   takeoverInFlight: false,
   lastTakeoverKey: "",
+  rejoinInFlight: false,
+  unsubConnected: null,
 };
 
 const ONLINE_MUTATION_FUNCS = [
@@ -69,6 +71,7 @@ const ONLINE_MUTATION_FUNCS = [
   "endTurn",
   "confirmBankruptcy",
   "confirmBuy",
+  "declineBuy",
   "startAuction",
   "placeBid",
   "passAuction",
@@ -322,10 +325,40 @@ async function setupPresence(roomId) {
       at: FIREBASE.api.serverTimestamp(),
     });
     ONLINE.lastPresencePingAt = Date.now();
+    // After a network drop the server has already fired our onDisconnect and
+    // marked us offline. Re-arm it and say we are back as soon as the
+    // connection returns, instead of waiting for the next ping.
+    if (!ONLINE.unsubConnected && !(typeof LAN !== "undefined" && LAN.active)) {
+      let first = true;
+      ONLINE.unsubConnected = FIREBASE.api.onValue(FIREBASE.api.ref(FIREBASE.db, ".info/connected"), (snap) => {
+        if (first) {
+          first = false;
+          return;
+        }
+        if (snap.val() !== true || !ONLINE.presenceRef) return;
+        const live = ONLINE.presenceRef;
+        FIREBASE.api
+          .onDisconnect(live)
+          .set({ online: false, at: FIREBASE.api.serverTimestamp() })
+          .then(() => FIREBASE.api.set(live, { online: true, at: FIREBASE.api.serverTimestamp() }))
+          .then(() => {
+            ONLINE.lastPresencePingAt = Date.now();
+          })
+          .catch((err) => console.warn("Presence re-arm failed.", err));
+      });
+    }
   } catch (err) {
     console.warn("Presence registration failed.", err);
   }
 }
+
+// A phone that was locked or a tab that slept missed its pings; say we are
+// here the moment it is visible again.
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState !== "visible" || !isOnlineGame()) return;
+  ONLINE.lastPresencePingAt = 0;
+  pulsePresence();
+});
 
 async function pulsePresence() {
   if (!isOnlineGame() || !ONLINE.presenceRef) return;
@@ -346,6 +379,10 @@ async function clearPresence() {
   if (ONLINE.unsubPresence) {
     ONLINE.unsubPresence();
     ONLINE.unsubPresence = null;
+  }
+  if (ONLINE.unsubConnected) {
+    ONLINE.unsubConnected();
+    ONLINE.unsubConnected = null;
   }
   const ref = ONLINE.presenceRef;
   ONLINE.presenceRef = null;
@@ -2188,6 +2225,10 @@ const BOARD_THEMES = {
       { text: "জেলে যান। ২০০৳ সংগ্রহ করবেন না", action: "jail", value: 0 },
       { text: "জেলমুক্তি কার্ড", action: "jailcard", value: 0 },
       { text: "সাধারণ মেরামত: প্রতি বাড়ির জন্য ২৫৳ এবং প্রতি হোটেলের জন্য ১০০৳ দিন", action: "repairs", value: {"hotel":100,"house":25} },
+      { text: "৩ ঘর পিছিয়ে যান", action: "back", value: 3 },
+      { text: "নিকটতম ইউটিলিটিতে যান। মালিক থাকলে ছক্কার দানের ১০ গুণ ভাড়া দিন", action: "nearest", value: "utility" },
+      { text: "নিকটতম স্টেশনে এগিয়ে যান", action: "nearest", value: "railroad" },
+      { text: "আপনি পরিচালনা পর্ষদের চেয়ারম্যান হয়েছেন। প্রত্যেক খেলোয়াড়কে ৫০৳ করে দিন", action: "payeach", value: 50 },
     ],
     communityCards: [
       { text: "যাত্রা শুরুতে যান। ২০০৳ সংগ্রহ করুন", action: "goto", value: 0 },
@@ -2202,6 +2243,10 @@ const BOARD_THEMES = {
       { text: "স্কুলের ফি ৫০৳ প্রদান করুন", action: "money", value: -50 },
       { text: "আয়কর রিফান্ড। ২০৳ সংগ্রহ করুন", action: "money", value: 20 },
       { text: "আজ আপনার জন্মদিন। প্রত্যেক খেলোয়াড়ের কাছ থেকে ১০৳ করে নিন", action: "birthday", value: 10 },
+      { text: "রাস্তা মেরামতের খরচ: প্রতি বাড়ির জন্য ৪০৳ এবং প্রতি হোটেলের জন্য ১১৫৳ দিন", action: "repairs", value: {"hotel":115,"house":40} },
+      { text: "উত্তরাধিকার সূত্রে ১০০৳ পেলেন", action: "money", value: 100 },
+      { text: "ছুটির তহবিলের মেয়াদ পূর্ণ। ১০০৳ সংগ্রহ করুন", action: "money", value: 100 },
+      { text: "সৌন্দর্য প্রতিযোগিতায় দ্বিতীয় পুরস্কার। ১০৳ সংগ্রহ করুন", action: "money", value: 10 },
     ],
   },
   ancient: {
@@ -2585,7 +2630,7 @@ function buildSpacesFromTheme(themeId) {
       name: "Free Parking",
       type: "parking",
       icon: "🅿️",
-      desc: "Free parking — just visiting.",
+      desc: "Free Parking: a free stop, unless the jackpot rule is on",
     },
     22: { id: 22, name: "Chance", type: "chance", icon: "❓" },
     25: {
@@ -2896,7 +2941,7 @@ const SPACES = [
     name: "Free Parking",
     type: "parking",
     icon: "🅿️",
-    desc: "Free parking — just visiting.",
+    desc: "Free Parking: a free stop, unless the jackpot rule is on",
   },
   {
     id: 21,
@@ -3094,6 +3139,22 @@ const CHANCE_CARDS_INFLATED = [
     action: "repairs",
     value: { house: 400, hotel: 1500 },
   },
+  { text: "Go back 3 spaces.", action: "back", value: 3 },
+  {
+    text: "Advance to nearest Utility. If owned, pay 10 times the dice roll.",
+    action: "nearest",
+    value: "utility",
+  },
+  {
+    text: "You have been elected Chairman of the Board. Pay each player ৳500.",
+    action: "payeach",
+    value: 500,
+  },
+  {
+    text: "Building loan matures. Collect ৳1500.",
+    action: "money",
+    value: 1500,
+  },
 ];
 
 const COMMUNITY_CARDS_INFLATED = [
@@ -3133,6 +3194,18 @@ const COMMUNITY_CARDS_INFLATED = [
     action: "birthday",
     value: 1000,
   },
+  {
+    text: "You are assessed street repairs: ৳400 per house, ৳1150 per hotel.",
+    action: "repairs",
+    value: { house: 400, hotel: 1150 },
+  },
+  { text: "You inherit ৳1000.", action: "money", value: 1000 },
+  { text: "Holiday fund matures. Collect ৳1000.", action: "money", value: 1000 },
+  {
+    text: "You won second prize in a beauty contest. Collect ৳100.",
+    action: "money",
+    value: 100,
+  },
 ];
 
 const CHANCE_CARDS_CLASSIC = [
@@ -3164,6 +3237,22 @@ const CHANCE_CARDS_CLASSIC = [
     action: "repairs",
     value: { house: 25, hotel: 100 },
   },
+  { text: "Go back 3 spaces.", action: "back", value: 3 },
+  {
+    text: "Advance to nearest Utility. If owned, pay 10 times the dice roll.",
+    action: "nearest",
+    value: "utility",
+  },
+  {
+    text: "Advance to nearest Railroad.",
+    action: "nearest",
+    value: "railroad",
+  },
+  {
+    text: "You have been elected Chairman of the Board. Pay each player $50.",
+    action: "payeach",
+    value: 50,
+  },
 ];
 
 const COMMUNITY_CARDS_CLASSIC = [
@@ -3189,6 +3278,18 @@ const COMMUNITY_CARDS_CLASSIC = [
   {
     text: "It is your birthday. Collect $10 from each player.",
     action: "birthday",
+    value: 10,
+  },
+  {
+    text: "You are assessed street repairs: $40 per house, $115 per hotel.",
+    action: "repairs",
+    value: { house: 40, hotel: 115 },
+  },
+  { text: "You inherit $100.", action: "money", value: 100 },
+  { text: "Holiday fund matures. Collect $100.", action: "money", value: 100 },
+  {
+    text: "You won second prize in a beauty contest. Collect $10.",
+    action: "money",
     value: 10,
   },
 ];
@@ -3244,6 +3345,8 @@ function normalizeCustomCardAction(action) {
     "nearest",
     "repairs",
     "birthday",
+    "back",
+    "payeach",
   ].includes(normalized)
     ? normalized
     : "money";
@@ -3251,9 +3354,10 @@ function normalizeCustomCardAction(action) {
 
 function normalizeCustomCardValue(action, value) {
   if (action === "nearest") {
-    const target = String(value || "").trim();
-    return target || "railroad";
+    const target = String(value || "").trim().toLowerCase();
+    return target === "utility" ? "utility" : "railroad";
   }
+  if (action === "back") return Math.min(12, customClampInt(value, 3, 1));
   if (action === "repairs") {
     const raw =
       value && typeof value === "object" && !Array.isArray(value) ? value : {};
@@ -3621,6 +3725,7 @@ const DEBT_PROMPT = {
   payerId: null,
   amount: 0,
   recipientId: null,
+  toParking: false,
 };
 const MOVE_FX = {
   active: false,
@@ -3640,6 +3745,7 @@ function initGameState(players, startMoney, options = {}) {
   const shuffledChance = shuffle(themeDecks.chance);
   const shuffledComm = shuffle(themeDecks.community);
   const auctionEnabled = sanitizeAuctionEnabled(options.auctionEnabled, true);
+  const rules = sanitizeRules(options.rules);
   if (AI_CTRL.timerId) {
     clearTimeout(AI_CTRL.timerId);
     AI_CTRL.timerId = null;
@@ -3705,6 +3811,10 @@ function initGameState(players, startMoney, options = {}) {
     chat: [],
     pendingBuy: null,
     debtPrompt: null,
+    debtTurnReturn: null,
+    jailReleaseMove: null,
+    freshMortgages: {},
+    worthHistory: [],
     pendingCollections: [],
     auctionState: null,
     bankAuctionQueue: [],
@@ -3716,6 +3826,9 @@ function initGameState(players, startMoney, options = {}) {
         ? String(ACTIVE_CUSTOM_BOARD_SEED || "").trim() || null
         : null,
     auctionEnabled,
+    rules,
+    parkingPot: 0,
+    pausedMs: 0,
     gameOver: false,
   };
 }
@@ -3737,19 +3850,21 @@ function normalizePlayerKind(kind) {
   return kind === "ai" ? "ai" : "human";
 }
 
+// Made-up names for computer players: Bangladeshi birds and flowers, never
+// real people.
 const AI_PLACEHOLDER_NAMES = [
-  "Mirza Abbas",
-  "Dipjol",
-  "Hero Alom",
-  "Obaydul Kader",
-  "Shakib Khan",
-  "Sefuda",
-  "Shakib Al Hasan",
-  "Nasiruddin Patwary",
-  "Dr. Mahfuzur Rahman",
-  "Solaiman Shukhon",
-  "Salman Muqtadir",
-  "Ananta Jalil",
+  "Doyel",
+  "Moyna",
+  "Tuntuni",
+  "Shalik",
+  "Kokil",
+  "Machranga",
+  "Shapla",
+  "Bokul",
+  "Shimul",
+  "Polash",
+  "Shiuli",
+  "Kadam",
 ];
 
 function isAiPlaceholderName(name) {
@@ -3809,6 +3924,7 @@ function defaultLobbySettings() {
     themeId: selectedThemeId,
     customBoardSeed: customBoardSeed || null,
     auctionEnabled,
+    rules: readLobbyRules(),
   };
 }
 
@@ -4010,11 +4126,19 @@ function hydrateRemoteGameState(raw) {
   // Firebase drops empty objects and nulls, so a missing holder means the
   // card is in its deck.
   next.stats = normalizeStats(next.stats, players.length);
+  next.rules = sanitizeRules(next.rules);
+  next.parkingPot = Math.max(0, Number(next.parkingPot) || 0);
+  next.pausedMs = Math.max(0, Number(next.pausedMs) || 0);
+  next.pausedAt = null;
+  next.endReason = next.endReason === "time" ? "time" : null;
+  const winnerIdRaw = optionalPlayerIndex(next.winnerId);
+  next.winnerId = Number.isInteger(winnerIdRaw) && winnerIdRaw >= 0 && winnerIdRaw < players.length ? winnerIdRaw : null;
+  next.rollCount = Math.max(0, Number(next.rollCount) || 0);
   next.turnCount = Math.max(0, Number(next.turnCount) || 0);
   const holders = next.jailCardHolder && typeof next.jailCardHolder === "object" ? next.jailCardHolder : {};
   next.jailCardHolder = {};
   for (const t of ["chance", "community"]) {
-    const id = Number(holders[t]);
+    const id = optionalPlayerIndex(holders[t]);
     if (Number.isInteger(id) && id >= 0 && id < players.length) next.jailCardHolder[t] = id;
   }
   next.bankAuctionQueue = indexedObjectToArray(next.bankAuctionQueue).filter(
@@ -4023,13 +4147,43 @@ function hydrateRemoteGameState(raw) {
   // Firebase strips null values, so `pendingBuy: null` is simply absent from the
   // snapshot and comes back undefined. Every `G.pendingBuy !== null` test then
   // reads true, which traps an AI player in the buy branch and stalls the match.
-  const pendingBuyRaw = Number(next.pendingBuy);
+  // Saved games and Same Wi-Fi rooms keep nulls (Firebase drops them), and
+  // Number(null) is 0, which would be a pending purchase of GO.
+  const pendingBuyRaw = optionalPlayerIndex(next.pendingBuy);
   next.pendingBuy =
     Number.isInteger(pendingBuyRaw) &&
     pendingBuyRaw >= 0 &&
     pendingBuyRaw < SPACES.length
       ? pendingBuyRaw
       : null;
+
+  // Whose turn it really is while another player settles a debt, and the move a
+  // player still makes after paying a forced bail.
+  const turnBack = next.debtTurnReturn && typeof next.debtTurnReturn === "object" ? next.debtTurnReturn : null;
+  const turnBackId = optionalPlayerIndex(turnBack?.playerId);
+  next.debtTurnReturn =
+    Number.isInteger(turnBackId) && turnBackId >= 0 && turnBackId < players.length
+      ? { playerId: turnBackId, phase: ["roll", "action", "end"].includes(turnBack.phase) ? turnBack.phase : "action" }
+      : null;
+  const jailMove = next.jailReleaseMove && typeof next.jailReleaseMove === "object" ? next.jailReleaseMove : null;
+  const jailMoveId = optionalPlayerIndex(jailMove?.playerId);
+  const jailSteps = Number(jailMove?.steps);
+  next.jailReleaseMove =
+    Number.isInteger(jailMoveId) && jailMoveId >= 0 && jailMoveId < players.length && Number.isInteger(jailSteps) && jailSteps >= 2 && jailSteps <= 12
+      ? { playerId: jailMoveId, steps: jailSteps }
+      : null;
+
+  next.worthHistory = indexedObjectToArray(next.worthHistory)
+    .map((row) => indexedObjectToArray(row).map((n) => Math.round(Number(n) || 0)))
+    .filter((row) => row.length === next.players.length)
+    .slice(-240);
+  const fresh = next.freshMortgages && typeof next.freshMortgages === "object" ? next.freshMortgages : {};
+  next.freshMortgages = {};
+  for (const key of Object.keys(fresh)) {
+    const id = Number(key);
+    const owner = optionalPlayerIndex(fresh[key]);
+    if (Number.isInteger(id) && props[id]?.mortgaged && Number.isInteger(owner) && props[id].owner === owner) next.freshMortgages[id] = owner;
+  }
 
   next.auctionEnabled = sanitizeAuctionEnabled(next.auctionEnabled, true);
   next.pendingCollections = indexedObjectToArray(next.pendingCollections)
@@ -4078,6 +4232,7 @@ function hydrateRemoteGameState(raw) {
             payerId,
             amount: Math.max(0, Number(debtPromptRaw.amount) || 0),
             recipientId,
+            toParking: debtPromptRaw.toParking === true,
           }
         : null;
   } else {
@@ -4099,6 +4254,8 @@ function hydrateRemoteGameState(raw) {
     const toProps = indexedObjectToArray(pendingTradeRaw.toProps).filter(
       Number.isInteger,
     );
+    const fromCards = Math.max(0, Math.floor(Number(pendingTradeRaw.fromCards) || 0));
+    const toCards = Math.max(0, Math.floor(Number(pendingTradeRaw.toCards) || 0));
     const validPlayers =
       Number.isInteger(fromId) &&
       Number.isInteger(toId) &&
@@ -4117,6 +4274,8 @@ function hydrateRemoteGameState(raw) {
           toProps,
           fromMoney,
           toMoney,
+          fromCards,
+          toCards,
           createdAt: Number(pendingTradeRaw.createdAt) || Date.now(),
         }
       : null;
@@ -4160,7 +4319,7 @@ function hydrateRemoteGameState(raw) {
           activePlayers.length
         : 0;
 
-      const rawHighBidder = Number(G.auctionState.highBidder);
+      const rawHighBidder = optionalPlayerIndex(G.auctionState.highBidder);
       G.auctionState.highBidder =
         Number.isInteger(rawHighBidder) &&
         rawHighBidder >= 0 &&
@@ -4244,6 +4403,7 @@ async function syncRoomState(reason = "") {
       if (txResult?.committed) {
         ONLINE.revision = nextRevision;
         ONLINE.lastSelfRevision = nextRevision;
+        ONLINE.appliedRevision = nextRevision;
         attempts = 0;
         if (ONLINE.syncQueuedReason) {
           currentReason = ONLINE.syncQueuedReason;
@@ -4330,6 +4490,20 @@ async function applyRoomSnapshot(data) {
 
   const rawChat =
     data.chat && typeof data.chat === "object" ? data.chat : null;
+  // The room keeps the last 120 messages. Older ones are removed by the host,
+  // so the room (which every player downloads) does not grow without end.
+  if (rawChat && ONLINE.isHost && !Array.isArray(rawChat) && !ONLINE.chatPruneInFlight) {
+    const keys = Object.keys(rawChat).sort();
+    if (keys.length > 150) {
+      ONLINE.chatPruneInFlight = true;
+      const drop = {};
+      keys.slice(0, keys.length - 120).forEach((k) => (drop[`chat/${k}`] = null));
+      FIREBASE.api
+        .update(getRoomRef(), drop)
+        .catch((err) => console.warn("Chat cleanup failed.", err))
+        .finally(() => (ONLINE.chatPruneInFlight = false));
+    }
+  }
   if (rawChat) {
     const entries = Array.isArray(rawChat)
       ? rawChat.filter(Boolean)
@@ -4366,8 +4540,33 @@ async function applyRoomSnapshot(data) {
 
   const localPresent = roomPlayers.some((p) => p.uid === ONLINE.localUid);
   if (isOnlineGame() && !localPresent) {
+    // Dropped out long enough for the AI to take the seat: take it back.
+    const reservedForMe = data.reserved && typeof data.reserved === "object" && data.reserved[ONLINE.localUid];
+    if (reservedForMe && !ONLINE.rejoinInFlight) {
+      ONLINE.rejoinInFlight = true;
+      updateOnlineStatus("Reconnecting to your seat…");
+      FIREBASE.api
+        .runTransaction(getRoomRef(), (current) => (current ? roomRejoinData(current, ONLINE.localUid) || undefined : current))
+        .then((res) => {
+          if (res?.committed) toast("You're back in the game.", "gold");
+          else {
+            leaveOnlineRoom(false, false);
+            toast("Your seat is no longer available.", "danger");
+          }
+        })
+        .catch((err) => {
+          console.error(err);
+          leaveOnlineRoom(false, false).catch(() => {});
+        })
+        .finally(() => {
+          ONLINE.rejoinInFlight = false;
+        });
+      return;
+    }
+    if (ONLINE.rejoinInFlight) return;
     updateOnlineStatus("You are no longer in this room.", true);
-    leaveOnlineRoom(false, false);
+    rememberOnlineRoom(null);
+    leaveOnlineRoom(false, false).catch((err) => console.error(err));
     toast("You were removed from the room.", "danger");
     return;
   }
@@ -4405,6 +4604,9 @@ async function applyRoomSnapshot(data) {
     if (auctionSelect)
       auctionSelect.value = settings.auctionEnabled ? "on" : "off";
   }
+  if (settings.rules && typeof settings.rules === "object") {
+    applyRulesToLobbyUi(settings.rules);
+  }
   refreshCustomBoardPanel();
 
   // Firebase echoes our own writes straight back. Re-hydrating from them threw
@@ -4413,11 +4615,28 @@ async function applyRoomSnapshot(data) {
   const isOwnEcho =
     Number(data.revision) === Number(ONLINE.lastSelfRevision) &&
     Number(ONLINE.lastSelfRevision) > 0;
+  // Chat messages, presence leases and heartbeats change the room without
+  // touching the game. Rebuilding the whole board for each of them was wasted
+  // work on every device, so an unchanged revision only refreshes the chat.
+  const sameRevision =
+    Number(ONLINE.appliedRevision) > 0 &&
+    Number(data.revision) === Number(ONLINE.appliedRevision) &&
+    Array.isArray(G?.players) &&
+    G.players.length > 0;
 
-  if (ONLINE.status === "playing" && data.gameState && !isOwnEcho) {
+  if (ONLINE.status === "playing" && data.gameState && !isOwnEcho && sameRevision) {
+    renderChatLog();
+    const dc = document.getElementById("drawer-chat");
+    if (dc) dc.innerHTML = document.getElementById("chat-log")?.innerHTML || "";
+    const nextLast = getLastChatMessage();
+    if (prevLastChatKey && chatMessageKey(nextLast) !== prevLastChatKey) showChatPreview(nextLast);
+    updateActionButtons();
+    maybeScheduleOfflineAiTurn();
+  } else if (ONLINE.status === "playing" && data.gameState && !isOwnEcho) {
     ONLINE.isApplyingRemote = true;
     try {
       hydrateRemoteGameState(data.gameState);
+      ONLINE.appliedRevision = Number(data.revision) || 0;
       buildBoard();
       renderAll();
       showScreen("game-screen");
@@ -4508,6 +4727,7 @@ async function processQueuedRoomSnapshots() {
 function attachRoomListener(roomId) {
   if (ONLINE.unsubRoom) ONLINE.unsubRoom();
   ONLINE.roomId = roomId;
+  if (!(typeof LAN !== "undefined" && LAN.active)) rememberOnlineRoom(roomId);
   ONLINE.connected = true;
   ONLINE.lastDepartureNoticeId = "";
   ONLINE.lastSnapshotAt = Date.now();
@@ -4518,12 +4738,14 @@ function attachRoomListener(roomId) {
   ONLINE.pendingCardResolutions = 0;
   ONLINE.snapshotApplyInFlight = false;
   ONLINE.queuedSnapshot = null;
+  ONLINE.appliedRevision = 0;
   const ref = FIREBASE.api.ref(FIREBASE.db, `rooms/${roomId}`);
   ONLINE.unsubRoom = FIREBASE.api.onValue(
     ref,
     (snap) => {
       if (!snap.exists()) {
         updateOnlineStatus("Room closed. You are now offline.", true);
+        rememberOnlineRoom(null);
         leaveOnlineRoom(false, false);
         return;
       }
@@ -4562,7 +4784,68 @@ function attachRoomListener(roomId) {
   );
 }
 
+// A link that opens the game straight into this room (see handleLaunchShortcut).
+function roomInviteLink(roomId = ONLINE.roomId) {
+  const url = new URL(window.location.href);
+  url.search = "";
+  url.hash = "";
+  url.searchParams.set("room", roomId);
+  return url.href;
+}
+
+async function copyRoomInvite() {
+  if (!ONLINE.roomId) return;
+  const link = roomInviteLink();
+  const closed = ONLINE.visibility === "closed";
+  try {
+    if (navigator.share && window.matchMedia("(pointer: coarse)").matches) {
+      await navigator.share({ title: "Bangladeshi Monopoly", text: `Join my game, room ${ONLINE.roomId}${closed ? " (ask me for the password)" : ""}`, url: link });
+      return;
+    }
+    await navigator.clipboard.writeText(link);
+    toast(closed ? "Invite link copied. Share the password separately." : "Invite link copied", "gold");
+  } catch (err) {
+    if (err && err.name === "AbortError") return;
+    toast(`Room code: ${ONLINE.roomId}`, "gold");
+  }
+}
+
+// Opened from an invite link: go to Join with the code filled in, and join
+// at once when the room needs no password.
+async function joinFromInviteLink(code) {
+  const roomId = sanitizeRoomId(code);
+  if (!isValidRoomId(roomId)) return;
+  openOnlineSetupPage("join");
+  const codeEl = document.getElementById("join-room-code");
+  if (codeEl) codeEl.value = roomId;
+  try {
+    const url = new URL(window.location.href);
+    url.searchParams.delete("room");
+    history.replaceState(null, "", url.href);
+  } catch (_err) {}
+  const ready = await bootstrapFirebase();
+  if (!ready) return;
+  const snap = await FIREBASE.api.get(FIREBASE.api.ref(FIREBASE.db, `rooms/${roomId}`)).catch(() => null);
+  if (!snap || !snap.exists()) {
+    toast("That room has closed.", "danger");
+    return;
+  }
+  if ((snap.val().visibility || "open") === "closed") {
+    toast("Enter the room password to join.", "gold");
+    document.getElementById("join-room-password")?.focus();
+    return;
+  }
+  await joinOnlineRoom();
+}
+
 function updateOnlineLobbyUI() {
+  const invite = document.getElementById("room-invite");
+  if (invite) {
+    const show = !!(ONLINE.connected && ONLINE.roomId && !(typeof LAN !== "undefined" && LAN.active));
+    invite.hidden = !show;
+    const codeLabel = document.getElementById("room-invite-code");
+    if (codeLabel && show) codeLabel.textContent = ONLINE.roomId;
+  }
   const createBtn = document.getElementById("create-room-btn");
   const joinBtn = document.getElementById("join-room-btn");
   const leaveBtn = document.getElementById("leave-room-btn");
@@ -4813,9 +5096,11 @@ async function joinOnlineRoom() {
     }
   }
 
+  let rejoinKind = "";
   try {
     let txError = "";
     const result = await FIREBASE.api.runTransaction(roomRef, (data) => {
+      rejoinKind = "";
       const roomData = data && typeof data === "object" ? data : baseRoom;
       if (!roomData) {
         throw new Error("Room not found");
@@ -4825,13 +5110,23 @@ async function joinOnlineRoom() {
           "Room is from an older version. Ask host to recreate the room.";
         return;
       }
-      if ((roomData.status || "lobby") !== "lobby") {
-        txError = "Game already started";
-        return;
-      }
       let players = indexedObjectToArray(roomData.players).filter(
         (p) => p && typeof p === "object",
       );
+      if ((roomData.status || "lobby") !== "lobby") {
+        // Still seated (a refresh before anyone noticed): nothing to write.
+        if (players.some((p) => p.uid === ONLINE.localUid)) {
+          rejoinKind = "seated";
+          return;
+        }
+        const back = roomRejoinData(roomData, ONLINE.localUid);
+        if (back) {
+          rejoinKind = "reserved";
+          return back;
+        }
+        txError = "Game already started";
+        return;
+      }
       const existingIdx = players.findIndex((p) => p.uid === ONLINE.localUid);
       if (existingIdx === -1) {
         if (players.length >= 8) {
@@ -4878,7 +5173,8 @@ async function joinOnlineRoom() {
         updatedAt: Date.now(),
       };
     });
-    if (!result.committed) throw new Error(txError || "Unable to join room.");
+    if (!result.committed && rejoinKind !== "seated")
+      throw new Error(txError || "Unable to join room.");
   } catch (err) {
     console.error(err);
     // A closed room rejects a wrong password as a rules failure, because the
@@ -4899,8 +5195,116 @@ async function joinOnlineRoom() {
 
   attachRoomListener(roomId);
   if (passEl) passEl.value = "";
+  if (rejoinKind) {
+    toast(`Back in room ${roomId}`, "gold");
+    return;
+  }
   openOnlineRoomPage();
   toast(`Joined room ${roomId}`, "gold");
+}
+
+// The room after `uid` takes back the seat that was reserved for them when
+// they dropped out, or null if there is no such seat.
+function roomRejoinData(roomData, uid) {
+  const reserved = roomData?.reserved && typeof roomData.reserved === "object" ? roomData.reserved : null;
+  const entry = reserved && reserved[uid];
+  if (!entry || !roomData.gameState) return null;
+  const gs = JSON.parse(JSON.stringify(roomData.gameState));
+  const gamePlayers = indexedObjectToArray(gs.players).filter((p) => p && typeof p === "object");
+  const seat = gamePlayers.findIndex((p) => p.reservedUid === uid);
+  if (seat < 0 || gamePlayers[seat].bankrupt) return null;
+  const now = Date.now();
+  const name = sanitizeName(entry.name || gamePlayers[seat].reservedName, `Player ${seat + 1}`);
+  const seatPlayer = gamePlayers[seat];
+  seatPlayer.uid = uid;
+  seatPlayer.kind = "human";
+  seatPlayer.name = name;
+  delete seatPlayer.reservedUid;
+  delete seatPlayer.reservedName;
+  gs.players = gamePlayers;
+  const msg = `${name} is back and plays their own seat again.`;
+  if (!Array.isArray(gs.log)) gs.log = indexedObjectToArray(gs.log);
+  gs.log.push({ text: msg, type: "success", time: now });
+  if (gs.log.length > GAME_LOG_LIMIT) gs.log = gs.log.slice(-GAME_LOG_LIMIT);
+  const players = [
+    ...indexedObjectToArray(roomData.players).filter((p) => p && typeof p === "object"),
+    { uid, name, token: sanitizeToken(entry.token || seatPlayer.token, TOKENS[seat % TOKENS.length]), kind: "human", ready: true },
+  ];
+  const nextReserved = { ...reserved };
+  delete nextReserved[uid];
+  return {
+    ...roomData,
+    players,
+    playerUids: players.map((p) => p.uid).filter(Boolean),
+    members: membersMapFromPlayers(players),
+    reserved: Object.keys(nextReserved).length ? nextReserved : null,
+    gameState: gs,
+    revision: (Number(roomData.revision) || 0) + 1,
+    updatedAt: now,
+    lastDepartureNotice: { id: `back_${now}_${uid}`, type: "rejoin", name, message: msg, time: now },
+  };
+}
+
+// ── Rejoining after a refresh, a crash or a locked phone ─────────────────
+const ONLINE_ROOM_MEMORY_KEY = "monopoly_online_room_v1";
+const ONLINE_ROOM_MEMORY_MS = 1000 * 60 * 60 * 12;
+
+function rememberOnlineRoom(roomId) {
+  try {
+    if (roomId) localStorage.setItem(ONLINE_ROOM_MEMORY_KEY, JSON.stringify({ roomId, at: Date.now() }));
+    else localStorage.removeItem(ONLINE_ROOM_MEMORY_KEY);
+  } catch (err) {
+    /* storage can be unavailable; rejoining is then by code */
+  }
+  if (typeof renderRejoinCard === "function") renderRejoinCard();
+}
+
+function rememberedOnlineRoom() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(ONLINE_ROOM_MEMORY_KEY) || "null");
+    if (!raw || !isValidRoomId(raw.roomId)) return null;
+    if (Date.now() - Number(raw.at || 0) > ONLINE_ROOM_MEMORY_MS) return null;
+    return raw;
+  } catch (err) {
+    return null;
+  }
+}
+
+function renderRejoinCard() {
+  const card = document.getElementById("hp-rejoin");
+  if (!card) return;
+  const saved = isOnlineGame() ? null : rememberedOnlineRoom();
+  card.hidden = !saved;
+  const sub = document.getElementById("hp-rejoin-sub");
+  if (saved && sub) sub.textContent = `Room ${saved.roomId}`;
+}
+
+async function rejoinRememberedRoom() {
+  const saved = rememberedOnlineRoom();
+  if (!saved) {
+    renderRejoinCard();
+    return;
+  }
+  toast("Connecting…", "gold");
+  const ready = await bootstrapFirebase();
+  if (!ready) {
+    toast("Could not reach the online service.", "danger");
+    return;
+  }
+  LOBBY_CONTEXT = "online";
+  const codeEl = document.getElementById("join-room-code");
+  if (codeEl) codeEl.value = saved.roomId;
+  const snap = await FIREBASE.api.get(FIREBASE.api.ref(FIREBASE.db, `rooms/${saved.roomId}`)).catch(() => null);
+  if (!snap || !snap.exists()) {
+    rememberOnlineRoom(null);
+    toast("That room has closed.", "danger");
+    return;
+  }
+  await joinOnlineRoom();
+}
+
+function forgetRememberedRoom() {
+  rememberOnlineRoom(null);
 }
 
 function applyOnlineDepartureRuleToRoomData(
@@ -4911,7 +5315,10 @@ function applyOnlineDepartureRuleToRoomData(
   if (!roomData || typeof roomData !== "object") return roomData;
 
   const now = Date.now();
-  const departureMode = leaveMode === "ai" ? "ai" : "liquidation";
+  // "absent": the player dropped out (phone locked, network gone). The AI
+  // plays the seat, but it stays reserved so they can come back to it.
+  const reserveSeat = leaveMode === "absent";
+  const departureMode = leaveMode === "ai" || reserveSeat ? "ai" : "liquidation";
   const allRoomPlayers = indexedObjectToArray(roomData.players).filter(
     (p) => p && typeof p === "object" && !!p.uid,
   );
@@ -5020,6 +5427,19 @@ function applyOnlineDepartureRuleToRoomData(
     quitter.uid = null;
     quitter.kind = "ai";
     quitter.name = `${quitterName} (AI)`;
+    if (reserveSeat) {
+      quitter.reservedUid = leavingUid;
+      quitter.reservedName = quitterName;
+      out.reserved = {
+        ...(roomData.reserved && typeof roomData.reserved === "object" ? roomData.reserved : {}),
+        [leavingUid]: {
+          seat: quitterIdx,
+          name: quitterName,
+          token: sanitizeToken(leavingRoomPlayer?.token || quitter.token, TOKENS[quitterIdx % TOKENS.length]),
+          at: now,
+        },
+      };
+    }
 
     if (
       gs.pendingTrade &&
@@ -5030,7 +5450,9 @@ function applyOnlineDepartureRuleToRoomData(
     }
     gs.pendingBuy = null;
 
-    const aiMsg = `${quitterName} left the match. AI takeover is active.`;
+    const aiMsg = reserveSeat
+      ? `${quitterName} lost connection. The AI plays their seat until they come back.`
+      : `${quitterName} left the match. AI takeover is active.`;
     if (!Array.isArray(gs.log)) gs.log = [];
     gs.log.push({ text: aiMsg, type: "important", time: now });
     if (gs.log.length > GAME_LOG_LIMIT) gs.log = gs.log.slice(-GAME_LOG_LIMIT);
@@ -5256,12 +5678,9 @@ async function takeOverAbsentSeat(uid, name) {
         (p) => p && p.uid === uid,
       );
       if (!stillThere) return data;
-      return applyOnlineDepartureRuleToRoomData(data, uid, "ai");
+      return applyOnlineDepartureRuleToRoomData(data, uid, "absent");
     });
-    if (result?.committed) {
-      addLog(`${name} lost connection. The AI is playing their seat.`, "important");
-      return true;
-    }
+    if (result?.committed) return true;
   } catch (err) {
     console.error("Seat takeover failed.", err);
   } finally {
@@ -5336,6 +5755,7 @@ async function leaveOnlineRoom(
   }
 
   const wasPlaying = ONLINE.status === "playing";
+  if (mutateRoom) rememberOnlineRoom(null);
 
   await clearPresence();
 
@@ -5361,6 +5781,7 @@ async function leaveOnlineRoom(
   ONLINE.visibility = "open";
   ONLINE.status = "offline";
   ONLINE.revision = 0;
+  ONLINE.appliedRevision = 0;
   ONLINE.lastDepartureNoticeId = "";
   ONLINE.lastSnapshotAt = 0;
   ONLINE.heartbeatInFlight = false;
@@ -5445,7 +5866,7 @@ function renderLobby() {
   }
 
   const hostEditable = !online || ONLINE.isHost;
-  ["starting-money", "lobby-timer", "auction-enabled"].forEach(
+  ["starting-money", "lobby-timer", "auction-enabled", ...LOBBY_RULE_CONTROL_IDS].forEach(
     (id) => {
       const input = document.getElementById(id);
       if (input) input.disabled = !hostEditable;
@@ -5552,7 +5973,25 @@ function removePlayer(i) {
   renderLobby();
 }
 
-async function startGame() {
+async function startGame(replaceSaved = false) {
+  // Three games are kept. A new one when all three slots are used would push
+  // out the oldest, so ask first.
+  const onLanNow = typeof LAN !== "undefined" && LAN.active;
+  if (!replaceSaved && !isOnlineGame() && !onLanNow && typeof readSavedGames === "function") {
+    const saves = readSavedGames();
+    if (saves.length >= SAVE_MAX_SLOTS) {
+      const oldest = saves[saves.length - 1];
+      const desc = document.getElementById("replace-save-desc");
+      if (desc) desc.textContent = `You already have ${saves.length} saved games. Starting a new one removes the oldest (${describeSavedGame(oldest)}).`;
+      const keep = document.getElementById("replace-save-continue");
+      if (keep) keep.onclick = () => {
+        closeOverlay("replace-save-overlay");
+        resumeSavedGame(saves[0].id);
+      };
+      openOverlay("replace-save-overlay");
+      return;
+    }
+  }
   clearOfflineAiTimer(true);
   const names = lobbyPlayers.map((p, i) => ({
     uid: p.uid || null,
@@ -5643,7 +6082,7 @@ async function startGame() {
   applyThemeById(selectedThemeId);
   const t = getThemeById(selectedThemeId);
 
-  initGameState(names, startMoney, { auctionEnabled });
+  initGameState(names, startMoney, { auctionEnabled, rules: readLobbyRules() });
   buildBoard();
   renderAll();
   showScreen("game-screen");
@@ -5675,6 +6114,7 @@ async function startGame() {
   }
   if (TIMER.duration > 0)
     addLog(`Turn timer: ${TIMER.duration}s per turn.`, "important");
+  logActiveHouseRules();
   updateActionButtons();
 
   if (isOnlineGame()) {

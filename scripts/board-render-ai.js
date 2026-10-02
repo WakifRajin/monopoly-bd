@@ -54,6 +54,27 @@ function boardLabelHtml(name) {
   );
 }
 
+// What a square is, in words: for screen readers and the keyboard board.
+function spaceAccessibleName(id) {
+  const sp = SPACES[id];
+  if (!sp) return "";
+  const parts = [sp.name];
+  if (sp.type === "property" || sp.type === "railroad" || sp.type === "utility") {
+    const prop = G?.properties?.[id];
+    const owner = prop && prop.owner !== null && prop.owner !== undefined ? G.players[prop.owner] : null;
+    parts.push(fmtCurrency(sp.price || 0));
+    parts.push(owner ? `owned by ${owner.name}` : "for sale");
+    if (prop?.hotel) parts.push("hotel");
+    else if (prop?.houses) parts.push(`${prop.houses} house${prop.houses === 1 ? "" : "s"}`);
+    if (prop?.mortgaged) parts.push("mortgaged");
+  } else if (sp.type === "tax") {
+    parts.push(`pay ${fmtCurrency(sp.amount || 0)}`);
+  }
+  const here = (G?.players || []).filter((p) => !p.bankrupt && p.pos === id).map((p) => p.name);
+  if (here.length) parts.push(`${here.join(", ")} ${here.length === 1 ? "is" : "are"} here`);
+  return uiText(parts.join(", "));
+}
+
 function buildBoard() {
   const board = document.getElementById("game-board");
   board.innerHTML = "";
@@ -75,6 +96,15 @@ function buildBoard() {
     }
     el.id = `sp${s.id}`;
     el.onclick = () => showSpaceInfo(s.id);
+    el.tabIndex = 0;
+    el.setAttribute("role", "button");
+    el.setAttribute("aria-label", spaceAccessibleName(s.id));
+    el.onkeydown = (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        showSpaceInfo(s.id);
+      }
+    };
 
     let inner = "";
     if (s.type === "property") {
@@ -143,6 +173,7 @@ function renderDiceFromState() {
 //  RENDER
 // ═══════════════════════════════════════════════
 function renderAll() {
+  if (typeof renderRulesHud === "function") renderRulesHud();
   renderPlayerCards();
   renderMarkers();
   renderBoardOwnership();
@@ -153,6 +184,14 @@ function renderAll() {
   updateTopBar();
   updateActionButtons();
   maybeScheduleOfflineAiTurn();
+  if (typeof scheduleSave === "function") scheduleSave();
+  if (window.Board3D && typeof window.Board3D.wake === "function") window.Board3D.wake();
+  if (typeof maybeShowTurnBanner === "function") maybeShowTurnBanner();
+  document.body.classList.toggle("is-local-game", !isOnlineGame());
+  // The flat HTML board (no WebGL) keeps its squares' spoken names current.
+  if (!document.body.classList.contains("board-gl")) {
+    SPACES.forEach((sp) => document.getElementById(`sp${sp.id}`)?.setAttribute("aria-label", spaceAccessibleName(sp.id)));
+  }
 }
 
 function syncAuctionOverlay() {
@@ -172,10 +211,25 @@ function syncAuctionOverlay() {
   }
 }
 
+// Last log entry read out to screen readers, so each is announced once
+// whether it was written here or arrived from another player.
+let LAST_ANNOUNCED_LOG = "";
+
+function announceNewLogEntries() {
+  if (typeof announce !== "function" || !Array.isArray(G?.log) || !G.log.length) return;
+  const keys = G.log.map(getLogEntryKey);
+  const from = LAST_ANNOUNCED_LOG ? keys.lastIndexOf(LAST_ANNOUNCED_LOG) + 1 : G.log.length - 1;
+  LAST_ANNOUNCED_LOG = keys[keys.length - 1];
+  const screen = document.getElementById("game-screen");
+  if (!screen || screen.classList.contains("hidden")) return;
+  G.log.slice(Math.max(0, from), G.log.length).slice(-4).forEach((e) => announce(e.text));
+}
+
 function renderGameLog() {
   const el = document.getElementById("game-log");
   if (!el || !Array.isArray(G.log)) return;
   appendLogsToArchive(G.log);
+  announceNewLogEntries();
   // Only follow new entries when the reader is already at the bottom; someone
   // scrolled up to read an earlier turn should not be yanked back down.
   const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 24;
@@ -194,16 +248,66 @@ function renderGameLog() {
 function renderChatLog() {
   const el = document.getElementById("chat-log");
   if (!el || !G.chat) return;
+  if (!G.chat.length) {
+    el.innerHTML = `<div class="chat-empty">${escHtml(uiText(isOnlineGame() ? "No messages yet. Say hello!" : "Chat is for online games."))}</div>`;
+    return;
+  }
+  const muted = chatMutedSet();
+  let lastMutedUid = "";
   el.innerHTML = G.chat
     .map((m) => {
-      const whoColor = sanitizeColor(m.color, "#ffffff");
-      const token = escHtml(String(m.token || "💬"));
-      const who = escHtml(m.name || "Player");
+      // Shown as the player who sent it, not as whatever name the message
+      // carries, so nobody can post under someone else's name.
+      const seat = m.uid ? (G.players || []).find((p) => p.uid === m.uid || p.reservedUid === m.uid) : null;
+      const whoColor = sanitizeColor(seat?.color || m.color, "#ffffff");
+      const token = escHtml(String(seat?.token || m.token || "💬"));
+      const who = escHtml(seat?.reservedName || seat?.name || m.name || "Player");
       const text = escHtml(m.text || "");
-      return `<div class="chat-msg"><span class="chat-who" style="color:${whoColor}">${token} ${who}:</span><span class="chat-text">${text}</span></div>`;
+      const other = isOnlineGame() && m.uid && m.uid !== ONLINE.localUid;
+      if (other && muted.has(m.uid)) {
+        // One line per run of muted messages, with a way back.
+        if (lastMutedUid === m.uid) return "";
+        lastMutedUid = m.uid;
+        return `<div class="chat-msg chat-muted"><button type="button" class="chat-unmute" onclick="toggleChatMute('${escAttr(m.uid)}')">${who} ${escHtml(uiText("is muted · show messages"))}</button></div>`;
+      }
+      lastMutedUid = "";
+      const whoHtml = other
+        ? `<button type="button" class="chat-who" style="color:${whoColor}" title="${escAttr(uiText("Mute this player"))}" onclick="toggleChatMute('${escAttr(m.uid)}')">${token} ${who}:</button>`
+        : `<span class="chat-who" style="color:${whoColor}">${token} ${who}:</span>`;
+      return `<div class="chat-msg">${whoHtml}<span class="chat-text">${text}</span></div>`;
     })
     .join("");
   el.scrollTop = el.scrollHeight;
+}
+
+// Players muted in this room's chat, for this browser tab.
+function chatMuteKey() {
+  return `monopoly_chat_muted_${ONLINE.roomId || "local"}`;
+}
+function chatMutedSet() {
+  try {
+    return new Set(JSON.parse(sessionStorage.getItem(chatMuteKey()) || "[]"));
+  } catch (_err) {
+    return new Set();
+  }
+}
+function toggleChatMute(uid) {
+  const set = chatMutedSet();
+  const seat = (G.players || []).find((p) => p.uid === uid);
+  const name = seat?.name || "This player";
+  if (set.has(uid)) {
+    set.delete(uid);
+    toast(`${name} is no longer muted`, "gold");
+  } else {
+    set.add(uid);
+    toast(`${name} is muted. Tap the line in chat to show them again.`, "gold");
+  }
+  try {
+    sessionStorage.setItem(chatMuteKey(), JSON.stringify([...set]));
+  } catch (_err) {}
+  renderChatLog();
+  const dc = document.getElementById("drawer-chat");
+  if (dc) dc.innerHTML = document.getElementById("chat-log")?.innerHTML || "";
 }
 
 // An unowned space stores owner === null, and Number(null) is 0 - which would
@@ -255,8 +359,24 @@ function playerGroupProgress(player) {
 function playerTagsHtml(p) {
   return (
     (isAiPlayer(p) ? '<span class="ptag">AI</span>' : "") +
-    (p.bankrupt ? '<span class="ptag out">OUT</span>' : "")
+    (p.bankrupt ? '<span class="ptag out">OUT</span>' : "") +
+    (!p.bankrupt && isLowOnCash(p) ? `<span class="ptag low" title="${escAttr(uiText("Could not pay the biggest rent on the board"))}">${escHtml(uiText("Low cash"))}</span>` : "")
   );
+}
+
+// Short of the biggest rent another player could charge right now: one
+// unlucky roll from having to mortgage or sell.
+function isLowOnCash(p) {
+  if (!p || !G || !Array.isArray(G.properties)) return false;
+  let worst = 0;
+  G.properties.forEach((prop, id) => {
+    if (!prop || prop.owner === null || prop.owner === undefined || Number(prop.owner) === p.id || prop.mortgaged) return;
+    const sp = SPACES[id];
+    if (!sp) return;
+    const rent = sp.type === "utility" ? 7 * (getThemeUtilityRentMultipliers(G.boardThemeId || selectedThemeId)?.one || 4) : calcRent(sp, prop);
+    if (rent > worst) worst = rent;
+  });
+  return worst > 0 && Number(p.money) < worst;
 }
 
 function renderPlayerCards() {
@@ -312,6 +432,15 @@ function renderPlayerCards() {
       `;
       div.title = `Tap to view ${p.name}'s portfolio and money log`;
       div.onclick = () => showPlayerPortfolio(i);
+      div.setAttribute("role", "button");
+      div.tabIndex = 0;
+      div.setAttribute("aria-label", `${p.name}, ${fmtCurrency(p.money)}${active ? ", playing now" : ""}${p.bankrupt ? ", out of the game" : ""}`);
+      div.onkeydown = (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          showPlayerPortfolio(i);
+        }
+      };
       el.appendChild(div);
     }
 
@@ -328,6 +457,9 @@ function renderPlayerCards() {
       `;
       chip.title = `Tap to view ${p.name}'s portfolio and money log`;
       chip.onclick = () => showPlayerPortfolio(i);
+      chip.setAttribute("role", "button");
+      chip.tabIndex = 0;
+      chip.setAttribute("aria-label", `${p.name}, ${fmtCurrency(p.money)}${active ? ", playing now" : ""}`);
       mobileEl.appendChild(chip);
     }
   });
@@ -542,7 +674,7 @@ async function animatePlayerStepMovement(player, steps, options = {}) {
         i === steps - 1 ? "step-arrive" : "step-trail",
         i === steps - 1 ? 340 : 240,
       );
-      await waitMs(Math.round(180 * (MOVE_SPEED?.factor || 1)));
+      await waitMs(Math.round(180 * (MOVE_SPEED?.factor || 1) * (typeof reduceMotionOn === "function" && reduceMotionOn() ? 0.45 : 1)));
       if (!canContinue()) return false;
     }
   } finally {
@@ -869,7 +1001,36 @@ function aiCashReserve(player) {
     (player.utilities?.length || 0);
   const floorReserve = Math.max(120, Math.floor(1500 * scale));
   const dynamicReserve = Math.floor((900 + owned * 180) * scale);
-  return Math.max(floorReserve, dynamicReserve);
+  // Easy keeps a fat cushion and so builds and bids less; hard plays lean.
+  const level = aiLevel();
+  const factor = level === "easy" ? 1.25 : level === "hard" ? 0.75 : 1;
+  return Math.floor(Math.max(floorReserve, dynamicReserve) * factor);
+}
+
+// Rent a colour set could earn once built to three houses, the level where
+// rent jumps. Used to price handing a set to an opponent.
+function aiSetDangerValue(groupIds, ownerCash) {
+  const houseCost = groupIds.reduce((sum, id) => sum + (Number(SPACES[id]?.house) || 0), 0);
+  const rentAt3 = groupIds.reduce((sum, id) => sum + (Number(SPACES[id]?.rent?.[3]) || 0), 0);
+  // An opponent who cannot afford houses is less dangerous for a while.
+  const canBuild = houseCost > 0 ? Math.min(1, Math.max(0.35, ownerCash / (houseCost * 3))) : 1;
+  return Math.floor(rentAt3 * 1.5 * canBuild);
+}
+
+// Groups that `playerId` would complete (own entirely) only after the trade.
+function aiGroupsCompletedByTrade(trade, playerId) {
+  const overrides = aiTradeOwnerOverrides(trade);
+  const touched = new Set();
+  [...(trade.fromProps || []), ...(trade.toProps || [])].forEach((id) => {
+    const sp = SPACES[Number(id)];
+    if (sp && sp.type === "property") touched.add(sp.group);
+  });
+  const out = [];
+  touched.forEach((group) => {
+    const ids = SPACES.filter((s) => s.type === "property" && s.group === group).map((s) => s.id);
+    if (!aiPlayerOwnsFullGroup(playerId, ids) && aiPlayerOwnsFullGroup(playerId, ids, overrides)) out.push(ids);
+  });
+  return out;
 }
 
 function aiPropertyGroupIds(spaceId) {
@@ -1097,6 +1258,11 @@ function aiTradeTerms(trade, playerId) {
   const reserve = aiCashReserve(me);
   const critical = (me?.money || 0) < Math.floor(reserve * 0.24);
   const netCash = cashIn - cashOut;
+  // A Get Out of Jail Free card is worth a bit less than the bail it saves.
+  const cardValue = Math.floor(getThemeJailBail(G.boardThemeId || selectedThemeId) * 0.8);
+  const cardsIn = Math.max(0, Number(iAmFrom ? trade.toCards : trade.fromCards) || 0);
+  const cardsOut = Math.max(0, Number(iAmFrom ? trade.fromCards : trade.toCards) || 0);
+  const netCards = (cardsIn - cardsOut) * cardValue;
   // When broke, cash in hand is worth more than cards.
   const cashWeight = critical && netCash > 0 ? 1.3 : 1;
 
@@ -1104,17 +1270,26 @@ function aiTradeTerms(trade, playerId) {
     aiPortfolioValue(playerId, overrides) - aiPortfolioValue(playerId);
   const otherAssetGain =
     aiPortfolioValue(otherId, overrides) - aiPortfolioValue(otherId);
-  const gain = assetGain + Math.floor(netCash * cashWeight) - myInterest;
-  const otherGain = otherAssetGain - netCash - otherInterest;
+  const gain = assetGain + Math.floor(netCash * cashWeight) + netCards - myInterest;
+  let otherGain = otherAssetGain - netCash - netCards - otherInterest;
 
   const swing = aiEvaluateTradeGroupSwing(trade, playerId);
+  const level = aiLevel();
   // Handing an opponent a full set without getting one back is the dangerous
-  // case, so their gain counts for more there.
-  const alpha =
-    swing.oppMonopoliesGained > swing.aiMonopoliesGained && !critical
-      ? 0.8
-      : 0.5;
-  const margin = Math.floor(120 * aiEconomyScale());
+  // case: their gain counts for more, and on normal and hard the rent that
+  // set could earn is added on top, so a set can't be bought cheaply.
+  const handsOverSet = swing.oppMonopoliesGained > swing.aiMonopoliesGained && !critical;
+  if (handsOverSet && level !== "easy") {
+    const other = G.players[otherId];
+    const otherCashAfter = Math.max(0, (other?.money || 0) - netCash);
+    aiGroupsCompletedByTrade(trade, otherId).forEach((ids) => {
+      otherGain += aiSetDangerValue(ids, otherCashAfter);
+    });
+  }
+  const alpha = handsOverSet
+    ? level === "hard" ? 1.25 : level === "easy" ? 0.6 : 1
+    : 0.5;
+  const margin = Math.floor((level === "easy" ? 60 : 120) * aiEconomyScale());
   const listPrice = (ids) =>
     (ids || []).reduce((sum, id) => sum + estimateAssetValue(Number(id)), 0);
   const listDelta = iAmFrom
@@ -1137,6 +1312,21 @@ function aiTradeTerms(trade, playerId) {
     margin,
     accept: affordable && gain >= margin && gain >= alpha * otherGain + margin,
   };
+}
+
+// The AI's answer to an offer made to it. On top of the value test, every
+// offer it has already turned down from the same player this turn makes it
+// firmer, and a small random demand means its exact limit can't be found by
+// lowering the cash one step at a time.
+function aiAcceptsOffer(trade, recipient) {
+  const terms = aiTradeTerms(trade, recipient.id);
+  if (!AI_CTRL.haggle || AI_CTRL.haggle.turn !== G.turnCount) AI_CTRL.haggle = { turn: G.turnCount, tries: {} };
+  const key = `${Number(trade.fromId)}>${recipient.id}`;
+  const tries = Number(AI_CTRL.haggle.tries[key]) || 0;
+  const extra = Math.floor(terms.margin * (0.6 * tries + Math.random() * 0.5));
+  const ok = terms.accept && terms.gain >= terms.alpha * terms.otherGain + terms.margin + extra;
+  if (!ok) AI_CTRL.haggle.tries[key] = tries + 1;
+  return ok;
 }
 
 function aiTradeMemoryForPlayer(playerId) {
@@ -1251,6 +1441,26 @@ function aiRecordTradeResolution(trade, accepted) {
   }
 }
 
+// Early on, getting out to buy property is worth the bail. Late in the game,
+// with opponents' sets built up, jail is the safest square on the board, so
+// normal and hard stay and roll until the third turn forces them out.
+function aiShouldLeaveJailEarly(p, bailAmount) {
+  const level = aiLevel();
+  if (level === "easy") {
+    return p.jailTurns >= 2 || (p.money >= bailAmount * 6 && Math.random() < 0.55);
+  }
+  const unowned = SPACES.filter(
+    (s) => ["property", "railroad", "utility"].includes(s.type) && G.properties[s.id] && G.properties[s.id].owner === null,
+  ).length;
+  const danger = SPACES.filter((s) => {
+    const pr = G.properties[s.id];
+    return pr && pr.owner !== null && pr.owner !== p.id && (pr.hotel || pr.houses >= (level === "hard" ? 2 : 3));
+  }).length;
+  if (danger >= 3) return false;
+  if (p.jailFreeCards > 0) return unowned >= 4;
+  return unowned >= 6 && p.money >= bailAmount * 3;
+}
+
 function aiPropertyPriority(player, spaceId) {
   const sp = SPACES[spaceId];
   if (!sp || !player) return 0;
@@ -1292,19 +1502,26 @@ function aiPropertyPriority(player, spaceId) {
   return score;
 }
 
+// Assets the AI can mortgage without hurting itself: never a property from a
+// colour set it owns outright (that would stop it building there). Cheapest
+// first, so it gives up as little rent as possible.
+function aiSpareMortgageAssets(player) {
+  if (!player) return [];
+  return [...player.properties, ...player.railroads, ...player.utilities]
+    .filter((id) => canMortgageAsset(player, id))
+    .filter((id) => SPACES[id]?.type !== "property" || !aiPlayerOwnsFullGroup(player.id, aiPropertyGroupIds(id)))
+    .sort((a, b) => mortgageValueForSpace(SPACES[a]) - mortgageValueForSpace(SPACES[b]));
+}
+
+// Cash the AI could raise from spare mortgages.
+function aiSpareMortgageValue(player) {
+  return aiSpareMortgageAssets(player).reduce((sum, id) => sum + mortgageValueForSpace(SPACES[id]), 0);
+}
+
 function aiTryMortgageToTarget(player, targetCash) {
   if (!player || player.bankrupt || player.money >= targetCash) return false;
 
-  const assets = [
-    ...player.properties,
-    ...player.railroads,
-    ...player.utilities,
-  ]
-    .filter((id) => canMortgageAsset(player, id))
-    .sort(
-      (a, b) =>
-        mortgageValueForSpace(SPACES[a]) - mortgageValueForSpace(SPACES[b]),
-    );
+  const assets = aiSpareMortgageAssets(player);
 
   if (!assets.length) return false;
   const id = assets[0];
@@ -1339,18 +1556,23 @@ function aiTryUnmortgage(player) {
       return prop && prop.owner === player.id && prop.mortgaged;
     })
     .sort((a, b) => {
-      const aCost = Math.floor(mortgageValueForSpace(SPACES[a]) * 1.1);
-      const bCost = Math.floor(mortgageValueForSpace(SPACES[b]) * 1.1);
-      return aCost - bCost;
+      const inSet = (id) => {
+        const ids = aiPropertyGroupIds(id);
+        return ids.length && aiPlayerOwnsFullGroup(player.id, ids) ? 1 : 0;
+      };
+      const aCost = unmortgageCostFor(player, a);
+      const bCost = unmortgageCostFor(player, b);
+      return inSet(b) - inSet(a) || aCost - bCost;
     });
 
   for (let i = 0; i < mortgaged.length; i++) {
     const id = mortgaged[i];
     const sp = SPACES[id];
     const prop = G.properties[id];
-    const cost = Math.floor(mortgageValueForSpace(sp) * 1.1);
+    const cost = unmortgageCostFor(player, id);
     if (!prop || player.money - cost < flexibleReserve) continue;
     prop.mortgaged = false;
+    clearFreshMortgage(id);
     player.money -= cost;
     playSfx("unmortgage");
     addLog(
@@ -1377,7 +1599,11 @@ function aiTryBuildOne(player) {
 
   const groups = buildableGroups(player);
   if (!groups.length) return false;
-  const reserve = aiCashReserve(player);
+  const level = aiLevel();
+  // Money kept back after building. Three houses is where rent jumps, so
+  // normal and hard dig deeper into the reserve to get there.
+  const reserve = Math.floor(aiCashReserve(player) * (level === "easy" ? 1.1 : level === "hard" ? 0.45 : 0.7));
+  const maxHouses = level === "easy" ? 2 : 5;
 
   let best = null;
   groups.forEach((ids) => {
@@ -1386,6 +1612,7 @@ function aiTryBuildOne(player) {
       const sp = SPACES[id];
       const prop = G.properties[id];
       if (!sp || !prop || prop.owner !== player.id || prop.hotel) return;
+      if (prop.houses >= maxHouses) return;
       const cost = Number(sp.house) || 0;
       if (cost <= 0) return;
       if (player.money - cost < reserve) return;
@@ -1401,7 +1628,8 @@ function aiTryBuildOne(player) {
         prop.houses >= 4
           ? sp.rent[5] || currentRent
           : sp.rent[prop.houses + 1] || currentRent;
-      const score = nextRent - currentRent + (4 - prop.houses) * 25;
+      const toThree = prop.houses < 3 ? 1.5 : 1;
+      const score = (nextRent - currentRent) * toThree + (4 - prop.houses) * 25;
       if (!best || score > best.score) {
         best = { id, score };
       }
@@ -1417,7 +1645,7 @@ function aiTryProposeTrade(player) {
   if (
     !player ||
     player.bankrupt ||
-    isOnlineGame() ||
+    !canRunAiController() ||
     G.pendingTrade ||
     G.auctionState ||
     hasPendingBuy()
@@ -1480,11 +1708,33 @@ function aiTryProposeTrade(player) {
     }
   };
 
+  const level = aiLevel();
+  // Cards to offer: the least valuable few, so combinations stay cheap to try.
+  const giveable = [...myAssets]
+    .sort((a, b) => estimateAssetValue(a) - estimateAssetValue(b))
+    .slice(0, level === "hard" ? 7 : 5);
+  const givePairs = [];
+  for (let i = 0; i < giveable.length; i++)
+    for (let j = i + 1; j < giveable.length; j++) givePairs.push([giveable[i], giveable[j]]);
+
+  // Easy never proposes swaps; it only answers them (and still sells a card
+  // for cash when broke, below).
   G.players.forEach((owner) => {
-    if (!owner || owner.bankrupt || owner.id === player.id) return;
-    tradable(owner).forEach((takeId) => {
-      considerOffer(owner, [], [takeId]);
-      myAssets.forEach((giveId) => considerOffer(owner, [giveId], [takeId]));
+    if (level === "easy" || !owner || owner.bankrupt || owner.id === player.id) return;
+    const theirs = tradable(owner);
+    // Single cards, plus pairs from one colour group, which is how a set
+    // missing two pieces held by one player gets completed.
+    const takeSets = theirs.map((id) => [id]);
+    for (let i = 0; i < theirs.length; i++)
+      for (let j = i + 1; j < theirs.length; j++) {
+        const a = SPACES[theirs[i]];
+        const b = SPACES[theirs[j]];
+        if (a?.type === "property" && b?.type === "property" && a.group === b.group) takeSets.push([theirs[i], theirs[j]]);
+      }
+    takeSets.forEach((take) => {
+      considerOffer(owner, [], take);
+      myAssets.forEach((giveId) => considerOffer(owner, [giveId], take));
+      givePairs.forEach((pair) => considerOffer(owner, pair, take));
     });
   });
 
@@ -1532,10 +1782,13 @@ function aiTryProposeTrade(player) {
       myAssets.forEach((propId) => {
         buyers.forEach((buyer) => {
           if (!buyer || buyer.money <= 0) return;
-          const ask = Math.min(
+          // A round number, as a person would ask: 2,184 becomes 2,100.
+          const rawAsk = Math.min(
             buyer.money,
-            Math.max(350, Math.floor(estimateAssetValue(propId) * 0.78)),
+            Math.max(Math.floor(350 * aiEconomyScale()), Math.floor(estimateAssetValue(propId) * 0.78)),
           );
+          const step = Math.max(1, 10 ** Math.floor(Math.log10(Math.max(10, rawAsk)) - 1));
+          const ask = Math.floor(rawAsk / step) * step;
           if (ask <= 0) return;
 
           const swing = aiEvaluateTradeGroupSwing(
@@ -1611,6 +1864,10 @@ function aiTryProposeTrade(player) {
 
 function maybeScheduleOfflineAiTurn() {
   if (!G || G.gameOver || !Array.isArray(G.players) || !G.players.length) {
+    clearOfflineAiTimer(true);
+    return;
+  }
+  if (isGamePaused()) {
     clearOfflineAiTimer(true);
     return;
   }
@@ -1715,12 +1972,8 @@ function maybeScheduleOfflineAiTurn() {
 
   clearOfflineAiTimer(false);
   AI_CTRL.lastKey = stateKey;
-  // Slow enough to follow what the AI is doing; the movement-speed setting
-  // speeds it up along with everything else.
-  AI_CTRL.timerId = setTimeout(
-    runOfflineAiStep,
-    (650 + Math.floor(Math.random() * 300)) / (MOVE_SPEED.factor || 1),
-  );
+  // Slow enough to follow what the AI is doing; the AI speed setting scales it.
+  AI_CTRL.timerId = setTimeout(runOfflineAiStep, aiStepDelayMs());
 }
 
 function tryAutoResolveAiDebtPrompt() {
@@ -1743,26 +1996,9 @@ function tryAutoResolveAiDebtPrompt() {
 
   if (tryResolveDebtPrompt()) return true;
 
-  const raised = sellBuildingsForEmergencyCash(payer);
+  const raised = aiRaiseCash(payer, due);
   if (raised > 0) {
-    addLog(
-      `${payer.name} sold buildings to cover debt (raised ${fmtCurrency(raised)}).`,
-      "important",
-    );
-  }
-
-  let usedMortgages = 0;
-  while (payer.money < due && usedMortgages < 32) {
-    const target = due + Math.floor(aiCashReserve(payer) * 0.25);
-    const mortgaged = aiTryMortgageToTarget(payer, target);
-    if (!mortgaged) break;
-    usedMortgages++;
-  }
-  if (usedMortgages > 0) {
-    addLog(
-      `${payer.name} used ${usedMortgages} emergency mortgage${usedMortgages > 1 ? "s" : ""} to settle debt.`,
-      "important",
-    );
+    addLog(`${payer.name} raised ${fmtCurrency(raised)} to settle the debt.`, "important");
   }
 
   if (tryResolveDebtPrompt()) return true;
@@ -1791,6 +2027,10 @@ function syncAiDirectMutation(reason) {
 
 function runOfflineAiStep() {
   AI_CTRL.timerId = null;
+  if (isGamePaused()) {
+    AI_CTRL.lastKey = "";
+    return;
+  }
 
   if (!G || G.gameOver || !Array.isArray(G.players) || !G.players.length) {
     AI_CTRL.lastKey = "";
@@ -1839,7 +2079,7 @@ function runOfflineAiStep() {
     const trade = G.pendingTrade;
     const recipient = G.players[Number(trade.toId)];
     if (isAiPlayer(recipient) && !recipient.bankrupt) {
-      respondTrade(aiTradeTerms(trade, recipient.id).accept);
+      respondTrade(aiAcceptsOffer(trade, recipient));
       return;
     }
   }
@@ -1852,13 +2092,6 @@ function runOfflineAiStep() {
       const reserve = aiCashReserve(bidder);
       const steps = auctionBidSteps(SPACES[a.propId]?.price);
       const nextBid = (Number(a.currentBid) || 0) + steps[0];
-      if (
-        bidder.money < nextBid &&
-        aiTryMortgageToTarget(bidder, nextBid + Math.floor(reserve * 0.4))
-      ) {
-        syncAiDirectMutation("ai-auction-mortgage");
-        return;
-      }
 
       const threatCount = aiCountOpponentMonopolyThreats(
         a.propId,
@@ -1876,13 +2109,29 @@ function runOfflineAiStep() {
           (0.93 + Math.random() * 0.16),
       );
       const reserveFactor = threatCount > 0 ? 0.3 : 0.45;
+      // Mortgaging to win is only worth it for a card that completes its own
+      // set or blocks someone else's. The cap is worked out from that potential
+      // cash first, so it never mortgages and then passes anyway.
+      const groupIds = aiPropertyGroupIds(a.propId);
+      const completesOwnSet =
+        groupIds.length > 0 &&
+        aiCountGroupOwnedByPlayer(bidder.id, groupIds) === groupIds.length - 1;
+      const extraCash = threatCount > 0 || completesOwnSet ? aiSpareMortgageValue(bidder) : 0;
       const cashCap = Math.max(
         0,
-        bidder.money - Math.floor(reserve * reserveFactor),
+        bidder.money + extraCash - Math.floor(reserve * reserveFactor),
       );
       const maxBid = Math.max(0, Math.min(valueCap, cashCap));
 
-      if (nextBid > maxBid || bidder.money < nextBid) {
+      if (nextBid > maxBid) {
+        passAuction();
+        return;
+      }
+      if (bidder.money < nextBid) {
+        if (aiTryMortgageToTarget(bidder, nextBid)) {
+          syncAiDirectMutation("ai-auction-mortgage");
+          return;
+        }
         passAuction();
         return;
       }
@@ -1917,20 +2166,34 @@ function runOfflineAiStep() {
     const price = Number(sp?.price) || 0;
     const reserve = aiCashReserve(p);
     const auctionsEnabled = isAuctionSystemEnabled();
+    const score = aiPropertyPriority(p, spaceId);
+    const level = aiLevel();
+    // Decide on cash in hand first. With auctions off, passing leaves the
+    // property unsold, so buy whenever it is affordable. Otherwise: easy buys
+    // on cash alone, normal and hard on what the card is worth to them (sets,
+    // blocking), hard more readily.
+    const wantsAt = (cash) =>
+      cash >= price &&
+      (!auctionsEnabled ||
+        (level === "easy"
+          ? cash - price >= Math.floor(reserve * 0.5)
+          : level === "hard"
+            ? score >= Math.floor(price * 1.05) || cash - price >= Math.floor(reserve * 0.7)
+            : score >= Math.floor(price * 1.2) || cash - price >= reserve));
+    // Only mortgage for a purchase it is sure to make: a card worth clearly
+    // more than its price (a set piece or a block), and affordable afterwards.
     if (
+      !wantsAt(p.money) &&
+      level !== "easy" &&
+      score >= Math.floor(price * 1.2) &&
       p.money < price &&
-      aiTryMortgageToTarget(p, price + Math.floor(reserve * 0.35))
+      p.money + aiSpareMortgageValue(p) >= price + Math.floor(reserve * 0.2) &&
+      aiTryMortgageToTarget(p, price)
     ) {
       syncAiDirectMutation("ai-buy-prep-mortgage");
       return;
     }
-    const score = aiPropertyPriority(p, spaceId);
-    const shouldBuy =
-      p.money >= price &&
-      (!auctionsEnabled ||
-        score >= Math.floor(price * 1.2) ||
-        p.money - price >= reserve ||
-        Math.random() < 0.3);
+    const shouldBuy = wantsAt(p.money);
     closeOverlay("buy-overlay");
     if (shouldBuy) {
       actionBuy();
@@ -1955,11 +2218,7 @@ function runOfflineAiStep() {
     // Only try to leave early when it can actually pay (or has a card);
     // a failed payment would leave the AI with nothing to do.
     const canLeave = p.jailFreeCards > 0 || p.money >= bailAmount;
-    if (
-      p.inJail &&
-      canLeave &&
-      (p.jailTurns >= 2 || (p.money >= bailAmount * 6 && Math.random() < 0.55))
-    ) {
+    if (p.inJail && canLeave && aiShouldLeaveJailEarly(p, bailAmount)) {
       payBailout();
       return;
     }
@@ -2028,7 +2287,6 @@ function updateActionButtons() {
     : 0;
   const managementPhase =
     G.phase === "roll" || G.phase === "action" || G.phase === "end";
-  const tradePending = !!G.pendingTrade;
   const canBuyAny =
     !debtPending && G.phase === "action" && onProp && onProp.owner === null;
   const canBuild =
@@ -2038,11 +2296,6 @@ function updateActionButtons() {
     (p.properties.length > 0 ||
       p.railroads.length > 0 ||
       p.utilities.length > 0);
-  const canTrade =
-    !debtPending &&
-    managementPhase &&
-    !tradePending &&
-    G.players.filter((x) => !x.bankrupt).length > 1;
   const canEnd = !debtPending && (G.phase === "action" || G.phase === "end");
   const inJail = p.inJail;
 
@@ -2099,9 +2352,11 @@ function updateActionButtons() {
     const el = document.getElementById(id);
     if (el) el.disabled = !canHumanAct || !canMortgage;
   });
+  // Trading is open on anyone's turn (see tradeBlockedReason).
+  const tradeOpen = canProposeTradeNow();
   ["btn-trade", "mb-trade"].forEach((id) => {
     const el = document.getElementById(id);
-    if (el) el.disabled = !canHumanAct || !canTrade;
+    if (el) el.disabled = !tradeOpen;
   });
   ["btn-end", "mb-end"].forEach((id) => {
     const el = document.getElementById(id);
@@ -2123,7 +2378,11 @@ function updateActionButtons() {
   }
   if (centerEndBtn) {
     centerEndBtn.disabled = !canHumanAct || !canEnd;
+    // Before the roll there is nothing to end: show Roll alone, so the next
+    // step is obvious. After it, End turn takes its place.
+    centerEndBtn.hidden = G.phase === "roll" && !debtPromptActive;
   }
+  if (rollBtn) rollBtn.hidden = G.phase !== "roll" && !debtPromptActive;
   // Whichever one applies right now is the filled, primary button.
   if (rollBtn) rollBtn.classList.toggle("is-primary", !rollBtn.disabled);
   if (centerEndBtn) centerEndBtn.classList.toggle("is-primary", !centerEndBtn.disabled);
@@ -2155,7 +2414,7 @@ function updateActionButtons() {
     else if (inJail && G.phase === "roll")
       cm.textContent = `Roll doubles or pay ${fmtCurrency(bailAmount)} bail`;
     else if (G.phase === "roll")
-      cm.textContent = `${p.name}'s turn to roll (or manage assets first)`;
+      cm.textContent = "Roll the dice";
     else if (G.phase === "action") cm.textContent = `Landed on ${sp.name}`;
     else
       cm.textContent =
@@ -2181,7 +2440,7 @@ function updateActionButtons() {
     else if (inJail && G.phase === "roll")
       mobileTurnLine.textContent = `In jail — roll doubles or pay ${fmtCurrency(bailAmount)}`;
     else if (G.phase === "roll")
-      mobileTurnLine.textContent = "Roll dice, or manage assets first";
+      mobileTurnLine.textContent = "Your turn: roll the dice";
     else if (G.phase === "action")
       mobileTurnLine.textContent = `${sp.name} — choose an action`;
     else
@@ -2205,11 +2464,8 @@ function updateActionButtons() {
 
   maybeShowPendingTradeReview();
 
-  // Start auto-advance timer when player enters the 'end' phase (move done, can end turn)
-  if (G.phase === "end" && !G.gameOver && canHumanAct) {
-    startTimer();
-  } else {
-    stopTimer();
-  }
+  syncTurnTimer();
+  updatePauseButton();
+  maybeShowTip();
 }
 

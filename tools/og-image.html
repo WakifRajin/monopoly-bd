@@ -1,0 +1,45 @@
+<!doctype html>
+<!-- Source for images/og-image.jpg, the link preview. Rendered at 1200x630 by
+     tools/make-og-image.cjs; re-run it after changing this page. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; width: 1200px; height: 630px; overflow: hidden; }
+  body {
+    background: #0f2318 url("../images/home-bg.webp") center / cover no-repeat;
+    font-family: "DM Sans", sans-serif;
+    color: #fff;
+    position: relative;
+  }
+  body::before {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(90deg, rgba(8, 22, 14, .94) 0%, rgba(8, 22, 14, .82) 45%, rgba(8, 22, 14, .25) 100%);
+  }
+  .copy { position: absolute; left: 72px; top: 0; bottom: 0; width: 520px; display: flex; flex-direction: column; justify-content: center; }
+  .kicker { color: #f0c040; font-weight: 700; letter-spacing: .22em; font-size: 20px; text-transform: uppercase; margin-bottom: 22px; }
+  .title { display: flex; align-items: center; gap: 22px; }
+  .title img { width: 104px; height: 104px; }
+  h1 { margin: 0; font-family: "Playfair Display", serif; font-weight: 900; line-height: 1.02; }
+  h1 .a { display: block; color: #f0c040; font-size: 50px; font-weight: 700; }
+  h1 .b { display: block; font-size: 76px; }
+  p { margin: 30px 0 0; font-size: 27px; line-height: 1.45; color: rgba(255, 255, 255, .86); }
+  .tags { margin-top: 30px; display: flex; gap: 12px; }
+  .tags span { padding: 9px 18px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, .28); background: rgba(255, 255, 255, .08); font-size: 20px; font-weight: 700; }
+  .shot { position: absolute; right: -150px; top: 70px; width: 760px; border-radius: 18px; box-shadow: 0 30px 80px rgba(0, 0, 0, .6); border: 2px solid rgba(255, 255, 255, .15); transform: rotate(-4deg); }
+</style>
+</head>
+<body>
+  <img class="shot" src="../docs/screenshots/desktop-game-3d.png" alt="">
+  <div class="copy">
+    <div class="kicker">Bangladesh edition</div>
+    <div class="title">
+      <img src="../icons/icon-512.png" alt="">
+      <h1><span class="a">Bangladeshi</span><span class="b">Monopoly</span></h1>
+    </div>
+    <p>Own cities, build empires and trade your way across Bangladesh.</p>
+    <div class="tags"><span>Online</span><span>Same Wi-Fi</span><span>vs AI</span><span>3D board</span></div>
+  </div>
+</body>
+</html>

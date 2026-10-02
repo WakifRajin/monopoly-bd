@@ -17,8 +17,8 @@
  */
 
 :root {
-  --mp-font-display: "Playfair Display", Georgia, serif;
-  --mp-font-body: "DM Sans", system-ui, sans-serif;
+  --mp-font-display: "Playfair Display", "Noto Sans Bengali", Georgia, serif;
+  --mp-font-body: "DM Sans", "Noto Sans Bengali", system-ui, sans-serif;
   --mp-gold: #f0c040;
   --mp-text: #ffffff;
   --mp-text-2: rgba(255, 255, 255, 0.76);
@@ -1741,6 +1741,10 @@ body.nav-on-home .hp-nav-logo {
   font-size: 0.9rem;
   font-variant-numeric: tabular-nums;
 }
+.mp-segmented-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+}
 .mp-segmented-3 {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   margin: 0;
@@ -2049,4 +2053,215 @@ body.nav-on-home .hp-nav-logo {
 }
 .mp-actionbar > * {
   pointer-events: auto;
+}
+
+/* ── Continue a saved game (home) ── */
+.hp-continue {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  padding: 0.9rem 1rem;
+  margin-bottom: 0.75rem;
+  border-radius: var(--mp-radius, 14px);
+  border: 1px solid rgba(240, 192, 64, 0.45);
+  background: linear-gradient(135deg, rgba(240, 192, 64, 0.16), rgba(240, 192, 64, 0.05));
+}
+.hp-continue[hidden] {
+  display: none;
+}
+.hp-continue-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+  flex: 1 1 16rem;
+}
+.hp-continue-title {
+  color: var(--mp-text, #fff);
+  font-weight: 700;
+  font-size: 1rem;
+}
+.hp-continue-sub {
+  color: var(--mp-text-2, rgba(255, 255, 255, 0.72));
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+.hp-continue-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+html.reduce-motion *,
+html.reduce-motion *::before,
+html.reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* Bangla: letter-spacing breaks up conjuncts and vowel signs. */
+html.lang-bn *,
+html.lang-bn *::before,
+html.lang-bn *::after {
+  letter-spacing: 0 !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   0.4.0 POLISH (menus)
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Analytics question, first visit only. */
+.consent-banner {
+  position: fixed;
+  left: 50%;
+  bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: 5200;
+  width: min(560px, calc(100vw - 24px));
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem 1rem;
+  padding: 0.85rem 1rem;
+  border-radius: 14px;
+  background: rgba(10, 28, 18, 0.97);
+  border: 1px solid rgba(240, 192, 64, 0.4);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.5);
+  color: rgba(255, 255, 255, 0.85);
+  font-family: var(--mp-font-body, "DM Sans", system-ui, sans-serif);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+.consent-banner p {
+  flex: 1 1 18rem;
+  margin: 0;
+}
+.consent-banner strong {
+  color: #fff;
+}
+.consent-banner a {
+  color: var(--mp-gold, #f0c040);
+}
+.consent-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+.consent-actions button {
+  min-height: 2.5rem;
+  padding: 0.4rem 1rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: transparent;
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.consent-actions .consent-yes {
+  background: linear-gradient(135deg, #c99b1e, #f0c040);
+  border-color: transparent;
+  color: #1b1405;
+}
+.consent-actions button:focus-visible {
+  outline: 2px solid var(--mp-gold, #f0c040);
+  outline-offset: 2px;
+}
+@media (max-width: 767px) {
+  .consent-banner {
+    bottom: calc(var(--mp-tabbar, 4.25rem) + 0.5rem + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* Rejoin an online room, and the other saved games. */
+.hp-rejoin {
+  border-color: rgba(74, 222, 128, 0.45);
+  background: linear-gradient(135deg, rgba(74, 222, 128, 0.14), rgba(74, 222, 128, 0.04));
+}
+.hp-continue-more {
+  flex: 1 1 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+.hp-continue-more[hidden] {
+  display: none;
+}
+.hp-continue-more-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--mp-text-2, rgba(255, 255, 255, 0.6));
+}
+.hp-continue-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem 0.75rem;
+  font-size: 0.85rem;
+  color: var(--mp-text-2, rgba(255, 255, 255, 0.75));
+}
+.hp-continue-row-actions {
+  display: flex;
+  gap: 0.4rem;
+}
+.hp-recent-dot.is-result {
+  background: #f97316;
+}
+.mp-legal {
+  margin: 0.75rem 0 0;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--mp-text-3, rgba(255, 255, 255, 0.5));
+}
+@media (pointer: coarse) {
+  .mp-btn-sm,
+  .mp-icon-btn {
+    min-height: 44px;
+  }
+  .mp-icon-btn {
+    min-width: 44px;
+  }
+}
+
+/* The room code and its invite link. */
+.room-invite {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin: 0.25rem 0 0.75rem;
+  padding: 0.6rem 0.8rem;
+  border-radius: 12px;
+  border: 1px dashed rgba(240, 192, 64, 0.45);
+  background: rgba(240, 192, 64, 0.08);
+}
+.room-invite[hidden] {
+  display: none;
+}
+.room-invite-code {
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  color: var(--mp-gold, #f0c040);
 }

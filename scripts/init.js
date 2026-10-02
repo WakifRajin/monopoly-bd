@@ -26,6 +26,9 @@ initStep("sound", () => {
   installSfxUnlockListeners();
 });
 
+initStep("language", installI18n);
+initStep("app shell", installAppShell);
+initStep("autosave", installAutosave);
 initStep("online hooks", installOnlineMutationHooks);
 initStep("lobby events", installLobbyEvents);
 initStep("keyboard", installKeyboardShortcuts);
@@ -38,3 +41,6 @@ initStep("starting money", () => refreshStartingMoneyUi(selectedThemeId, false))
 initStep("lobby", renderLobby);
 initStep("online lobby", updateOnlineLobbyUI);
 initStep("home", () => showScreen("home-screen"));
+initStep("saved game", renderContinueCard);
+initStep("online rejoin", renderRejoinCard);
+initStep("launch shortcut", handleLaunchShortcut);

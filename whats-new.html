@@ -2,19 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Bangladeshi Monopoly - Credits & Patch Logs</title>
 <link rel="icon" type="image/svg+xml" href="logo.svg">
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600..900&family=DM+Sans:opsz,wght@9..40,400..800&display=swap" rel="stylesheet">
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-QPMD9QD5H7"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-QPMD9QD5H7');
-</script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600..900&family=DM+Sans:opsz,wght@9..40,400..800&family=Noto+Sans+Bengali:wght@400..800&display=swap" rel="stylesheet">
+<!-- Analytics only after the player allows it (scripts/consent.js). -->
+<script src="scripts/consent.js?v=1.8.0"></script>
 <style>
 :root {
   --green: #1a7a3c;
@@ -23,7 +16,7 @@
   --gold-light: #f0c040;
   --radius: 12px;
   --font-display: 'Playfair Display', Georgia, serif;
-  --font-body: 'DM Sans', system-ui, sans-serif;
+  --font-body: 'DM Sans', 'Noto Sans Bengali', system-ui, sans-serif;
 }
 
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -304,9 +297,10 @@ body::before{
   .log-card{padding:.98rem}
   .news-subtitle-row{letter-spacing:.08em;font-size:.72rem}
 }
+html:not([lang="bn"]) .bn-only { display: none; }
 </style>
-<link rel="stylesheet" href="styles/menu.css?v=1.6.0">
-<link rel="stylesheet" href="styles/standalone.css?v=1.6.0">
+<link rel="stylesheet" href="styles/menu.css?v=1.8.0">
+<link rel="stylesheet" href="styles/standalone.css?v=1.8.0">
 </head>
 <body>
   <main class="page">
@@ -327,38 +321,122 @@ body::before{
       </p>
     </section>
 
-    <h2 class="section-label">Latest update</h2>
+    <h2 class="section-label" id="privacy">Privacy</h2>
     <section class="log-card">
-      <h2 class="log-version">0.2.0 · Fair rules, livelier table</h2>
-      <h3 class="log-subtitle">Rule fixes, safer online rooms, and a game that shows you what just happened</h3>
       <ul class="changes">
-        <li>Rolling doubles and then buying, auctioning or skipping a property now gives you your extra roll, as the rules say. Before, the turn simply ended.</li>
-        <li>Skip on the buy dialog now passes on the property properly. It used to only close the dialog and leave the turn stuck.</li>
-        <li>Leaving jail on doubles, or being sent there by a card, no longer earns a bonus roll.</li>
-        <li>A player who raises the forced bail after three turns in jail is released, instead of being charged again next turn.</li>
-        <li>Fixed debts to the bank being paid to Player 1 when they were settled by mortgaging.</li>
-        <li>An AI in jail without the money for bail now rolls instead of stalling the game.</li>
-        <li>Trades that would leave someone unable to pay the 10% interest on mortgaged property are refused up front, and interest inherited through a bankruptcy is charged like any other debt, so you can mortgage to cover it.</li>
-        <li>A hotel can be sold when the bank is short of houses; the missing houses are sold with it.</li>
-        <li>Chance and Community Chest are reshuffled when they run out. A Get Out of Jail Free card leaves the deck while someone holds it and goes back when it is used.</li>
-        <li>"Advance to the nearest station" now charges the owner's double rent.</li>
-        <li>Auction bid buttons are sized to the property, so a 60 street no longer opens with +100.</li>
-        <li>Houses and hotels on the 3D board have their roofs the right way up.</li>
-        <li>Money changes are animated: balances count up or down, a +/− amount floats off the player, and coins fly from payer to payee.</li>
-        <li>Chance and Community Chest cards flip over, with the effect shown underneath.</li>
-        <li>The buy dialog and property details show a proper title deed with every rent level.</li>
-        <li>The rent dialog shows who paid whom and how much.</li>
-        <li>New sounds for buying, passing GO, cards, jail, building, auctions and rent.</li>
-        <li>The winner screen adds a match summary: length, turns, and each player's rent earned and paid, properties bought and biggest rent.</li>
-        <li>AI turns are paced to be followed, and a toast says which card an AI drew.</li>
-        <li>End turn appears once, on the board, instead of in three places.</li>
-        <li>Online rooms are harder to tamper with: only the host can close a room, the host role only moves when the host leaves or drops out, players can only add themselves, chat messages can't be edited or sent under someone else's name, and fake rooms can't be added to the open rooms list.</li>
+        <li>Games on one device, your settings and saved games stay in this browser. Nothing about them is sent anywhere.</li>
+        <li>Online and Same Wi-Fi play signs you in anonymously (no account, no email). Room data, including your name in the room and chat messages, is stored on Google Firebase while the room is open and is removed when the room closes or goes stale.</li>
+        <li>Usage statistics (Google Analytics) are only collected if you allow them. They are anonymous, and you can turn them off at any time in Settings, under Privacy.</li>
+        <li>The game shows no ads and does not sell or share data.</li>
       </ul>
     </section>
 
+    <h2 class="section-label" id="legal">Legal</h2>
+    <section class="log-card">
+      <p class="note">Bangladeshi Monopoly is an unofficial, non-commercial fan project. It is not affiliated with, endorsed by or sponsored by Hasbro. MONOPOLY is a trademark of Hasbro, Inc., used here only to describe the kind of game this is. The Classic board's street names come from the original game for players who know it.</p>
+      <p class="note" style="margin-top:.5rem">Computer players have made-up names; any resemblance to real people is coincidental.</p>
+    </section>
+
+    <p class="note bn-only">Patch notes are written in English.</p>
+    <h2 class="section-label">Latest update</h2>
+    <section class="log-card" data-no-i18n>
+      <h2 class="log-version">0.4.0 · Rejoin, fairer rules, a clearer table</h2>
+      <h3 class="log-subtitle">Online games survive a dropped connection, the rules match the board game more closely, and the table says more at a glance</h3>
+      <ul class="changes">
+        <li>Online: if your phone locks, the page reloads or the connection drops, you can get back into the match. The home screen offers Rejoin, and if the AI had taken over your seat while you were away, you take it back where you left off.</li>
+        <li>Online: invite friends with a link. Copy invite link in the room opens the game straight into it.</li>
+        <li>Same Wi-Fi: a guest who loses the host now tries to reconnect for a minute instead of leaving the match, and the host checks what guests send, the way the online server does.</li>
+        <li>Chat: tap a player's name to mute them. Messages show the sender's real name, are limited to one every second or so, and old messages are cleared from the room.</li>
+        <li>Rules: a property you don't buy always goes to auction when auctions are on. "Don't buy" is only offered with auctions off, and End turn waits for the auction.</li>
+        <li>Rules: you can type your own bid in an auction, and the first bid may match the opening price. The bank sells a bankrupt player's estate from 10% of the list price, so those auctions no longer end unsold.</li>
+        <li>Rules: on the third turn in jail a Get Out of Jail Free card is used before cash, and a player who has to raise the bail first still moves by their roll. In jail you can choose between using your card and paying.</li>
+        <li>Rules: a hotel can be sold during a house shortage (the extra houses go with it), and you can't build while you owe money.</li>
+        <li>Rules: a mortgaged property you receive in a trade or a bankruptcy can be freed for its plain mortgage value until the end of your next turn, so the 10% interest isn't paid twice.</li>
+        <li>Chance and Community Chest now have 16 cards each, including Go back 3 spaces, Nearest utility (ten times the dice), Pay each player and Street repairs. The board editor knows the new card types.</li>
+        <li>With a time limit the round is played out before the match ends, so everyone has the same number of turns, and a tie on net worth goes to the player with more cash.</li>
+        <li>Trading: the dialog adds up what each side gives at list price, says when a trade completes a colour set or costs mortgage interest, and explains greyed-out properties. You can answer an offer with a counter-offer.</li>
+        <li>AI: it no longer mortgages to bid and then passes, or mortgages before deciding to buy. It never mortgages a colour set it owns, proposes trades in online games, and can't be talked down one small step at a time.</li>
+        <li>The table: owned squares show the owner's token, mortgaged ones are hatched with a ribbon instead of a stamp over the name, tokens stand clear of the names, and the tiny rent line is gone (it's on the title deed). A "Your turn" banner shows when play passes to you, and the board shows only the button that applies (Roll, then End turn).</li>
+        <li>Players short of the biggest rent on the board are marked Low cash. The title deed highlights the rent that applies now, and the portfolio shows each property's rent, full sets and mortgages, plus net worth.</li>
+        <li>The winner screen has colour confetti, a net-worth chart for the whole match, awards (top landlord, biggest hit and more) and Share result. Wins are counted per name on this device, in Settings.</li>
+        <li>Up to three games on this device are saved, so starting a new one keeps the last. A damaged save is removed instead of trapping you, and saves from older versions carry over.</li>
+        <li>Phones: vibration for your roll, rent, jail and your turn (it can be turned off), larger touch targets, room for a notch, a layout for phones held sideways, and the players wrap into two columns instead of scrolling off the side.</li>
+        <li>Desktop: the log and chat aren't repeated in the toolbar, and a game on one device gives the chat's space to the log.</li>
+        <li>Accessibility: board squares can be reached with the keyboard (arrow keys, then Enter) and are read out with their owner and buildings, player cards work from the keyboard, and the winner is announced.</li>
+        <li>বাংলা: about 200 more strings are translated, "turn" is পালা everywhere, and the flag in the board's edition title no longer leaves English behind.</li>
+        <li>Privacy: Google Analytics only loads after you allow it, and can be turned off in Settings. A privacy notice and a legal note are on this page; the game is an unofficial fan project, not connected to Hasbro. Computer players now have made-up names.</li>
+        <li>The 3D table stops drawing when nothing moves, and draws more lightly on low-memory phones, which saves battery. It also recovers when a phone drops its graphics in the background.</li>
+        <li>An installed app checks for new versions when it comes back to the foreground, and an update waits until you reload, so an open game never loses its offline copy.</li>
+        <li>Unexpected errors now show a short message with a way to report them, instead of failing silently.</li>
+        <li>Fixed: a debt from a card (for example a birthday) could hand the turn to the player who owed and never give it back, skipping everyone in between.</li>
+        <li>Behind the scenes: online play, rejoining and the new rules now have automated tests, and the release version is checked on every change.</li>
+      </ul>
+    </section>
+
+
     <h2 class="section-label">Earlier updates</h2>
     <div class="stack">
-      <section class="log-card">
+      <section class="log-card" data-no-i18n>
+      <h2 class="log-version">0.3.0 · Save, house rules and বাংলা</h2>
+      <h3 class="log-subtitle">Games that survive a refresh, more ways to play, a smarter AI, and the whole game in Bangla</h3>
+      <ul class="changes">
+        <li>Games on one device now save as you play. After a refresh or closing the tab, the home screen offers to continue where you left off. Starting a new game asks before replacing a saved one.</li>
+        <li>Pause a game on one device with the new pause button or the P key. The AI, the turn timer and the match clock stop until you carry on.</li>
+        <li>New house rules in the lobby: a Free Parking jackpot for taxes, fines and bail; no rent while the owner is in jail; double salary for landing exactly on GO; and a time limit, after which the richest player by net worth wins. The pot and the time left show over the board.</li>
+        <li>AI difficulty: easy, normal or hard, chosen in the lobby. There's also an AI speed setting.</li>
+        <li>Trade at any time, including on someone else's turn, and trade Get Out of Jail Free cards. Online, you can trade whenever you like with the other players. A player raising money for a debt can offer a trade from the debt prompt.</li>
+        <li>The turn timer now covers the whole turn: it rolls for a player who waits, sends an undecided property to auction (or passes on it when auctions are off), reads a card, and ends the turn. It still waits while you build, mortgage or trade.</li>
+        <li>First-game tips point out rolling, buying, building and trading. They can be turned off, or shown again, in settings.</li>
+        <li>বাংলা: the whole interface, the game log included, can be switched to Bangla in settings, with Bangla digits. Chance and Community Chest cards are translated too, and players in one online match can each use their own language. Place names come from the board.</li>
+        <li>The AI raises money like a careful player: it mortgages undeveloped property first and sells houses one at a time, evenly, only as far as it needs to.</li>
+        <li>The AI no longer buys at random. It builds up to three houses, where rent jumps, unmortgages a colour set before other property, and stays in jail late in the game when the board is dangerous.</li>
+        <li>The AI proposes bigger trades, such as two properties for one, or two missing pieces of a set at once. It prices in the rent a colour set could earn before handing one over, so it can no longer be talked out of a set cheaply.</li>
+        <li>The How to play page has been rewritten to match the game, with new sections on house rules, trading, pausing and saving.</li>
+        <li>After one visit the whole game works offline. The music only downloads once it plays, and the test lab is no longer downloaded with every visit.</li>
+        <li>When a new version is deployed, an open copy of the game says so and offers to reload.</li>
+        <li>You can install the game from the home screen or settings, and the installed app has shortcuts to Play offline, Play online, Same Wi-Fi and the rules. Its icon now fills the space on Android.</li>
+        <li>Sharing a link to the game shows a preview image and description.</li>
+        <li>Pinch-zoom works again. Double-tap zoom stays off, so quick taps on buttons don't zoom the page.</li>
+        <li>Reduce motion, in settings or from your device, shortens the dice, token and camera animations, stops the camera swinging between views, and removes the confetti.</li>
+        <li>Dialogs move keyboard focus into themselves, keep Tab inside, and hand focus back when they close. Game events are read out to screen readers.</li>
+        <li>Fixed: Skip on the buy dialog wasn't sent to the other players in an online match until the next action.</li>
+        <li>Fixed: in Same Wi-Fi games an empty value could be read as player 1 or as square 0, so a guest could be asked to buy GO, or an auction could show the wrong leader.</li>
+        <li>Fixed: on some phones, tapping a square on the board opened its details and closed them again at once.</li>
+        <li>Polish: centred dialog titles are centred again (they were pushed left by room kept for the close button), buttons in centred dialogs share the width evenly, the build dialog and the in-game settings use the same tidy rows as the Settings page, dropdown lists are readable in the dark theme, and opening a dialog with a click no longer draws a focus ring on its first button.</li>
+        <li>Fixed: the AI speed setting ran the AI slower when set to fast.</li>
+        <li>Fixed: a console error on every page load from a security setting browsers ignore.</li>
+        <li>Behind the scenes: automated tests for the game and the database rules now run on every change.</li>
+      </ul>
+      </section>
+      <section class="log-card" data-no-i18n>
+        <h2 class="log-version">0.2.0 · Fair rules, livelier table</h2>
+        <h3 class="log-subtitle">Rule fixes, safer online rooms, and a game that shows you what just happened</h3>
+        <ul class="changes">
+          <li>Rolling doubles and then buying, auctioning or skipping a property now gives you your extra roll, as the rules say. Before, the turn simply ended.</li>
+          <li>Skip on the buy dialog now passes on the property properly. It used to only close the dialog and leave the turn stuck.</li>
+          <li>Leaving jail on doubles, or being sent there by a card, no longer earns a bonus roll.</li>
+          <li>A player who raises the forced bail after three turns in jail is released, instead of being charged again next turn.</li>
+          <li>Fixed debts to the bank being paid to Player 1 when they were settled by mortgaging.</li>
+          <li>An AI in jail without the money for bail now rolls instead of stalling the game.</li>
+          <li>Trades that would leave someone unable to pay the 10% interest on mortgaged property are refused up front, and interest inherited through a bankruptcy is charged like any other debt, so you can mortgage to cover it.</li>
+          <li>A hotel can be sold when the bank is short of houses; the missing houses are sold with it.</li>
+          <li>Chance and Community Chest are reshuffled when they run out. A Get Out of Jail Free card leaves the deck while someone holds it and goes back when it is used.</li>
+          <li>"Advance to the nearest station" now charges the owner's double rent.</li>
+          <li>Auction bid buttons are sized to the property, so a 60 street no longer opens with +100.</li>
+          <li>Houses and hotels on the 3D board have their roofs the right way up.</li>
+          <li>Money changes are animated: balances count up or down, a +/− amount floats off the player, and coins fly from payer to payee.</li>
+          <li>Chance and Community Chest cards flip over, with the effect shown underneath.</li>
+          <li>The buy dialog and property details show a proper title deed with every rent level.</li>
+          <li>The rent dialog shows who paid whom and how much.</li>
+          <li>New sounds for buying, passing GO, cards, jail, building, auctions and rent.</li>
+          <li>The winner screen adds a match summary: length, turns, and each player's rent earned and paid, properties bought and biggest rent.</li>
+          <li>AI turns are paced to be followed, and a toast says which card an AI drew.</li>
+          <li>End turn appears once, on the board, instead of in three places.</li>
+          <li>Online rooms are harder to tamper with: only the host can close a room, the host role only moves when the host leaves or drops out, players can only add themselves, chat messages can't be edited or sent under someone else's name, and fake rooms can't be added to the open rooms list.</li>
+        </ul>
+      </section>
+
+      <section class="log-card" data-no-i18n>
         <h2 class="log-version">0.1.0 · New board, clearer table</h2>
         <h3 class="log-subtitle">A Bangladesh cities board, information where you need it, and a lot less decoration</h3>
         <ul class="changes">
@@ -461,7 +539,7 @@ body::before{
         </ul>
       </section>
 
-      <section class="log-card">
+      <section class="log-card" data-no-i18n>
       <h2 class="log-version">0.0.9 · Security and economy fixes</h2>
       <h3 class="log-subtitle">Closed exploits, protected online rooms, and money that adds up</h3>
       <ul class="changes">
@@ -482,7 +560,7 @@ body::before{
       </ul>
       </section>
 
-      <section class="log-card">
+      <section class="log-card" data-no-i18n>
       <h2 class="log-version">0.0.8 · UI updates and custom board editor</h2>
       <h3 class="log-subtitle">Homepage polish, board tools, audio, and reliability</h3>
       <ul class="changes">
@@ -498,7 +576,7 @@ body::before{
       </ul>
       </section>
 
-      <section class="log-card">
+      <section class="log-card" data-no-i18n>
         <h2 class="log-version">0.0.7 · Classic board and stability fixes</h2>
         <h3 class="log-subtitle">Rule parity and turn-flow reliability</h3>
         <ul class="changes">
@@ -511,7 +589,7 @@ body::before{
         </ul>
       </section>
 
-      <section class="log-card">
+      <section class="log-card" data-no-i18n>
         <h2 class="log-version">0.0.6 · Winner screen upgrade</h2>
         <h3 class="log-subtitle">Cleaner endgame flow</h3>
         <ul class="changes">
@@ -522,7 +600,7 @@ body::before{
         </ul>
       </section>
 
-      <section class="log-card">
+      <section class="log-card" data-no-i18n>
         <h2 class="log-version">0.0.5 · Bankruptcy and online reliability</h2>
         <h3 class="log-subtitle">Debt resolution stability</h3>
         <ul class="changes">
@@ -533,7 +611,7 @@ body::before{
         </ul>
       </section>
 
-      <section class="log-card">
+      <section class="log-card" data-no-i18n>
         <h2 class="log-version">0.0.4 · Home and patch notes</h2>
         <h3 class="log-subtitle">New discoverability for updates</h3>
         <ul class="changes">
@@ -542,7 +620,7 @@ body::before{
         </ul>
       </section>
 
-      <section class="log-card">
+      <section class="log-card" data-no-i18n>
         <h2 class="log-version">0.0.3 · Auction system revamp</h2>
         <h3 class="log-subtitle">Gameplay and menu improvements</h3>
         <ul class="changes">
@@ -554,7 +632,7 @@ body::before{
         </ul>
       </section>
 
-      <section class="log-card">
+      <section class="log-card" data-no-i18n>
         <h2 class="log-version">0.0.2 · Online sync and stability</h2>
         <h3 class="log-subtitle">Host room settings and rule consistency</h3>
         <ul class="changes">
@@ -565,7 +643,7 @@ body::before{
         </ul>
       </section>
 
-      <section class="log-card">
+      <section class="log-card" data-no-i18n>
         <h2 class="log-version">0.0.1 · UI updates</h2>
         <h3 class="log-subtitle">Auction panel improvements</h3>
         <ul class="changes">
@@ -587,5 +665,8 @@ body::before{
     update();
   })();
 </script>
+<script src="scripts/i18n-bn.js?v=1.8.0"></script>
+<script src="scripts/i18n.js?v=1.8.0"></script>
+<script>installI18n();</script>
 </body>
 </html>

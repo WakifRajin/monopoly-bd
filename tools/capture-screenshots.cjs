@@ -85,6 +85,13 @@ function serve(root) {
 // Runs before any page script: a seeded Math.random so the match is the same
 // on every run, and a switch to fast-forward timers while the AI plays.
 function initScript(seed) {
+  // A clean first visit in English, without first-game tips over the board.
+  try {
+    localStorage.setItem("monopoly_ui_lang", "en");
+    localStorage.setItem("monopoly_tips_v1", JSON.stringify({ enabled: false, seen: [] }));
+    localStorage.setItem("monopoly_analytics_consent", "denied");
+    Object.keys(localStorage).filter((k) => k.startsWith("monopoly_save")).forEach((k) => localStorage.removeItem(k));
+  } catch (_err) {}
   let s = seed >>> 0;
   Math.random = () => {
     s = (s + 0x6d2b79f5) >>> 0;

@@ -9,23 +9,11 @@
     <title>Monopoly Board Editor</title>
     <link rel="icon" type="image/svg+xml" href="logo.svg" />
     <link
-      href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400..800&family=IBM+Plex+Mono:wght@400;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400..800&family=Noto+Sans+Bengali:wght@400..800&family=IBM+Plex+Mono:wght@400;600&display=swap"
       rel="stylesheet"
     />
-    <!-- Google tag (gtag.js) -->
-    <script
-      async
-      src="https://www.googletagmanager.com/gtag/js?id=G-QPMD9QD5H7"
-    ></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag() {
-        dataLayer.push(arguments);
-      }
-      gtag("js", new Date());
-
-      gtag("config", "G-QPMD9QD5H7");
-    </script>
+    <!-- Analytics only after the player allows it (scripts/consent.js). -->
+    <script src="scripts/consent.js?v=1.8.0"></script>
     <style>
       :root {
         --bg-0: #081613;
@@ -43,7 +31,7 @@
         --radius: 14px;
         --radius-sm: 10px;
         --shadow: 0 24px 52px rgba(0, 0, 0, 0.34);
-        --font-display: "DM Sans", system-ui, sans-serif;
+        --font-display: "DM Sans", "Noto Sans Bengali", system-ui, sans-serif;
         --font-code: "IBM Plex Mono", Consolas, monospace;
       }
 
@@ -330,6 +318,17 @@
       .seed-status.error {
         border-color: rgba(223, 94, 94, 0.45);
         color: #ffc7c7;
+      }
+      .seed-undo {
+        margin-left: 0.35rem;
+        padding: 0.2rem 0.7rem;
+        border-radius: 999px;
+        border: 1px solid currentColor;
+        background: transparent;
+        color: inherit;
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
       }
 
       .stats {
@@ -1061,8 +1060,8 @@
         }
       }
     </style>
-<link rel="stylesheet" href="styles/menu.css?v=1.6.0">
-<link rel="stylesheet" href="styles/standalone.css?v=1.6.0">
+<link rel="stylesheet" href="styles/menu.css?v=1.8.0">
+<link rel="stylesheet" href="styles/standalone.css?v=1.8.0">
   </head>
   <body>
     <main class="page">
@@ -1175,8 +1174,8 @@
           <section class="card" style="margin-top: 0.82rem">
             <h2>Colour groups</h2>
             <p class="note">
-              Colors are controlled per group. Changing a group color updates
-              all properties in that group.
+              Colours are set per group. Changing a group's colour updates
+              every property in it.
             </p>
             <div class="group-list" id="group-controls"></div>
           </section>
@@ -1302,7 +1301,7 @@
 
             <div class="deck-block">
               <h4>Community Chest</h4>
-              <p class="deck-caption">Money, jail, birthday, and GO effects.</p>
+              <p class="deck-caption">Money, moves, jail, birthday and pay-everyone effects.</p>
               <div class="deck-table-wrap">
                 <table class="deck-table">
                   <thead>
@@ -1427,6 +1426,16 @@
           "GREEN",
           "DBLUE",
         ];
+        const COLOR_LABEL = {
+          BROWN: "Brown",
+          LBLUE: "Light blue",
+          PINK: "Pink",
+          ORANGE: "Orange",
+          RED: "Red",
+          YELLOW: "Yellow",
+          GREEN: "Green",
+          DBLUE: "Dark blue",
+        };
         const COLOR_HEX = {
           BROWN: "#8B4513",
           LBLUE: "#87CEEB",
@@ -1446,6 +1455,8 @@
           "nearest",
           "repairs",
           "birthday",
+          "back",
+          "payeach",
         ];
         const DEFAULT_CHANCE_CARDS = [
           { text: "Advance to GO. Collect $200.", action: "goto", value: 0 },
@@ -1483,6 +1494,22 @@
             text: "General repairs: pay $25 per house and $100 per hotel.",
             action: "repairs",
             value: { house: 25, hotel: 100 },
+          },
+          { text: "Go back 3 spaces.", action: "back", value: 3 },
+          {
+            text: "Advance to nearest Utility. If owned, pay 10 times the dice roll.",
+            action: "nearest",
+            value: "utility",
+          },
+          {
+            text: "Advance to nearest Railroad.",
+            action: "nearest",
+            value: "railroad",
+          },
+          {
+            text: "You have been elected Chairman of the Board. Pay each player $50.",
+            action: "payeach",
+            value: 50,
           },
         ];
 
@@ -1525,6 +1552,18 @@
           {
             text: "It is your birthday. Collect $10 from each player.",
             action: "birthday",
+            value: 10,
+          },
+          {
+            text: "You are assessed street repairs: $40 per house, $115 per hotel.",
+            action: "repairs",
+            value: { house: 40, hotel: 115 },
+          },
+          { text: "You inherit $100.", action: "money", value: 100 },
+          { text: "Holiday fund matures. Collect $100.", action: "money", value: 100 },
+          {
+            text: "You won second prize in a beauty contest. Collect $10.",
+            action: "money",
             value: 10,
           },
         ];
@@ -2054,6 +2093,7 @@
         function defaultCardValueForAction(action) {
           if (action === "nearest") return "railroad";
           if (action === "repairs") return { house: 25, hotel: 100 };
+          if (action === "back") return 3;
           return 0;
         }
 
@@ -2101,8 +2141,12 @@
 
         function normalizeCardValueForAction(action, value) {
           if (action === "nearest") {
-            const normalized = String(value || "").trim();
-            return normalized || "railroad";
+            const normalized = String(value || "").trim().toLowerCase();
+            return normalized === "utility" ? "utility" : "railroad";
+          }
+          if (action === "back") {
+            const n = Math.round(Number(value));
+            return Number.isFinite(n) ? Math.max(1, Math.min(12, n)) : 3;
           }
 
           if (action === "repairs") {
@@ -2157,7 +2201,7 @@
           deck.forEach((card) => {
             const action = normalizeCardAction(card && card.action);
             card.action = action;
-            if (action === "money" || action === "birthday") {
+            if (action === "money" || action === "birthday" || action === "payeach") {
               const n = Number(card.value);
               if (Number.isFinite(n)) {
                 card.value = Math.round(n * factor);
@@ -2415,9 +2459,8 @@
                 '<div class="group-row">' +
                 '<div class="group-title">' +
                 swatch +
-                "Group " +
-                groupId +
-                "</div>" +
+                escapeHtml(COLOR_LABEL[g.color] || "Group " + (Number(groupId) + 1)) +
+                " group</div>" +
                 '<div class="group-meta">' +
                 g.count +
                 " properties: " +
@@ -2655,7 +2698,7 @@
           els.peTitle.textContent =
             "Edit " + (space.name || "Space " + space.id);
           els.peSubtitle.textContent =
-            "Adjust values and save. For properties, group color updates all properties in that group.";
+            "Adjust values and save. For properties, the group colour updates every property in that group.";
           els.peId.textContent = "#" + space.id;
           els.peType.textContent = String(space.type || "").toUpperCase();
           els.peName.value = String(space.name || "").slice(0, 48);
@@ -3309,12 +3352,45 @@
           );
         }
 
+        // Two taps, and an undo afterwards: a reset throws away every edit.
+        let RESET_ARMED = 0;
+        let UNDO_SEED = "";
         function resetBoard() {
+          if (!RESET_ARMED) {
+            RESET_ARMED = setTimeout(() => {
+              RESET_ARMED = 0;
+              els.resetBtn.textContent = els.resetBtn.dataset.label || "Reset";
+            }, 3500);
+            els.resetBtn.dataset.label = els.resetBtn.dataset.label || els.resetBtn.textContent;
+            els.resetBtn.textContent = "Tap again to reset";
+            return;
+          }
+          clearTimeout(RESET_ARMED);
+          RESET_ARMED = 0;
+          els.resetBtn.textContent = els.resetBtn.dataset.label || "Reset";
+          try {
+            readMetaFromInputs();
+            UNDO_SEED = buildSeed(BOARD);
+          } catch (_err) {
+            UNDO_SEED = "";
+          }
           BOARD = makeDefaultBoard();
           SELECTED_SPACE_ID = 1;
           renderAll();
           persistSeedSilently();
           setSeedStatus("Board reset to classic defaults.", "success");
+          if (UNDO_SEED) {
+            const undo = document.createElement("button");
+            undo.type = "button";
+            undo.className = "seed-undo";
+            undo.textContent = "Undo";
+            undo.addEventListener("click", () => {
+              els.seedCode.value = UNDO_SEED;
+              UNDO_SEED = "";
+              loadSeedFromTextarea();
+            });
+            els.seedStatus.append(" ", undo);
+          }
         }
 
         function generateSeed() {
@@ -3528,7 +3604,7 @@
           setGroupColor(groupId, target.value);
           renderAll();
           persistSeedSilently();
-          setSeedStatus("Updated color for group " + groupId + ".", "success");
+          setSeedStatus("Updated colour for group " + groupId + ".", "success");
         }
 
         function onBoardPreviewClick(event) {
@@ -3653,5 +3729,8 @@
     update();
   })();
 </script>
+<script src="scripts/i18n-bn.js?v=1.8.0"></script>
+<script src="scripts/i18n.js?v=1.8.0"></script>
+<script>installI18n();</script>
 </body>
 </html>

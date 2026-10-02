@@ -6,11 +6,7 @@
 // ═══════════════════════════════════════════════
 
 function prefersReducedMotion() {
-  try {
-    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  } catch (_err) {
-    return false;
-  }
+  return typeof reduceMotionOn === "function" ? reduceMotionOn() : false;
 }
 
 // ── Money: count-up, floating +/- chips, coins between players ────────────
@@ -163,8 +159,26 @@ function trackMoneyFx() {
 function propertyDeedHtml(id) {
   const sp = SPACES[id];
   if (!sp) return "";
-  const row = (label, value, strong = false) =>
-    `<div class="deed-row${strong ? " is-strong" : ""}"><span>${label}</span><span>${value}</span></div>`;
+  // The row that applies right now is marked, once the property is owned.
+  const prop = G?.properties?.[id];
+  const owned = prop && prop.owner !== null && prop.owner !== undefined;
+  let level = -1;
+  if (owned && !prop.mortgaged) {
+    if (sp.type === "property") {
+      const full = SPACES.filter((s2) => s2.type === "property" && s2.group === sp.group).every((s2) => G.properties[s2.id]?.owner === prop.owner);
+      level = prop.hotel ? 6 : prop.houses > 0 ? prop.houses + 1 : full ? 1 : 0;
+    } else if (sp.type === "railroad") {
+      level = Math.max(0, countOwnedSpacesByType(Number(prop.owner), "railroad") - 1);
+    } else if (sp.type === "utility") {
+      level = countOwnedSpacesByType(Number(prop.owner), "utility") >= 2 ? 1 : 0;
+    }
+  }
+  let rowIdx = -1;
+  const row = (label, value, strong = false) => {
+    rowIdx++;
+    const now = rowIdx === level;
+    return `<div class="deed-row${strong ? " is-strong" : ""}${now ? " is-current" : ""}"${now ? ' aria-current="true"' : ""}><span>${label}</span><span>${value}</span></div>`;
+  };
   if (sp.type === "property") {
     const c = COLOR[sp.color] || "#666";
     const hotelCost = fmtCurrency(sp.house);
@@ -233,7 +247,15 @@ function cardEffectText(card, p) {
     case "jailcard":
       return { text: "Keep this card until you need it", tone: "gain" };
     case "nearest":
-      return { text: "Nearest station · double rent if it's owned", tone: "move" };
+      return v === "utility"
+        ? { text: "Nearest utility · ten times the dice if it's owned", tone: "move" }
+        : { text: "Nearest station · double rent if it's owned", tone: "move" };
+    case "back":
+      return { text: `Back ${Number(v) || 3} spaces`, tone: "move" };
+    case "payeach": {
+      const others = (G.players || []).filter((x) => !x.bankrupt && x.id !== p?.id).length;
+      return { text: `−${fmtCurrency((Number(v) || 0) * others)} in all`, tone: "loss" };
+    }
     case "repairs": {
       let cost = 0;
       (p?.properties || []).forEach((id) => {
@@ -331,7 +353,9 @@ function renderMatchSummary(winnerId) {
   });
   const stat = (label, value) => `<div class="ws-stat"><span>${label}</span><strong>${value}</strong></div>`;
   host.innerHTML = `
-    <div class="winner-leader-title">Match summary${length ? ` · ${length}` : ""}${turns ? ` · ${turns} turns` : ""}</div>
+    ${matchAwardsHtml()}
+    ${worthChartHtml(winnerId)}
+    <div class="winner-leader-title">Match summary${length ? ` · ${length}` : ""}${turns ? ` · ${turns} turn${turns === 1 ? "" : "s"}` : ""}</div>
     <div class="ws-grid">
       ${order
         .map((p) => {
@@ -346,6 +370,134 @@ function renderMatchSummary(winnerId) {
         })
         .join("")}
     </div>`;
+}
+
+// Awards for the match, from the stats each player collected. Only awards
+// someone actually earned are shown.
+function matchAwardsHtml() {
+  const players = (G.players || []).map((p) => ({ p, s: statsFor(p.id) || {} }));
+  const best = (key) => {
+    let top = null;
+    players.forEach((x) => {
+      const v = Number(x.s[key]) || 0;
+      if (v > 0 && (!top || v > top.v)) top = { p: x.p, v };
+    });
+    return top;
+  };
+  const awards = [
+    ["🏦", "Top landlord", best("rentEarned"), (v) => `${fmtCurrency(v)} in rent`],
+    ["💥", "Biggest hit", best("biggestRent"), (v) => `${fmtCurrency(v)} in one go`],
+    ["🏘️", "Collector", best("bought"), (v) => `${v} propert${v === 1 ? "y" : "ies"} bought`],
+    ["🧾", "Generous tenant", best("rentPaid"), (v) => `${fmtCurrency(v)} paid out`],
+    ["🚓", "Regular in jail", best("jailed"), (v) => `${v} time${v === 1 ? "" : "s"} in jail`],
+  ].filter((a) => a[2]);
+  if (!awards.length) return "";
+  return `<div class="winner-awards">${awards
+    .map(
+      ([icon, title, who, fmt]) => `<div class="winner-award">
+        <span class="winner-award-icon" aria-hidden="true">${icon}</span>
+        <span class="winner-award-text"><strong>${escHtml(title)}</strong><span>${escHtml(who.p.name)} · ${escHtml(fmt(who.v))}</span></span>
+      </div>`,
+    )
+    .join("")}</div>`;
+}
+
+// Net worth over the match, one line per player, as a small inline chart.
+function worthChartHtml(winnerId) {
+  const rows = Array.isArray(G.worthHistory) ? G.worthHistory : [];
+  if (rows.length < 3) return "";
+  const n = G.players.length;
+  const W = 600;
+  const H = 180;
+  const pad = 8;
+  let max = 1;
+  rows.forEach((r) => r.forEach((v) => (max = Math.max(max, Number(v) || 0))));
+  const x = (i) => pad + (i / (rows.length - 1)) * (W - pad * 2);
+  const y = (v) => H - pad - ((Number(v) || 0) / max) * (H - pad * 2);
+  const lines = [];
+  for (let k = 0; k < n; k++) {
+    const p = G.players[k];
+    const pts = rows.map((r, i) => `${x(i).toFixed(1)},${y(r[k]).toFixed(1)}`).join(" ");
+    const win = p.id === winnerId;
+    lines.push(
+      `<polyline points="${pts}" fill="none" stroke="${sanitizeColor(p.color, "#fff")}" stroke-width="${win ? 3.2 : 2}" stroke-linejoin="round" stroke-linecap="round" opacity="${win ? 1 : 0.75}"/>`,
+    );
+  }
+  const legend = G.players
+    .map((p) => `<span class="worth-legend-item"><i style="background:${sanitizeColor(p.color, "#fff")}"></i>${escHtml(p.name)}</span>`)
+    .join("");
+  return `<div class="winner-chart">
+      <div class="winner-leader-title">${escHtml(uiText("Net worth over the match"))}</div>
+      <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="${escAttr(uiText("Net worth of each player after every turn"))}">
+        <line x1="${pad}" y1="${H - pad}" x2="${W - pad}" y2="${H - pad}" stroke="rgba(255,255,255,.18)" stroke-width="1"/>
+        ${lines.join("")}
+      </svg>
+      <div class="worth-legend">${legend}</div>
+    </div>`;
+}
+
+// Wins and games played by name, on this device.
+const RECORDS_KEY = "monopoly_records_v1";
+function readRecords() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(RECORDS_KEY) || "{}");
+    return raw && typeof raw === "object" ? raw : {};
+  } catch (_err) {
+    return {};
+  }
+}
+// Once per match on this device (online, every player's device shows the
+// winner screen and records only its own player).
+const RESULTS_RECORDED = new Set();
+function recordMatchResult(winner) {
+  if (!G || !Array.isArray(G.players)) return;
+  const matchKey = String(G.gameStartedAt || "");
+  if (!matchKey || RESULTS_RECORDED.has(matchKey)) return;
+  RESULTS_RECORDED.add(matchKey);
+  try {
+    const rec = readRecords();
+    G.players.forEach((p) => {
+      if (isAiSeat(p)) return;
+      if (isOnlineGame() && p.uid !== ONLINE.localUid) return;
+      const key = String(p.name || "").trim().slice(0, 24);
+      if (!key) return;
+      const r = rec[key] && typeof rec[key] === "object" ? rec[key] : { played: 0, won: 0 };
+      r.played = (Number(r.played) || 0) + 1;
+      if (winner && p.id === winner.id) r.won = (Number(r.won) || 0) + 1;
+      r.last = Date.now();
+      rec[key] = r;
+    });
+    const keys = Object.keys(rec).sort((a, b) => (rec[b].last || 0) - (rec[a].last || 0)).slice(0, 30);
+    localStorage.setItem(RECORDS_KEY, JSON.stringify(Object.fromEntries(keys.map((k) => [k, rec[k]]))));
+  } catch (_err) {}
+  if (typeof recordRecentActivity === "function" && winner) {
+    recordRecentActivity({
+      kind: "result",
+      title: `${winner.name} won`,
+      detail: `${G.players.length} players · ${(window.ACTIVE_THEME || {}).name || ""}`.replace(/ · $/, ""),
+      themeId: G.boardThemeId,
+    });
+  }
+}
+
+// Share the result: the system share sheet on phones, the clipboard elsewhere.
+async function shareMatchResult() {
+  const winner = G && Number.isInteger(G.winnerId) ? G.players[G.winnerId] : (G?.players || []).find((p) => !p.bankrupt);
+  if (!winner) return;
+  const board = (window.ACTIVE_THEME || {}).name || "";
+  const text = `${winner.name} won a game of Bangladeshi Monopoly${board ? ` on the ${board} board` : ""} with ${fmtCurrency(playerNetWorth(winner))}.`;
+  const url = "https://wakifrajin.github.io/monopoly-bd/";
+  try {
+    if (navigator.share) {
+      await navigator.share({ title: "Bangladeshi Monopoly", text, url });
+      return;
+    }
+    await navigator.clipboard.writeText(`${text} ${url}`);
+    toast("Result copied", "gold");
+  } catch (err) {
+    if (err && err.name === "AbortError") return;
+    toast("Could not share the result.", "danger");
+  }
 }
 
 // ── Sound effects without audio files ──────────────────────────────────────
@@ -422,3 +574,108 @@ const SFX_PATCHES = {
     playSfxTone(1174.7, 0.14, { type: "sine", gain: 0.03, start: 0.08 });
   },
 };
+
+
+// ── Haptics ────────────────────────────────────────────────────────────────
+// Short vibrations on phones for the moments that matter: your roll, buying,
+// building, rent, jail, your turn. Off in Settings, and never on a desktop.
+const HAPTICS_KEY = "monopoly_haptics";
+const HAPTIC_PATTERNS = {
+  dice: 12,
+  buy: 18,
+  build: 18,
+  sell: 12,
+  rent: [25, 40, 25],
+  passgo: [10, 30, 10],
+  jail: [40, 30, 40],
+  card: 10,
+  "auction-win": 20,
+  bankrupt: [80, 40, 120],
+  win: [30, 40, 30, 40, 60],
+  turn: [30, 40, 30],
+};
+
+function hapticsOn() {
+  try {
+    return localStorage.getItem(HAPTICS_KEY) !== "0";
+  } catch (_err) {
+    return true;
+  }
+}
+
+function hapticsSupported() {
+  try {
+    return typeof navigator.vibrate === "function" && window.matchMedia("(pointer: coarse)").matches;
+  } catch (_err) {
+    return false;
+  }
+}
+
+function setHaptics(on) {
+  try {
+    localStorage.setItem(HAPTICS_KEY, on ? "1" : "0");
+  } catch (_err) {}
+  if (on) buzz(20);
+  if (typeof refreshSettingsViews === "function") refreshSettingsViews();
+}
+
+function buzz(pattern) {
+  if (!pattern || !hapticsOn() || !hapticsSupported()) return;
+  try {
+    navigator.vibrate(pattern);
+  } catch (_err) {}
+}
+
+// Called with each sound. Only what this device's player does (or what
+// happens to them) vibrates, not every move an AI or a rival makes.
+function hapticForSfx(name) {
+  const pattern = HAPTIC_PATTERNS[name];
+  if (!pattern || name === "turn") return;
+  if (name === "rent" || name === "win" || name === "bankrupt") {
+    buzz(pattern);
+    return;
+  }
+  const p = G && Array.isArray(G.players) ? G.players[G.currentPlayerIdx] : null;
+  if (p && !isAiSeat(p) && canLocalControlTurn()) buzz(pattern);
+}
+
+// ── Turn banner ────────────────────────────────────────────────────────────
+// A short "Your turn" moment when play passes to someone on this device, so a
+// shared phone can be handed over and nobody misses that it is their go.
+const TURN_BANNER = { game: "", seen: new Set(), timer: 0 };
+
+function maybeShowTurnBanner() {
+  if (!G || !Array.isArray(G.players) || G.gameOver) return;
+  const screen = document.getElementById("game-screen");
+  if (!screen || screen.classList.contains("hidden")) return;
+  if (DEBT_PROMPT.active || G.debtTurnReturn) return;
+  const p = G.players[G.currentPlayerIdx];
+  if (!p || p.bankrupt) return;
+  const game = String(G.gameStartedAt || "");
+  if (TURN_BANNER.game !== game) {
+    TURN_BANNER.game = game;
+    TURN_BANNER.seen = new Set();
+  }
+  const key = `${Number(G.turnCount) || 0}|${G.currentPlayerIdx}`;
+  if (TURN_BANNER.seen.has(key)) return;
+  TURN_BANNER.seen.add(key);
+  if (isAiSeat(p)) return;
+  if (isOnlineGame() && p.uid !== ONLINE.localUid) return;
+  const humansHere = G.players.filter((x) => !x.bankrupt && !isAiSeat(x)).length;
+  const text = isOnlineGame() || humansHere <= 1 ? uiText("Your turn") : uiText(`${p.name}'s turn`);
+  showTurnBanner(p, text);
+  buzz(HAPTIC_PATTERNS.turn);
+}
+
+function showTurnBanner(p, text) {
+  const host = document.querySelector("#game-screen .board-wrapper") || document.body;
+  document.querySelectorAll(".turn-banner").forEach((el) => el.remove());
+  const el = document.createElement("div");
+  el.className = "turn-banner";
+  el.setAttribute("aria-hidden", "true");
+  el.style.setProperty("--turn-color", sanitizeColor(p.color, "#f4c542"));
+  el.innerHTML = `<span class="turn-banner-token">${escHtml(p.token)}</span><span class="turn-banner-text">${escHtml(text)}</span>`;
+  host.appendChild(el);
+  clearTimeout(TURN_BANNER.timer);
+  TURN_BANNER.timer = setTimeout(() => el.remove(), prefersReducedMotion() ? 1000 : 1500);
+}

@@ -5,7 +5,7 @@
     "rooms": {
       "$roomId": {
         ".read": "auth != null",
-        ".write": "auth != null && $roomId.matches(/^[A-Z0-9]{6}$/) && ((!data.exists() && newData.exists() && newData.child('hostUid').val() === auth.uid && newData.child('members').child(auth.uid).val() === true) || (data.exists() && newData.exists() && data.child('members').child(auth.uid).val() === true) || (data.exists() && newData.exists() && !data.child('members').child(auth.uid).exists() && newData.child('members').child(auth.uid).val() === true && data.child('status').val() === 'lobby' && (data.child('visibility').val() !== 'closed' || (root.child('roomAuth').child($roomId).child('passwordHash').val() !== null && root.child('roomAuth').child($roomId).child('proofs').child(auth.uid).val() === root.child('roomAuth').child($roomId).child('passwordHash').val()))) || (data.exists() && !newData.exists() && (data.child('hostUid').val() === auth.uid || (data.child('status').val() === 'playing' ? data.child('updatedAt').val() < (now - 86400000) : data.child('updatedAt').val() < (now - 600000)))))",
+        ".write": "auth != null && $roomId.matches(/^[A-Z0-9]{6}$/) && ((!data.exists() && newData.exists() && newData.child('hostUid').val() === auth.uid && newData.child('members').child(auth.uid).val() === true) || (data.exists() && newData.exists() && data.child('members').child(auth.uid).val() === true) || (data.exists() && newData.exists() && !data.child('members').child(auth.uid).exists() && newData.child('members').child(auth.uid).val() === true && data.child('status').val() === 'lobby' && (data.child('visibility').val() !== 'closed' || (root.child('roomAuth').child($roomId).child('passwordHash').val() !== null && root.child('roomAuth').child($roomId).child('proofs').child(auth.uid).val() === root.child('roomAuth').child($roomId).child('passwordHash').val()))) || (data.exists() && newData.exists() && !data.child('members').child(auth.uid).exists() && data.child('status').val() === 'playing' && data.child('reserved').child(auth.uid).exists() && !newData.child('reserved').child(auth.uid).exists() && newData.child('members').child(auth.uid).val() === true) || (data.exists() && !newData.exists() && (data.child('hostUid').val() === auth.uid || (data.child('status').val() === 'playing' ? data.child('updatedAt').val() < (now - 86400000) : data.child('updatedAt').val() < (now - 600000)))))",
         "schemaVersion": {
           ".validate": "newData.isNumber() && newData.val() === 3"
         },
@@ -41,7 +41,7 @@
         },
         "chat": {
           "$msgId": {
-            ".validate": "newData.hasChildren(['text','time']) && (data.exists() ? (newData.child('uid').val() === data.child('uid').val() && newData.child('text').val() === data.child('text').val() && newData.child('time').val() === data.child('time').val()) : (newData.child('uid').val() === auth.uid && newData.child('time').val() <= now + 300000))",
+            ".validate": "newData.hasChildren(['text','time']) && (data.exists() ? (newData.child('uid').val() === data.child('uid').val() && newData.child('text').val() === data.child('text').val() && newData.child('time').val() === data.child('time').val()) : (newData.child('uid').val() === auth.uid && newData.child('time').val() === now && newData.parent().parent().parent().parent().child('chatRate').child($roomId).child(auth.uid).val() === now))",
             "uid": {
               ".validate": "newData.isString()"
             },
@@ -73,6 +73,35 @@
         },
         "joinProof": {
           ".validate": false
+        },
+        "reserved": {
+          "$uid": {
+            ".validate": "newData.hasChildren(['seat','at']) && newData.child('seat').isNumber() && newData.child('at').isNumber()"
+          }
+        },
+        "$other": {
+          ".validate": false
+        },
+        "hasPassword": {
+          ".validate": true
+        },
+        "playerUids": {
+          ".validate": true
+        },
+        "settings": {
+          ".validate": true
+        },
+        "gameState": {
+          ".validate": true
+        },
+        "lastReason": {
+          ".validate": true
+        },
+        "aiRunner": {
+          ".validate": true
+        },
+        "lastDepartureNotice": {
+          ".validate": true
         }
       }
     },
@@ -153,6 +182,14 @@
           "$other": {
             ".validate": false
           }
+        }
+      }
+    },
+    "chatRate": {
+      "$roomId": {
+        "$uid": {
+          ".write": "auth != null && $uid === auth.uid && root.child('rooms').child($roomId).child('members').child(auth.uid).val() === true",
+          ".validate": "newData.isNumber() && newData.val() === now && (!data.exists() || now >= data.val() + 1000)"
         }
       }
     }

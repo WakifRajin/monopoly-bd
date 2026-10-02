@@ -10,7 +10,10 @@
   "orientation": "any",
   "background_color": "#0f2318",
   "theme_color": "#0f2318",
-  "categories": ["games", "entertainment"],
+  "categories": [
+    "games",
+    "entertainment"
+  ],
   "icons": [
     {
       "src": "icons/icon-192.png",
@@ -23,6 +26,18 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
+    },
+    {
+      "src": "icons/icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "logo.svg",
@@ -52,6 +67,60 @@
       "type": "image/png",
       "form_factor": "narrow",
       "label": "The game log, grouped by turn"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Play offline",
+      "short_name": "Offline",
+      "description": "Start a game on this device, with or without AI",
+      "url": "./?open=offline",
+      "icons": [
+        {
+          "src": "icons/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Play online",
+      "short_name": "Online",
+      "description": "Host or join an online room",
+      "url": "./?open=online",
+      "icons": [
+        {
+          "src": "icons/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Same Wi-Fi",
+      "short_name": "Same Wi-Fi",
+      "description": "Play with people on your network",
+      "url": "./?open=lan",
+      "icons": [
+        {
+          "src": "icons/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "How to play",
+      "short_name": "Rules",
+      "description": "The rules and a quick guide",
+      "url": "./?open=rules",
+      "icons": [
+        {
+          "src": "icons/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
     }
   ]
 }

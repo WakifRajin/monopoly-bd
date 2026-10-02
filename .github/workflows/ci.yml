@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  game:
+    name: Game tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Syntax check
+        run: |
+          for f in scripts/*.js tools/*.cjs tools/*.mjs sw.js; do node --check "$f"; done
+      - name: JSON files parse
+        run: |
+          node -e 'for (const f of ["manifest.json", "database.rules.json", "firebase.json", "package.json"]) JSON.parse(require("fs").readFileSync(f, "utf8"))'
+      - name: Version stamps match
+        run: npm run check:version
+      - name: 3D bundle matches its source
+        run: |
+          npm run build:3d
+          git diff --exit-code scripts/board3d.min.js
+      - name: Game tests
+        run: npm test
+
+  rules:
+    name: Database rules tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: npm ci
+      - name: Rules tests against the Firebase emulators
+        run: npm run test:rules
+      - name: Online play in two browsers against the emulators
+        run: npm run test:online

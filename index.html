@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-consent-prompt="1">
   <head>
     <meta charset="UTF-8" />
     <meta
@@ -11,51 +11,53 @@
                img-src 'self' data:;
                media-src 'self';
                connect-src 'self' https://*.firebasedatabase.app wss://*.firebasedatabase.app https://*.googleapis.com https://*.google-analytics.com https://*.analytics.google.com https://www.gstatic.com;
-               frame-ancestors 'none';
                base-uri 'self';
                object-src 'none';
                form-action 'none'"
     />
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
     />
     <title>Bangladeshi Monopoly</title>
     <link rel="icon" type="image/svg+xml" href="logo.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16.png" />
+    <link rel="canonical" href="https://wakifrajin.github.io/monopoly-bd/" />
     <meta
       name="description"
       content="A Bangladeshi take on the classic property trading game. Play on one device, against AI, or online with friends."
     />
     <meta name="theme-color" content="#0f2318" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Bangladeshi Monopoly" />
+    <meta property="og:title" content="Bangladeshi Monopoly" />
+    <meta property="og:description" content="Own cities, build empires and trade your way across Bangladesh. Play online, on the same Wi-Fi, against AI or on one device." />
+    <meta property="og:url" content="https://wakifrajin.github.io/monopoly-bd/" />
+    <meta property="og:image" content="https://wakifrajin.github.io/monopoly-bd/images/og-image.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Bangladeshi Monopoly: the logo beside a match on the 3D board" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Bangladeshi Monopoly" />
+    <meta name="twitter:description" content="Own cities, build empires and trade your way across Bangladesh. Play online, on the same Wi-Fi, against AI or on one device." />
+    <meta name="twitter:image" content="https://wakifrajin.github.io/monopoly-bd/images/og-image.jpg" />
     <link rel="manifest" href="manifest.json" />
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Monopoly BD" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <link rel="prefetch" href="whats-new.html" />
-    <link rel="prefetch" href="test-lab.html" />
-    <link rel="prefetch" href="boardeditor.html" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600..900&family=DM+Sans:opsz,wght@9..40,400..800&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600..900&family=DM+Sans:opsz,wght@9..40,400..800&family=Noto+Sans+Bengali:wght@400..800&display=swap"
       rel="stylesheet"
     />
-    <!-- Google tag (gtag.js) -->
-    <script
-      async
-      src="https://www.googletagmanager.com/gtag/js?id=G-QPMD9QD5H7"
-    ></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag() {
-        dataLayer.push(arguments);
-      }
-      gtag("js", new Date());
-
-      gtag("config", "G-QPMD9QD5H7");
-    </script>
-    <link rel="stylesheet" href="styles/main.css?v=1.6.0" />
-    <link rel="stylesheet" href="styles/menu.css?v=1.6.0" />
+    <!-- Analytics only after the player allows it (scripts/consent.js). -->
+    <script src="scripts/consent.js?v=1.8.0"></script>
+    <link rel="stylesheet" href="styles/main.css?v=1.8.0" />
+    <link rel="stylesheet" href="styles/menu.css?v=1.8.0" />
   </head>
   <body>
     <!-- Side menu (desktop) / tab bar (phones), shared by the menu pages. -->
@@ -81,7 +83,7 @@
     </aside>
 
     <!-- ═══════════════ HOME SCREEN ═══════════════ -->
-    <div class="screen menu-page" id="home-screen">
+    <div class="screen menu-page" id="home-screen" role="main">
       <div class="hp-main">
 
         <header class="hp-hero">
@@ -97,6 +99,27 @@
         </header>
 
         <section class="hp-play" aria-label="Play">
+          <div class="hp-continue hp-rejoin" id="hp-rejoin" hidden>
+            <div class="hp-continue-text">
+              <span class="hp-continue-title">Rejoin your online game</span>
+              <span class="hp-continue-sub" id="hp-rejoin-sub"></span>
+            </div>
+            <div class="hp-continue-actions">
+              <button type="button" class="mp-btn mp-btn-secondary mp-btn-sm" onclick="forgetRememberedRoom()">Not now</button>
+              <button type="button" class="mp-btn mp-btn-primary mp-btn-sm" onclick="rejoinRememberedRoom()">Rejoin</button>
+            </div>
+          </div>
+          <div class="hp-continue" id="hp-continue" hidden>
+            <div class="hp-continue-text">
+              <span class="hp-continue-title">Continue your game</span>
+              <span class="hp-continue-sub" id="hp-continue-sub"></span>
+            </div>
+            <div class="hp-continue-actions">
+              <button type="button" class="mp-btn mp-btn-secondary mp-btn-sm" id="hp-continue-discard" onclick="discardSavedGame()">Discard</button>
+              <button type="button" class="mp-btn mp-btn-primary mp-btn-sm" onclick="resumeSavedGame()">Continue</button>
+            </div>
+            <div class="hp-continue-more" id="hp-continue-more" hidden></div>
+          </div>
           <button class="hp-card hp-card-hero" onclick="openOnlineSetupPage('host')">
             <svg class="hp-card-globe" viewBox="0 0 200 200" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" stroke-width="3"><circle cx="100" cy="100" r="92"/><ellipse cx="100" cy="100" rx="40" ry="92"/><ellipse cx="100" cy="100" rx="74" ry="92"/><path d="M100 8v184M8 100h184M20 54h160M20 146h160"/></g></svg>
             <span class="hp-card-icon"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.2"/><path d="M6 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="5" cy="9.5" r="2.3"/><circle cx="19" cy="9.5" r="2.3"/><path d="M1.5 18.5c0-2.3 1.6-4 3.5-4.3M22.5 18.5c0-2.3-1.6-4-3.5-4.3"/></svg></span>
@@ -119,7 +142,7 @@
             <span class="hp-card-icon"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 9a14 14 0 0 1 19 0"/><path d="M5.5 12.5a9.5 9.5 0 0 1 13 0"/><path d="M8.7 16a5 5 0 0 1 6.6 0"/><path d="M12 19.5h.01"/></svg></span>
             <span class="hp-card-text">
               <span class="hp-card-title">Same Wi-Fi</span>
-              <span class="hp-card-sub">Play with people on your network</span>
+              <span class="hp-card-sub">Play on your local network</span>
             </span>
             <span class="hp-card-go"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span>
           </button>
@@ -133,7 +156,7 @@
             <span class="hp-quick-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3.5H7a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8.5z"/><path d="M14 3.5v5h5M9 13h6M9 16.5h4"/></svg></span>
             <span class="hp-card-text">
               <span class="hp-quick-title">Patch notes</span>
-              <span class="hp-quick-sub">What&#39;s new, and credits</span>
+              <span class="hp-quick-sub">Updates and credits</span>
             </span>
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
           </button>
@@ -162,16 +185,17 @@
         </section>
 
         <footer class="hp-footer">
-          <span>Bangladeshi Monopoly</span>
-          <button class="hp-footer-link" onclick="openTestLabPage()">Test lab</button>
+          <span>Bangladeshi Monopoly · unofficial fan game</span>
+          <a class="hp-footer-link" href="whats-new.html#privacy">Privacy</a>
           <button class="hp-footer-link" onclick="openBugReport()">Report a bug</button>
+          <button class="hp-footer-link" id="hp-install" onclick="installApp()" hidden>Install app</button>
         </footer>
       </div>
 
     </div>
 
     <!-- ═══════════════ ONLINE ROOMS ═══════════════ -->
-    <div class="screen hidden menu-page" id="online-screen">
+    <div class="screen hidden menu-page" id="online-screen" role="main">
       <div class="mp-page mp-page-narrow">
       <header class="mp-header">
         <button class="mp-back" onclick="openHomePage()" aria-label="Back"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
@@ -235,7 +259,7 @@
     </div>
 
     <!-- ═══════════════ SAME WI-FI ═══════════════ -->
-    <div class="screen hidden menu-page" id="lan-screen">
+    <div class="screen hidden menu-page" id="lan-screen" role="main">
       <div class="mp-page mp-page-narrow">
         <header class="mp-header">
           <button class="mp-back" onclick="lanStopDiscovery();openHomePage()" aria-label="Back"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
@@ -274,7 +298,7 @@
     </div>
 
     <!-- ═══════════════ LOBBY ═══════════════ -->
-    <div class="screen hidden menu-page" id="lobby-screen">
+    <div class="screen hidden menu-page" id="lobby-screen" role="main">
       <div class="mp-page mp-page-wide mp-has-actionbar">
       <header class="mp-header">
         <button class="mp-back" onclick="handleLobbyBack()" aria-label="Back"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
@@ -298,6 +322,10 @@
             <section class="mp-card" id="online-room-panel" style="display: none">
               <h2 class="mp-card-title">Room</h2>
               <p class="mp-help" id="online-room-status">Not in a room.</p>
+              <div class="room-invite" id="room-invite" hidden>
+                <span class="room-invite-code" id="room-invite-code" data-no-i18n></span>
+                <button type="button" class="mp-btn mp-btn-secondary mp-btn-sm" onclick="copyRoomInvite()">Copy invite link</button>
+              </div>
               <div id="online-room-players"></div>
               <div class="mp-row">
                 <button class="mp-btn mp-btn-secondary" id="ready-btn" onclick="toggleReadyState()" disabled>Ready</button>
@@ -330,8 +358,48 @@
                     <option value="off">Off</option>
                   </select>
                 </div>
+                <div class="mp-field">
+                  <label for="ai-difficulty">AI difficulty</label>
+                  <select id="ai-difficulty">
+                    <option value="easy">Easy</option>
+                    <option value="normal" selected>Normal</option>
+                    <option value="hard">Hard</option>
+                  </select>
+                </div>
+                <div class="mp-field">
+                  <label for="rule-free-parking">Free Parking</label>
+                  <select id="rule-free-parking">
+                    <option value="off" selected>Nothing happens</option>
+                    <option value="on">Jackpot</option>
+                  </select>
+                </div>
+                <div class="mp-field">
+                  <label for="rule-jail-rent">Rent while in jail</label>
+                  <select id="rule-jail-rent">
+                    <option value="on" selected>Still collected</option>
+                    <option value="off">Not collected</option>
+                  </select>
+                </div>
+                <div class="mp-field">
+                  <label for="rule-go-bonus">Landing on GO</label>
+                  <select id="rule-go-bonus">
+                    <option value="off" selected>Normal salary</option>
+                    <option value="on">Double salary</option>
+                  </select>
+                </div>
+                <div class="mp-field">
+                  <label for="rule-time-limit">Time limit</label>
+                  <select id="rule-time-limit">
+                    <option value="0" selected>None</option>
+                    <option value="30">30 minutes</option>
+                    <option value="45">45 minutes</option>
+                    <option value="60">1 hour</option>
+                    <option value="90">1.5 hours</option>
+                    <option value="120">2 hours</option>
+                  </select>
+                </div>
               </div>
-              <p class="mp-help">The turn timer ends a turn automatically once the player has moved. Unbought properties go to auction, opening at 60–80% of the price.</p>
+              <p class="mp-help">The turn timer rolls, passes on a property or ends the turn for a player who waits too long. Unbought properties go to auction, opening at 60–80% of the price. With the jackpot, taxes, fines and bail collect on Free Parking for whoever lands there. With a time limit, the richest player by net worth wins when time runs out.</p>
             </section>
           </div>
 
@@ -366,7 +434,7 @@
     </div>
 
     <!-- ═══════════════ BOARDS ═══════════════ -->
-    <div class="screen hidden menu-page" id="boards-screen">
+    <div class="screen hidden menu-page" id="boards-screen" role="main">
       <div class="mp-page">
         <header class="mp-header">
           <button class="mp-back" onclick="openHomePage()" aria-label="Back"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
@@ -381,7 +449,7 @@
     </div>
 
     <!-- ═══════════════ SETTINGS ═══════════════ -->
-    <div class="screen hidden menu-page" id="settings-screen">
+    <div class="screen hidden menu-page" id="settings-screen" role="main">
       <div class="mp-page mp-page-narrow">
         <header class="mp-header">
           <button class="mp-back" onclick="openHomePage()" aria-label="Back"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
@@ -395,7 +463,7 @@
     </div>
 
     <!-- ═══════════════ HOW TO PLAY ═══════════════ -->
-    <div class="screen hidden menu-page" id="how-to-screen">
+    <div class="screen hidden menu-page" id="how-to-screen" role="main">
       <div class="mp-page mp-page-medium">
       <header class="mp-header">
         <button class="mp-back" onclick="openHomePage()" aria-label="Back"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
@@ -415,272 +483,128 @@
             <li><a href="#rules-6">Jail</a></li>
             <li><a href="#rules-7">Chance and Community Chest</a></li>
             <li><a href="#rules-8">Debt, bankruptcy and asset transfer</a></li>
-            <li><a href="#rules-9">Trading and the turn timer</a></li>
+            <li><a href="#rules-9">Trading</a></li>
+            <li><a href="#rules-10">House rules and the turn timer</a></li>
+            <li><a href="#rules-11">Pausing, saving and online play</a></li>
           </ul>
         </nav>
         <div class="mp-stack-lg">
           <section class="mp-card" id="rules-1">
             <h2 class="mp-card-title">Setup, turn order and winning</h2>
             <ul class="mp-list">
-              <li>
-                Offline games support 2 to 8 players (any mix of human and AI).
-                Online games require at least 2 ready human players, and only the
-                host can launch.
-              </li>
-              <li>
-                Turn order follows lobby order and loops to the next non-bankrupt
-                player each turn.
-              </li>
-              <li>
-                You start with the lobby starting-money value. If that value is
-                invalid, the selected board theme default is used.
-              </li>
-              <li>
-                The selected board theme controls currency display, location
-                names, GO salary amount, and default starting money.
-              </li>
-              <li>
-                Goal: make all other players bankrupt. The last non-bankrupt
-                player wins.
-              </li>
+              <li>Games on one device take 2 to 8 players, any mix of people and AI. Online and Same Wi-Fi games need at least 2 people, everyone ready, and the host starts the match.</li>
+              <li>Players take turns in lobby order, skipping anyone who is bankrupt.</li>
+              <li>Everyone starts with the lobby's starting money. The board sets the currency, place names, GO salary and the default starting money.</li>
+              <li>The last player who is not bankrupt wins. With a time limit, the player with the highest net worth wins when time runs out.</li>
+              <li>AI players come in three levels, set in the lobby. Easy plays loosely and never proposes swaps, normal plays a sound game, and hard builds and trades aggressively.</li>
             </ul>
           </section>
 
           <section class="mp-card" id="rules-2">
             <h2 class="mp-card-title">Turns and dice</h2>
             <ul class="mp-list">
-              <li>Every turn runs in phases: Roll → Action/Land Result → End.</li>
-              <li>You must roll before you can end your turn.</li>
-              <li>
-                If you roll doubles (and are not in jail), you get another roll
-                after land effects resolve.
-              </li>
-              <li>
-                If you roll 3 doubles in one turn, you are sent directly to Jail
-                immediately.
-              </li>
-              <li>
-                Movement wraps around 40 spaces. Passing GO pays the theme GO
-                salary. Landing exactly on GO also pays salary.
-              </li>
+              <li>Roll, deal with the square you land on, then end your turn. You can build, mortgage and trade before rolling as well as after.</li>
+              <li>Doubles give you another roll once the square is dealt with, including after buying, auctioning or passing on a property.</li>
+              <li>Three doubles in one turn send you straight to jail.</li>
+              <li>Passing GO pays the board's GO salary. Landing exactly on GO pays it too, or double with that house rule.</li>
             </ul>
           </section>
 
           <section class="mp-card" id="rules-3">
             <h2 class="mp-card-title">Spaces</h2>
             <ul class="mp-list">
-              <li>GO: landing on GO pays salary.</li>
-              <li>Jail/Visit: safe when just visiting.</li>
-              <li>
-                Free Parking: visiting only, no jackpot and no reward pool payout.
-              </li>
-              <li>
-                Go to Jail: sends you to Jail space (position 10), ends movement,
-                and resets doubles streak.
-              </li>
-              <li>Tax spaces: pay the printed amount to the bank.</li>
-              <li>
-                Chance/Community Chest: draw top card from a shuffled deck and
-                apply its action.
-              </li>
+              <li>Jail: safe when you are just visiting.</li>
+              <li>Free Parking: nothing happens, unless the Free Parking jackpot house rule is on.</li>
+              <li>Go to Jail: sends you to jail without passing GO and ends your move.</li>
+              <li>Tax squares: pay the printed amount to the bank.</li>
+              <li>Chance and Community Chest: draw the next card and do what it says.</li>
             </ul>
           </section>
 
           <section class="mp-card" id="rules-4">
             <h2 class="mp-card-title">Buying, auctions and rent</h2>
             <ul class="mp-list">
-              <li>
-                Landing on an unowned property/railroad/utility lets you buy it at
-                face price.
-              </li>
-              <li>
-                If you cannot afford a landed property, buy is disabled and you
-                can auction it or skip.
-              </li>
-              <li>
-                Auction includes all non-bankrupt players. You can toggle auctions
-                on/off in lobby settings. Bid controls are +100, +200, +500,
-                +1000, or Pass.
-              </li>
-              <li>
-                When enabled, auctions start from an opening value (about 60%-80%
-                of base property price), not from 0.
-              </li>
-              <li>
-                You cannot place a bid above your current cash. Auction ends when
-                only one non-passed bidder remains with a valid high bid, or
-                everyone passes.
-              </li>
-              <li>
-                If all pass, the property remains unsold (owner stays none).
-              </li>
-              <li>
-                Rent on normal properties: base rent, or double base if color
-                monopoly and no buildings, or house/hotel rent tiers from the
-                deed.
-              </li>
-              <li>
-                Railroad rent depends on owner total railroads. Inflated boards
-                use 250 / 500 / 1000 / 2000; Classic uses 25 / 50 / 100 / 200.
-              </li>
-              <li>
-                Utility rent is dice-based. Most boards use inflated economy (40x
-                one utility, 100x both); Classic board uses original multipliers
-                (4x and 10x).
-              </li>
-              <li>Mortgaged assets collect no rent.</li>
+              <li>Landing on an unowned property, station or utility lets you buy it at the printed price. The dialog shows its title deed with every rent level.</li>
+              <li>If you don't buy it, you can send it to auction, or skip and leave it unsold.</li>
+              <li>Every player still in the game can bid. Bidding opens at 60 to 80% of the price, and the bid steps are sized to the property. You can't bid more than the cash you have. It ends when one bidder is left, or everyone passes and the property stays unsold.</li>
+              <li>Rent on a street is the base rent, double that when one player owns the whole colour set and it has no buildings, or the house or hotel rent on the deed.</li>
+              <li>Station rent grows with the number of stations the owner has. Utility rent is the dice roll times a multiplier, higher when both utilities are owned.</li>
+              <li>Mortgaged property collects no rent.</li>
             </ul>
           </section>
 
           <section class="mp-card" id="rules-5">
             <h2 class="mp-card-title">Building and mortgages</h2>
             <ul class="mp-list">
-              <li>
-                You can build only after owning all properties in a color group.
-              </li>
-              <li>Build cost per click is that property house cost.</li>
-              <li>
-                At 4 houses, the next build converts that property to a hotel.
-              </li>
-              <li>
-                Selling buildings returns 50% of one house cost per sell action.
-              </li>
-              <li>
-                Selling a hotel converts it back to 4 houses first in this build.
-              </li>
-              <li>
-                Even-building distribution across a color set is not enforced by
-                this build.
-              </li>
-              <li>
-                You can mortgage owned assets (property, railroad, utility) for
-                50% of purchase price, if that asset has no buildings.
-              </li>
-              <li>
-                You cannot mortgage a color property while any property in that
-                same color group still has buildings.
-              </li>
-              <li>Unmortgage cost is 110% of mortgage value (10% interest).</li>
+              <li>You can build once you own every street in a colour set and none of it is mortgaged. Each house costs the price on the deed.</li>
+              <li>Build evenly: a street can't get another house until the rest of its set has as many. After four houses, the next one is a hotel.</li>
+              <li>The bank has 32 houses and 12 hotels. When they run out, nobody can build until some are sold back.</li>
+              <li>Selling returns half of what a building cost, and must also be even. A hotel sells back for four houses; if the bank is short of houses, the missing ones are sold with it.</li>
+              <li>Mortgaging an asset pays you half its price. You can't mortgage a street while any street in its set has buildings.</li>
+              <li>Buying back a mortgage costs its value plus 10% interest.</li>
             </ul>
           </section>
 
           <section class="mp-card" id="rules-6">
             <h2 class="mp-card-title">Jail</h2>
             <ul class="mp-list">
-              <li>
-                You can be jailed by Go to Jail square, jail-type cards, or
-                rolling 3 doubles in one turn.
-              </li>
-              <li>
-                When your jailed turn starts, choose to roll for doubles or leave
-                immediately by paying bail/using a card.
-              </li>
-              <li>
-                Bail follows board economy: 500 on inflated boards, 50 on Classic,
-                unless you use a Get Out of Jail Free card.
-              </li>
-              <li>
-                If you roll doubles in jail, you are released and move by that
-                roll.
-              </li>
-              <li>
-                If you fail doubles, jail turn count increases. On the 3rd failed
-                roll, you must pay bail, then move by that roll.
-              </li>
+              <li>You go to jail from the Go to Jail square, a jail card, or three doubles in one turn.</li>
+              <li>At the start of a turn in jail, roll for doubles, pay bail, or use a Get Out of Jail Free card.</li>
+              <li>Doubles free you and you move by that roll, with no extra roll after it.</li>
+              <li>After a third roll without doubles you must pay bail and move by that roll. If you can't pay, raise the money first and you are released once it's paid.</li>
+              <li>Bail depends on the board: 500 on most boards, 50 on Classic.</li>
             </ul>
           </section>
 
           <section class="mp-card" id="rules-7">
             <h2 class="mp-card-title">Chance and Community Chest</h2>
             <ul class="mp-list">
-              <li>
-                Chance deck actions include movement cards (GO, nearest railway,
-                key destinations), jail cards, fines, rewards, and repair bills.
-                Card values follow board economy: Classic uses original values,
-                other boards use inflated equivalents.
-              </li>
-              <li>
-                Community Chest includes money gains/losses, GO/Jail moves,
-                jail-free card, and birthday collection from each non-bankrupt
-                opponent, with values scaled by board economy.
-              </li>
-              <li>
-                Get Out of Jail Free cards increase your stored jail-free card
-                count.
-              </li>
-              <li>
-                Decks are shuffled at game start and drawn in order; when index
-                exceeds length, drawing wraps back through the same shuffled deck
-                order.
-              </li>
+              <li>Cards move you (to GO, a named square, or the nearest station), send you to jail, pay you, fine you, charge for repairs on your buildings, or collect a gift from every player.</li>
+              <li>"Advance to the nearest station": if it's owned, the owner gets double the usual rent.</li>
+              <li>Both decks are shuffled at the start and reshuffled when they run out.</li>
+              <li>A Get Out of Jail Free card stays with you until you use it or trade it, and is out of the deck while you hold it.</li>
             </ul>
           </section>
 
           <section class="mp-card" id="rules-8">
             <h2 class="mp-card-title">Debt, bankruptcy and asset transfer</h2>
             <ul class="mp-list">
-              <li>
-                If a human player cannot pay a charge, a debt prompt appears. You
-                must raise money (sell buildings/mortgage) or declare bankruptcy.
-              </li>
-              <li>
-                You cannot end your turn while unresolved debt prompt is active.
-              </li>
-              <li>
-                If debt is paid after raising funds, the exact owed amount is
-                transferred to the creditor (or bank) and play continues.
-              </li>
-              <li>
-                Bankruptcy to another player transfers remaining cash and all
-                owned assets to that creditor.
-              </li>
-              <li>
-                If transferred assets are mortgaged, the creditor pays 10%
-                mortgage-interest to the bank for those assets.
-              </li>
-              <li>
-                Bankruptcy to bank clears ownership, removes all
-                buildings/hotel/mortgage status, and queues each asset for bank
-                auction.
-              </li>
-              <li>Bank auctions run in sequence until queue is empty.</li>
+              <li>If you can't pay, a prompt asks you to raise the money by selling buildings, mortgaging or trading, or to declare bankruptcy. You can't end your turn until it's settled.</li>
+              <li>Once you have enough, the exact amount goes to whoever you owe and play carries on.</li>
+              <li>Bankruptcy to another player hands them your cash, your property and your Get Out of Jail Free cards. They pay the bank 10% interest on any mortgaged property they receive, raising it like any other debt if they have to.</li>
+              <li>Bankruptcy to the bank returns your property to it without buildings or mortgages, and the bank auctions each one in turn (unless auctions are off).</li>
             </ul>
           </section>
 
           <section class="mp-card" id="rules-9">
-            <h2 class="mp-card-title">Trading and the turn timer</h2>
+            <h2 class="mp-card-title">Trading</h2>
             <ul class="mp-list">
-              <li>Trades can include properties and cash from both sides.</li>
-              <li>
-                A property cannot be traded if it has buildings, or if any
-                property in its same color group has buildings.
-              </li>
-              <li>
-                Recipient can accept or decline. Proposer can cancel while
-                pending.
-              </li>
-              <li>
-                Trade is validated again on response (ownership and available cash
-                must still be valid).
-              </li>
-              <li>
-                Auto-advance timer (Off / 10 / 20 / 30 / 45 / 60 seconds) runs
-                only during end phase after movement resolves.
-              </li>
-              <li>
-                Timer pauses while any modal overlay is open. At zero, turn
-                auto-ends.
-              </li>
-              <li>
-                Online mode rules: only host can launch match or change lobby
-                timer/settings, and all connected players must be ready before
-                start.
-              </li>
-              <li>
-                If someone leaves an online match, leave handling can convert them
-                to AI control or liquidate and auction their assets (host-managed
-                room state).
-              </li>
+              <li>Trade at any time, on anyone's turn: properties, cash and Get Out of Jail Free cards, from both sides.</li>
+              <li>A street can't be traded while it, or any street in its colour set, has buildings.</li>
+              <li>Whoever receives a mortgaged property pays the 10% interest straight away, so a trade they couldn't afford is refused.</li>
+              <li>The other player accepts or declines, and you can withdraw your offer until they do. An offer left unanswered for 90 seconds is declined.</li>
+              <li>One offer is open at a time, and none while an auction is running. A player raising money for a debt can trade from the debt prompt.</li>
+            </ul>
+          </section>
+
+          <section class="mp-card" id="rules-10">
+            <h2 class="mp-card-title">House rules and the turn timer</h2>
+            <ul class="mp-list">
+              <li>Free Parking jackpot: taxes, fines, repair bills and bail go into a pot, and whoever lands on Free Parking takes it.</li>
+              <li>Rent while in jail: turn it off and players in jail don't collect rent.</li>
+              <li>Landing on GO: double salary for landing exactly on it.</li>
+              <li>Time limit: the match ends at the end of the turn in progress when time runs out, and the highest net worth wins. Paused time doesn't count.</li>
+              <li>Turn timer: counts down each step of your turn. When it runs out, the dice are rolled for you, the property goes to auction (or is passed on when auctions are off), a card is read, or the turn ends. It waits while you build, mortgage or trade.</li>
+              <li>An auction bidder who doesn't bid or pass within 45 seconds passes.</li>
+            </ul>
+          </section>
+
+          <section class="mp-card" id="rules-11">
+            <h2 class="mp-card-title">Pausing, saving and online play</h2>
+            <ul class="mp-list">
+              <li>Games on one device save themselves as you play. After a refresh or closing the tab, continue from the home screen.</li>
+              <li>Pause a game on one device with the pause button or the P key. The AI, the turn timer and the match clock all stop.</li>
+              <li>In an online match only the host can change the lobby settings. A player who leaves can hand their seat to the AI, or have their property sold at auction. A player who loses connection on their turn is handed to the AI so the game can go on.</li>
             </ul>
           </section>
         </div>
@@ -688,7 +612,7 @@
     </div>
 
     <!-- ═══════════════ GAME SCREEN ═══════════════ -->
-    <div class="screen hidden" id="game-screen">
+    <div class="screen hidden" id="game-screen" role="main">
       <!-- Top bar -->
       <div class="game-topbar">
         <div class="turn-badge">
@@ -724,17 +648,17 @@
           <span id="tb-money" class="tb-money" style="color: var(--gold-light); font-weight: 700"
             >৳15,000</span
           >
+          <button class="btn btn-sm topbar-tool-btn" id="pause-game-btn" onclick="pauseGame()" title="Pause (P)" aria-label="Pause" hidden>
+            <svg class="tb-ico" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5v14M15 5v14"/></svg><span class="tb-label">Pause</span>
+          </button>
           <button class="btn btn-sm topbar-tool-btn desktop-only" onclick="openDrawer('players')" title="Players" aria-label="Players">
             <svg class="tb-ico" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.4"/><path d="M2.6 20c0-3.5 2.9-6.3 6.4-6.3s6.4 2.8 6.4 6.3"/><path d="M16 4.6a3.4 3.4 0 0 1 0 6.8"/><path d="M18 14.1c2 .7 3.4 2.9 3.4 5.9"/></svg><span class="tb-label">Players</span>
           </button>
-          <button class="btn btn-sm topbar-tool-btn" onclick="openDrawer('log')" title="Game log" aria-label="Game log">
+          <button class="btn btn-sm topbar-tool-btn panel-dup" onclick="openDrawer('log')" title="Game log" aria-label="Game log">
             <svg class="tb-ico" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8.5 6h12M8.5 12h12M8.5 18h12"/><path d="M3.6 6h.01M3.6 12h.01M3.6 18h.01"/></svg><span class="tb-label">Log</span>
           </button>
-          <button class="btn btn-sm topbar-tool-btn" onclick="openDrawer('chat')" title="Chat" aria-label="Chat">
+          <button class="btn btn-sm topbar-tool-btn panel-dup chat-tool" onclick="openDrawer('chat')" title="Chat" aria-label="Chat">
             <svg class="tb-ico" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 11.6a8 8 0 0 1-11.7 7.1L3.5 20l1.4-4.7A8 8 0 1 1 20.5 11.6z"/></svg><span class="tb-label">Chat</span>
-          </button>
-          <button class="btn btn-sm topbar-tool-btn desktop-only" onclick="openBugReport()" title="Report a bug" aria-label="Report a bug">
-            <svg class="tb-ico" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 21V4"/><path d="M5 4h11.5l-2 4 2 4H5"/></svg><span class="tb-label">Report</span>
           </button>
           <button class="btn btn-sm topbar-tool-btn" onclick="openDrawer('settings')" title="Settings" aria-label="Settings">
             <svg class="tb-ico" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg><span class="tb-label">Settings</span>
@@ -817,6 +741,14 @@
           <!-- 3D board (scripts/board3d.min.js, loaded on first use). -->
           <div class="board3d" id="board3d" aria-label="3D board. Drag to turn, scroll or pinch to zoom, click a square for details."></div>
           <div class="board3d-hud" id="board3d-hud"></div>
+          <div class="board-chips" aria-live="polite">
+            <div class="board-chip" id="parking-pot-chip" hidden>
+              <span>Free Parking</span><strong data-value>0</strong>
+            </div>
+            <div class="board-chip" id="time-limit-chip" hidden>
+              <span>Time left</span><strong data-value>0:00</strong>
+            </div>
+          </div>
           <button type="button" class="board-view-reset" id="board-view-reset" onclick="window.Board3D && Board3D.resetView()" title="Reset the camera">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>
             <span>Reset view</span>
@@ -829,11 +761,11 @@
 
         <!-- Right panel (desktop) -->
         <div class="right-panel">
-          <div class="panel" style="flex: 0 0 auto; max-height: 45%">
+          <div class="panel log-panel" style="flex: 0 0 auto; max-height: 45%">
             <div class="panel-header">Game log</div>
             <div class="panel-body" id="game-log"></div>
           </div>
-          <div class="panel grow" style="display: flex; flex-direction: column">
+          <div class="panel grow chat-panel" style="display: flex; flex-direction: column">
             <div class="panel-header">Chat</div>
             <div class="panel-body" id="chat-log" style="flex: 1"></div>
             <div class="chat-input-row">
@@ -902,8 +834,8 @@
     </div>
 
     <!-- ═══════════════ WINNER SCREEN ═══════════════ -->
-    <div class="screen hidden" id="winner-screen">
-      <div id="confetti-container"></div>
+    <div class="screen hidden" id="winner-screen" role="main">
+      <div id="confetti-container" aria-hidden="true"></div>
       <div class="winner-trophy" id="winner-trophy">🏆</div>
       <div class="winner-name" id="winner-name">Champion!</div>
       <div class="winner-sub" id="winner-sub">Congratulations!</div>
@@ -915,6 +847,9 @@
       <div class="winner-actions">
         <button class="btn btn-secondary btn-lg" onclick="viewBoardAfterWin()">
           View board
+        </button>
+        <button class="btn btn-gold btn-lg" onclick="shareMatchResult()">
+          Share result
         </button>
         <button class="btn btn-primary btn-lg" onclick="restartGame()">
           Play again
@@ -949,11 +884,11 @@
             Auction
           </button>
           <button
-            class="btn"
-            style="background: rgba(255, 255, 255, 0.1); color: #fff"
+            class="btn btn-secondary"
+            id="buy-skip-btn"
             onclick="declineBuy()"
           >
-            Skip
+            Don't buy
           </button>
         </div>
       </div>
@@ -961,40 +896,39 @@
 
     <!-- Auction modal -->
     <div class="overlay" id="auction-overlay">
-      <div class="modal">
+      <div class="modal auction-modal">
         <h2>Property auction</h2>
         <div class="auction-display">
           <div class="auction-prop" id="auc-prop-name"></div>
           <div class="auction-base">
-            Base Price: <span id="auc-base-price">0</span>
+            List price <span id="auc-base-price">0</span>
           </div>
-          <div
-            style="
-              color: rgba(255, 255, 255, 0.5);
-              font-size: var(--fs-xs);
-              margin: 0.2rem 0;
-            "
-          >
-            Current Bid
-          </div>
+          <div class="auction-bid-label">Current bid</div>
           <div class="auction-bid"><span id="auc-bid">0</span></div>
           <div class="auction-leader">
             Leader: <span id="auc-leader">None</span>
           </div>
         </div>
-        <div
-          style="
-            color: rgba(255, 255, 255, 0.7);
-            font-size: var(--fs-sm);
-            margin-bottom: 0.5rem;
-          "
-        >
-          Bidding: <strong id="auc-bidder" style="color: #fff"></strong> (<span
-            id="auc-bidder-money"
-          ></span
-          >)
+        <div class="auction-turn">
+          <span>Bidding: <strong id="auc-bidder"></strong></span>
+          <span class="auction-cash" id="auc-bidder-money"></span>
         </div>
         <div class="bid-btns" id="bid-btns"></div>
+        <form
+          class="bid-custom"
+          onsubmit="event.preventDefault(); placeBidTo(document.getElementById('bid-custom-input').value)"
+        >
+          <input
+            type="number"
+            id="bid-custom-input"
+            inputmode="numeric"
+            min="0"
+            step="1"
+            aria-label="Your bid"
+            placeholder="Your bid"
+          />
+          <button type="submit" class="btn btn-primary btn-sm" id="bid-custom-btn">Bid</button>
+        </form>
       </div>
     </div>
 
@@ -1004,13 +938,14 @@
     <div class="overlay" id="exit-guard-overlay">
       <div class="modal" style="text-align: center">
         <h2>Leave the match?</h2>
-        <p>Your game is still in progress. Leaving now ends it for you.</p>
+        <p id="exit-guard-desc">Your game is still in progress. Leaving now ends it for you.</p>
         <div class="modal-actions" style="justify-content: center">
           <button class="btn btn-primary" onclick="dismissExitGuard()">
             Keep playing
           </button>
           <button
             class="btn"
+            id="exit-guard-leave"
             style="background: rgba(192, 57, 43, 0.35); color: #fff"
             onclick="confirmExitMatch()"
           >
@@ -1069,6 +1004,27 @@
       </div>
     </div>
 
+    <!-- Starting a new game over a saved one -->
+    <div class="overlay" id="replace-save-overlay">
+      <div class="modal pause-modal">
+        <h2>Replace a saved game?</h2>
+        <p id="replace-save-desc">You already have three saved games. Starting a new one removes the oldest.</p>
+        <div class="modal-actions" style="justify-content: center">
+          <button class="btn btn-primary" id="replace-save-continue" onclick="closeOverlay('replace-save-overlay'); resumeSavedGame()">Continue latest game</button>
+          <button class="btn btn-quiet" onclick="closeOverlay('replace-save-overlay'); startGame(true)">Start new game</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pause -->
+    <div class="overlay" id="pause-overlay">
+      <div class="modal pause-modal">
+        <h2>Paused</h2>
+        <p>The AI, the turn timer and the match clock are stopped until you carry on.</p>
+        <button class="btn btn-primary btn-full" id="pause-resume-btn" onclick="resumeGame()">Resume</button>
+      </div>
+    </div>
+
     <!-- Card (chance/community chest) -->
     <div class="overlay" id="card-overlay">
       <div class="modal card-modal">
@@ -1095,93 +1051,51 @@
       id="trade-overlay"
       onclick="if(event.target===this)closeOverlay('trade-overlay')"
     >
-      <div class="modal">
+      <div class="modal trade-modal">
         <h2>Trade</h2>
-        <div style="margin-bottom: 0.75rem">
-          <label
-            style="
-              color: rgba(255, 255, 255, 0.6);
-              font-size: var(--fs-xs);
-              display: block;
-              margin-bottom: 0.3rem;
-            "
-            >Trade with:</label
-          >
-          <select
-            id="trade-partner"
-            style="
-              width: 100%;
-              background: rgba(255, 255, 255, 0.1);
-              border: 1px solid rgba(255, 255, 255, 0.2);
-              border-radius: 6px;
-              padding: 0.5rem;
-              color: #fff;
-              font-family: var(--font-body);
-            "
-            onchange="renderTradeProps()"
-          ></select>
+        <div class="trade-picks">
+          <div class="trade-field" id="trade-proposer-field" hidden>
+            <label for="trade-proposer">Trading as</label>
+            <select id="trade-proposer" onchange="onTradeProposerChange()"></select>
+          </div>
+          <div class="trade-field">
+            <label for="trade-partner">Trade with</label>
+            <select id="trade-partner" onchange="renderTradeProps()"></select>
+          </div>
         </div>
         <div class="trade-sides">
           <div>
-            <h4>Your offer</h4>
+            <h4 id="trade-my-heading">Your offer</h4>
             <div class="trade-prop-list" id="trade-my-props"></div>
-            <div style="margin-top: 0.5rem">
-              <label style="color: rgba(255, 255, 255, 0.72); font-size: var(--fs-xs)"
-                >+ Money:</label
-              >
-              <input
-                type="number"
-                id="trade-my-money"
-                value="0"
-                min="0"
-                style="
-                  width: 100%;
-                  background: rgba(255, 255, 255, 0.1);
-                  border: 1px solid rgba(255, 255, 255, 0.2);
-                  border-radius: 5px;
-                  padding: 0.3rem 0.5rem;
-                  color: #fff;
-                  font-size: var(--fs-sm);
-                  margin-top: 0.25rem;
-                  font-family: var(--font-body);
-                "
-              />
+            <div class="trade-field">
+              <label for="trade-my-money">Money</label>
+              <input type="number" id="trade-my-money" value="0" min="0" inputmode="numeric" oninput="updateTradeSummary()" />
+            </div>
+            <div class="trade-field" id="trade-my-cards-field" hidden>
+              <label for="trade-my-cards">Get Out of Jail Free cards</label>
+              <input type="number" id="trade-my-cards" value="0" min="0" max="0" inputmode="numeric" oninput="updateTradeSummary()" />
             </div>
           </div>
           <div>
-            <h4>Their offer</h4>
+            <h4 id="trade-their-heading">Their offer</h4>
             <div class="trade-prop-list" id="trade-their-props"></div>
-            <div style="margin-top: 0.5rem">
-              <label style="color: rgba(255, 255, 255, 0.72); font-size: var(--fs-xs)"
-                >+ Money:</label
-              >
-              <input
-                type="number"
-                id="trade-their-money"
-                value="0"
-                min="0"
-                style="
-                  width: 100%;
-                  background: rgba(255, 255, 255, 0.1);
-                  border: 1px solid rgba(255, 255, 255, 0.2);
-                  border-radius: 5px;
-                  padding: 0.3rem 0.5rem;
-                  color: #fff;
-                  font-size: var(--fs-sm);
-                  margin-top: 0.25rem;
-                  font-family: var(--font-body);
-                "
-              />
+            <div class="trade-field">
+              <label for="trade-their-money">Money</label>
+              <input type="number" id="trade-their-money" value="0" min="0" inputmode="numeric" oninput="updateTradeSummary()" />
+            </div>
+            <div class="trade-field" id="trade-their-cards-field" hidden>
+              <label for="trade-their-cards">Get Out of Jail Free cards</label>
+              <input type="number" id="trade-their-cards" value="0" min="0" max="0" inputmode="numeric" oninput="updateTradeSummary()" />
             </div>
           </div>
         </div>
+        <div class="trade-summary" id="trade-summary" aria-live="polite" hidden></div>
         <div class="modal-actions">
           <button class="btn btn-primary" onclick="confirmTrade()">
             Propose trade
           </button>
           <button
-            class="btn"
-            style="background: rgba(255, 255, 255, 0.1); color: #fff"
+            class="btn btn-quiet"
             onclick="closeOverlay('trade-overlay')"
           >
             Cancel
@@ -1269,7 +1183,15 @@
             style="display: none"
             onclick="openMortgageForDebt()"
           >
-            Mortgage Properties
+            Mortgage properties
+          </button>
+          <button
+            class="btn btn-secondary"
+            id="bankrupt-trade-btn"
+            style="display: none"
+            onclick="openTradeForDebt()"
+          >
+            Offer a trade
           </button>
           <button
             class="btn btn-danger"
@@ -1335,18 +1257,24 @@
     </div>
 
     <!-- Toast -->
-    <div id="toast"></div>
+    <div id="toast" role="status" aria-live="polite"></div>
+    <div id="sr-announcer" class="sr-only" aria-live="polite" aria-atomic="true" data-no-i18n></div>
 
     <!-- Release version, stamped by tools/bump-version.cjs with the ?v= below. -->
     <script>
-      window.APP_BUILD = "1.6.0";
+      window.APP_BUILD = "1.8.0";
     </script>
-    <script src="scripts/core-online-theme-lobby.js?v=1.6.0"></script>
-    <script src="scripts/board-render-ai.js?v=1.6.0"></script>
-    <script src="scripts/gameplay-actions.js?v=1.6.0"></script>
-    <script src="scripts/ui-systems.js?v=1.6.0"></script>
-    <script src="scripts/game-feel.js?v=1.6.0"></script>
-    <script src="scripts/lan.js?v=1.6.0"></script>
-    <script src="scripts/init.js?v=1.6.0"></script>
+    <script src="scripts/core-online-theme-lobby.js?v=1.8.0"></script>
+    <script src="scripts/board-render-ai.js?v=1.8.0"></script>
+    <script src="scripts/gameplay-actions.js?v=1.8.0"></script>
+    <script src="scripts/ui-systems.js?v=1.8.0"></script>
+    <script src="scripts/game-feel.js?v=1.8.0"></script>
+    <script src="scripts/game-options.js?v=1.8.0"></script>
+    <script src="scripts/app-shell.js?v=1.8.0"></script>
+    <script src="scripts/save-game.js?v=1.8.0"></script>
+    <script src="scripts/i18n-bn.js?v=1.8.0"></script>
+    <script src="scripts/i18n.js?v=1.8.0"></script>
+    <script src="scripts/lan.js?v=1.8.0"></script>
+    <script src="scripts/init.js?v=1.8.0"></script>
   </body>
 </html>

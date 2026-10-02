@@ -66,6 +66,8 @@ function showWinner(p) {
   if (!p) return;
   playSfx("win");
   G.gameOver = true;
+  // A finished game on this device has nothing left to continue.
+  if (!isOnlineGame()) clearSavedGame();
   G.auctionState = null;
   G.bankAuctionQueue = [];
   closeAllOverlays();
@@ -73,23 +75,40 @@ function showWinner(p) {
   document.getElementById("winner-trophy").textContent = p.token;
   document.getElementById("winner-name").textContent = p.name + " wins";
   document.getElementById("winner-sub").textContent =
-    `${p.name} finished with ${fmtCurrency(p.money)} on the ${(window.ACTIVE_THEME || BOARD_THEMES.dhaka).name} board.`;
+    G.endReason === "time"
+      ? `Time ran out. ${p.name} had the highest net worth, ${fmtCurrency(playerNetWorth(p))}, on the ${(window.ACTIVE_THEME || BOARD_THEMES.dhaka).name} board.`
+      : `${p.name} finished with ${fmtCurrency(p.money)} on the ${(window.ACTIVE_THEME || BOARD_THEMES.dhaka).name} board.`;
+  if (!Number.isInteger(G.winnerId)) G.winnerId = p.id;
+  if (typeof recordWorthHistory === "function" && Array.isArray(G.worthHistory) && G.worthHistory.length) recordWorthHistory();
   renderWinnerLeaderboard(p.id);
   renderMatchSummary(p.id);
+  if (typeof recordMatchResult === "function") recordMatchResult(p);
   // Confetti
   const cont = document.getElementById("confetti-container");
   cont.innerHTML = "";
-  const emojis = ["✦", "✧", "◆"];
-  for (let i = 0; i < 20; i++) {
+  const emojis = ["✦", "✧", "◆", "●"];
+  // The game's gold plus the player colours, so it reads as celebration on the
+  // dark green screen (uncoloured glyphs came out black).
+  const colours = ["#f4c542", "#ffe08a", "#ffffff", "#2ecc71", "#e74c3c", "#3498db", sanitizeColor(p.color, "#f4c542")];
+  for (let i = 0; i < 36; i++) {
     const span = document.createElement("div");
     span.className = "confetti";
     span.textContent = emojis[i % emojis.length];
+    span.style.color = colours[i % colours.length];
+    span.style.fontSize = `${0.8 + Math.random() * 1.1}rem`;
     span.style.left = Math.random() * 100 + "vw";
     span.style.animationDelay = Math.random() * 3 + "s";
     span.style.animationDuration = 2 + Math.random() * 2 + "s";
     cont.appendChild(span);
   }
   showScreen("winner-screen");
+  // Said out loud for screen readers, and focus moves to the result.
+  if (typeof announce === "function") announce(`${p.name} wins.`);
+  const nameEl = document.getElementById("winner-name");
+  if (nameEl) {
+    nameEl.tabIndex = -1;
+    setTimeout(() => nameEl.focus({ preventScroll: true }), 60);
+  }
 }
 
 function renderWinnerLeaderboard(winnerId) {
@@ -100,9 +119,11 @@ function renderWinnerLeaderboard(winnerId) {
     return;
   }
 
+  // A match decided on time is ranked, and shown, by net worth.
+  const byWorth = G.endReason === "time";
   const entries = G.players.map((player) => ({
     player,
-    cash: Number(player.money) || 0,
+    cash: byWorth ? playerNetWorth(player) : Number(player.money) || 0,
     bankruptOrder:
       Number.isInteger(Number(player.bankruptOrder)) &&
       Number(player.bankruptOrder) > 0
@@ -168,6 +189,12 @@ function renderWinnerLeaderboard(winnerId) {
 
 function maybeShowWinnerFromState() {
   if (!G || !Array.isArray(G.players) || !G.players.length) return false;
+  if (G.endReason === "time" && Number.isInteger(G.winnerId) && G.players[G.winnerId]) {
+    const screen = document.getElementById("winner-screen");
+    if (screen && !screen.classList.contains("hidden")) return true;
+    showWinner(G.players[G.winnerId]);
+    return true;
+  }
   const active = G.players.filter((player) => !player.bankrupt);
   if (active.length > 1) return false;
 
@@ -301,12 +328,15 @@ function logTurnName(entry) {
 // Escapes the text, then tints player names and highlights money amounts.
 // Works on the escaped string so nothing a player typed becomes markup.
 function decorateLogText(text, type) {
-  let html = escHtml(text || "");
+  // Translated first (i18n.js), then names and amounts are picked out of the
+  // translated sentence, so they keep their colours in any language.
+  const show = (t) => (typeof uiText === "function" ? uiText(t) : String(t ?? ""));
+  let html = escHtml(show(text || ""));
   const players = (G.players || [])
     .filter((p) => p && p.name)
-    .sort((a, b) => b.name.length - a.name.length);
+    .sort((a, b) => show(b.name).length - show(a.name).length);
   if (players.length) {
-    const byName = new Map(players.map((p) => [escHtml(p.name), p]));
+    const byName = new Map(players.map((p) => [escHtml(show(p.name)), p]));
     const re = new RegExp(
       [...byName.keys()].map(escapeRegExp).join("|"),
       "g",
@@ -327,7 +357,7 @@ function decorateLogText(text, type) {
     const moneyRe = new RegExp(
       // Digits may contain separators but must end on a digit, so a
       // sentence's closing full stop stays outside the highlight.
-      `-?(?:${symbols.map(escapeRegExp).join("|")})\\s?\\d(?:[\\d,.]*\\d)?`,
+      `-?(?:${symbols.map(escapeRegExp).join("|")})\\s?[\\d০-৯](?:[\\d০-৯,.]*[\\d০-৯])?`,
       "g",
     );
     const tone =
@@ -357,8 +387,8 @@ function renderLogFeedHtml(entries) {
       const color = p ? sanitizeColor(p.color, "#ffffff") : "#ffffff";
       openGroup(
         `<div class="log-turn-head"><span class="log-turn-dot"></span>` +
-          `<span class="log-turn-title"><span style="color:${playerTextColor(color)}">${escHtml(turnName)}</span>'s turn</span>` +
-          `<time class="log-time">${time}</time></div>`,
+          `<span class="log-turn-title"><span style="color:${playerTextColor(color)}">${escHtml(typeof uiText === "function" ? uiText(turnName) : turnName)}</span>${typeof uiText === "function" ? uiText("'s turn") : "'s turn"}</span>` +
+          `<time class="log-time">${typeof uiText === "function" ? uiText(time) : time}</time></div>`,
         "",
         color,
       );
@@ -367,7 +397,7 @@ function renderLogFeedHtml(entries) {
     if (!open) {
       openGroup(
         `<div class="log-turn-head"><span class="log-turn-dot"></span>` +
-          `<span class="log-turn-title">Match</span><time class="log-time">${time}</time></div>`,
+          `<span class="log-turn-title">${typeof uiText === "function" ? uiText("Match") : "Match"}</span><time class="log-time">${typeof uiText === "function" ? uiText(time) : time}</time></div>`,
         " is-system",
       );
     }
@@ -378,7 +408,7 @@ function renderLogFeedHtml(entries) {
     html += `<div class="log-entry${cls}">${decorateLogText(entry.text, type)}</div>`;
   }
   if (open) html += "</div>";
-  return html || '<div class="log-empty">Nothing has happened yet.</div>';
+  return html || `<div class="log-empty">${typeof uiText === "function" ? uiText("Nothing has happened yet.") : "Nothing has happened yet."}</div>`;
 }
 
 function getLastChatMessage() {
@@ -404,6 +434,8 @@ function isChatPanelOpenOnMobile() {
 function showChatPreview(msg) {
   const key = chatMessageKey(msg);
   if (!key || CHAT_PREVIEW.lastShownKey === key) return;
+  // A muted player's messages do not pop up either.
+  if (msg?.uid && typeof chatMutedSet === "function" && chatMutedSet().has(msg.uid)) return;
   CHAT_PREVIEW.lastShownKey = key;
 
   const isMobile = !!(
@@ -425,10 +457,19 @@ function showChatPreview(msg) {
   toast(`${token} ${name}: ${preview}`, "chat");
 }
 
+const CHAT_COOLDOWN_MS = 1200;
+let lastChatSentAt = 0;
+
 function sendChat() {
   const inp = document.getElementById("chat-input");
   const text = inp.value.trim().slice(0, 300);
   if (!text) return;
+  // The server refuses messages sent faster than this, so wait here instead
+  // of losing the message.
+  if (isOnlineGame() && Date.now() - lastChatSentAt < CHAT_COOLDOWN_MS) {
+    toast("Slow down a little.", "danger");
+    return;
+  }
   inp.value = "";
   if (!G.chat) G.chat = [];
   const p = isOnlineGame()
@@ -446,14 +487,28 @@ function sendChat() {
   };
 
   if (isOnlineGame() && FIREBASE.api?.push) {
+    lastChatSentAt = Date.now();
+    const failed = (err) => {
+      console.error(err);
+      toast("Message could not be sent.", "danger");
+    };
     // Append-only: two people typing at the same moment each get their own key,
     // so neither message can overwrite the other.
+    if (typeof LAN !== "undefined" && LAN.active) {
+      FIREBASE.api.push(FIREBASE.api.ref(FIREBASE.db, `rooms/${ONLINE.roomId}/chat`), message).catch(failed);
+      return;
+    }
+    // Online, the message and the sender's rate-limit stamp are written
+    // together, both stamped with server time; the rules refuse a message
+    // that comes too soon after the last one.
+    const key = lanFreeChatKey();
+    const now = FIREBASE.api.serverTimestamp();
     FIREBASE.api
-      .push(FIREBASE.api.ref(FIREBASE.db, `rooms/${ONLINE.roomId}/chat`), message)
-      .catch((err) => {
-        console.error(err);
-        toast("Message could not be sent.", "danger");
-      });
+      .update(FIREBASE.api.ref(FIREBASE.db), {
+        [`rooms/${ONLINE.roomId}/chat/${key}`]: { ...message, time: now },
+        [`chatRate/${ONLINE.roomId}/${ONLINE.localUid}`]: now,
+      })
+      .catch(failed);
     return;
   }
 
@@ -463,6 +518,20 @@ function sendChat() {
   renderChatLog();
   const dc = document.getElementById("drawer-chat");
   if (dc) dc.innerHTML = document.getElementById("chat-log").innerHTML;
+}
+
+// A push-style key (time-ordered, unique) without writing anything yet.
+function lanFreeChatKey() {
+  const chars = "-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz";
+  let now = Date.now();
+  let stamp = "";
+  for (let i = 0; i < 8; i++) {
+    stamp = chars.charAt(now % 64) + stamp;
+    now = Math.floor(now / 64);
+  }
+  let tail = "";
+  for (let i = 0; i < 12; i++) tail += chars.charAt(Math.floor(Math.random() * 64));
+  return stamp + tail;
 }
 
 // ═══════════════════════════════════════════════
@@ -524,82 +593,74 @@ function openDrawer(type) {
       .getElementById("game-screen")
       ?.classList.contains("hidden");
     // On phones the top bar keeps only Log, Chat and Settings; everything it
-    // drops has to live here instead, or it becomes unreachable.
-    const leaveBlock = `<hr style="border:none;border-top:1px solid rgba(255,255,255,.12);margin:1rem 0">
-         <div style="display:grid;gap:.5rem">
-           <button onclick="closeDrawer();openBugReport()" style="width:100%;padding:.65rem .9rem;border:1px solid rgba(255,255,255,.18);border-radius:8px;background:rgba(255,255,255,.07);color:#fff;font-weight:600;cursor:pointer;font-family:var(--font-body)">Report a bug</button>
-           ${
-             !inMatch
-               ? ""
-               : canLeave
-               ? `<button onclick="closeDrawer();openLeaveGameModal()" style="width:100%;padding:.65rem .9rem;border:none;border-radius:8px;background:linear-gradient(135deg,#7f1d1d,#c0392b);color:#fff;font-weight:700;cursor:pointer;font-family:var(--font-body)">Leave online match</button>`
-               : `<button onclick="closeDrawer();requestExitMatch()" style="width:100%;padding:.65rem .9rem;border:1px solid rgba(192,57,43,.5);border-radius:8px;background:rgba(192,57,43,.18);color:#ffb3ae;font-weight:600;cursor:pointer;font-family:var(--font-body)">Quit to menu</button>`
-           }
-         </div>`;
+    // drops has to live here instead, or it becomes unreachable. Built from
+    // the same parts as the Settings page so the two look and work alike.
+    const seg = (choices, current, fn, label) =>
+      `<div class="mp-segmented mp-segmented-${choices.length}" role="group" aria-label="${escAttr(label)}">${choices
+        .map(([text, v]) => {
+          const on = typeof v === "number" ? Math.abs(current - v) < 0.05 : current === v;
+          return `<button type="button" class="${on ? "is-selected" : ""}" aria-pressed="${on}" onclick="${fn}(${typeof v === "number" ? v : `'${v}'`})">${text}</button>`;
+        })
+        .join("")}</div>`;
+    const stack = (title, help, control) => `<div class="mp-setting mp-setting-stack">
+        <div class="mp-setting-text"><div class="mp-setting-title">${title}</div>${help ? `<div class="mp-setting-help">${help}</div>` : ""}</div>
+        ${control}
+      </div>`;
+    const timers = [0, 10, 20, 30, 45, 60];
+    const lang = currentUiLanguage();
     content.innerHTML = `
-      <h3 style="color:#fff;margin-bottom:1rem;font-family:var(--font-heading)">Timer and sound</h3>
-      <div style="margin-bottom:1rem;padding:.75rem;border:1px solid rgba(255,255,255,.14);border-radius:10px;background:rgba(255,255,255,.05)">
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:.6rem;margin-bottom:.65rem">
-          <div>
-            <div style="color:#fff;font-size:var(--fs-sm);font-weight:700">Sound effects</div>
-            <div style="color:rgba(255,255,255,.52);font-size:var(--fs-xs)">Dice, rent, jail, auction, and win sounds</div>
+      <h3 class="drawer-title">Settings</h3>
+      <div class="drawer-settings">
+        ${
+          inMatch && canPauseGame()
+            ? `<button type="button" class="mp-btn mp-btn-secondary mp-btn-block" onclick="pauseGame()">Pause the game</button>`
+            : ""
+        }
+        <section class="mp-card">
+          <h4 class="mp-card-title">Sound</h4>
+          ${settingsRow("Sound effects", "Dice, rent, jail, auctions and wins", settingsSwitch("drawer-sfx", sfxEnabled, "toggleSfxEnabled()", "Sound effects"))}
+          ${settingsRow("Music", "Plays during a match", settingsSwitch("drawer-bgm", bgmEnabled, "toggleBgmEnabled()", "Music"))}
+          ${typeof hapticsSupported === "function" && hapticsSupported() ? settingsRow("Vibration", "", settingsSwitch("drawer-haptics", hapticsOn(), `setHaptics(${!hapticsOn()})`, "Vibration")) : ""}
+          <div class="mp-setting mp-setting-stack">
+            <div class="mp-setting-text"><label class="mp-setting-title" for="drawer-volume">Volume</label></div>
+            <div class="mp-range">
+              <input type="range" id="drawer-volume" min="0" max="100" value="${sfxVolumePct}"
+                oninput="document.getElementById('drawer-volume-value').textContent=this.value+'%';setSfxVolume(Number(this.value)/100,false)"
+                onchange="setSfxVolume(Number(this.value)/100,true)" />
+              <output id="drawer-volume-value" for="drawer-volume">${sfxVolumePct}%</output>
+            </div>
           </div>
-          <button onclick="toggleSfxEnabled()" style="padding:.42rem .75rem;border:1px solid ${sfxEnabled ? "rgba(45,160,90,.5)" : "rgba(255,255,255,.25)"};background:${sfxEnabled ? "rgba(45,160,90,.22)" : "rgba(255,255,255,.07)"};color:${sfxEnabled ? "#86efac" : "rgba(255,255,255,.76)"};border-radius:7px;cursor:pointer;font-family:var(--font-body);font-size:var(--fs-xs);font-weight:700">${sfxEnabled ? "On" : "Off"}</button>
-        </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:.6rem;margin-bottom:.65rem">
-          <div>
-            <div style="color:#fff;font-size:var(--fs-sm);font-weight:700">Background music</div>
-            <div style="color:rgba(255,255,255,.52);font-size:var(--fs-xs)">Plays during active match</div>
-          </div>
-          <button onclick="toggleBgmEnabled()" style="padding:.42rem .75rem;border:1px solid ${bgmEnabled ? "rgba(240,192,64,.5)" : "rgba(255,255,255,.25)"};background:${bgmEnabled ? "rgba(240,192,64,.18)" : "rgba(255,255,255,.07)"};color:${bgmEnabled ? "var(--gold-light)" : "rgba(255,255,255,.76)"};border-radius:7px;cursor:pointer;font-family:var(--font-body);font-size:var(--fs-xs);font-weight:700">${bgmEnabled ? "On" : "Off"}</button>
-        </div>
-        <label style="color:rgba(255,255,255,.72);font-size:var(--fs-sm);display:flex;justify-content:space-between;align-items:center;margin-bottom:.35rem">
-          <span>Volume</span>
-          <span id="sfx-volume-label">${sfxVolumePct}%</span>
-        </label>
-        <input type="range" min="0" max="100" value="${sfxVolumePct}" oninput="document.getElementById('sfx-volume-label').textContent=this.value+'%';setSfxVolume(Number(this.value)/100,false)" onchange="setSfxVolume(Number(this.value)/100,true)" style="width:100%;accent-color:var(--gold-light)">
-      </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:.6rem;margin-bottom:1rem;padding:.75rem;border:1px solid rgba(255,255,255,.14);border-radius:10px;background:rgba(255,255,255,.05)">
-        <div>
-          <div style="color:#fff;font-size:var(--fs-sm);font-weight:700">3D view</div>
-          <div style="color:rgba(255,255,255,.52);font-size:var(--fs-xs)">Tilt the table; off shows it from above (V)</div>
-        </div>
-        <button onclick="toggleBoard3d()" style="padding:.42rem .75rem;border:1px solid ${BOARD_VIEW.is3d ? "rgba(240,192,64,.5)" : "rgba(255,255,255,.25)"};background:${BOARD_VIEW.is3d ? "rgba(240,192,64,.18)" : "rgba(255,255,255,.07)"};color:${BOARD_VIEW.is3d ? "var(--gold-light)" : "rgba(255,255,255,.76)"};border-radius:7px;cursor:pointer;font-family:var(--font-body);font-size:var(--fs-xs);font-weight:700">${BOARD_VIEW.is3d ? "On" : "Off"}</button>
-      </div>
-      <p style="color:rgba(255,255,255,.6);font-size:var(--fs-sm);margin-bottom:1rem">
-        After a player finishes their move, a countdown begins. When it hits zero, the turn automatically advances — even if they haven't clicked End Turn.
-      </p>
-      <div style="margin-bottom:1rem">
-        <label style="color:rgba(255,255,255,.7);font-size:var(--fs-sm);display:block;margin-bottom:.4rem">Auto-advance delay</label>
-        <div style="display:flex;gap:.5rem;flex-wrap:wrap">
-          ${[0, 10, 20, 30, 45, 60].map((v) => `<button onclick="setTimerDuration(${v})" style="padding:.5rem .9rem;border:1px solid ${dur === v ? "var(--gold-light)" : "rgba(255,255,255,.2)"};background:${dur === v ? "rgba(201,151,28,.25)" : "rgba(255,255,255,.07)"};color:${dur === v ? "var(--gold-light)" : "rgba(255,255,255,.7)"};border-radius:7px;cursor:pointer;font-family:var(--font-body);font-size:var(--fs-sm);font-weight:600">${v === 0 ? "Off" : v + "s"}</button>`).join("")}
-        </div>
-      </div>
-      <p style="color:rgba(255,255,255,.4);font-size:var(--fs-xs)">Timer only runs during the "end turn" phase (after rolling & landing). It pauses while modals are open.</p>
-      <div style="margin:1rem 0">
-        <label style="color:rgba(255,255,255,.7);font-size:var(--fs-sm);display:block;margin-bottom:.4rem">Movement speed</label>
-        <div style="display:flex;gap:.5rem;flex-wrap:wrap">
-          ${[["Fast", 0.4], ["Normal", 1], ["Slow", 1.8]]
-            .map(([label, v]) => {
-              const on = Math.abs((MOVE_SPEED.factor || 1) - v) < 0.05;
-              return `<button onclick="setMoveSpeed(${v})" style="padding:.5rem .9rem;border:1px solid ${on ? "var(--gold-light)" : "rgba(255,255,255,.2)"};background:${on ? "rgba(201,151,28,.25)" : "rgba(255,255,255,.07)"};color:${on ? "var(--gold-light)" : "rgba(255,255,255,.7)"};border-radius:7px;cursor:pointer;font-family:var(--font-body);font-size:var(--fs-sm);font-weight:600">${label}</button>`;
-            })
-            .join("")}
+        </section>
+        <section class="mp-card">
+          <h4 class="mp-card-title">Game</h4>
+          ${settingsRow("3D view", "Tilt the table; off shows it from above (V)", settingsSwitch("drawer-3d", BOARD_VIEW.is3d, "toggleBoard3d()", "3D view"))}
+          ${settingsRow(
+            '<label for="drawer-timer">Turn timer</label>',
+            "Rolls, passes or ends the turn for a player who waits too long. It waits while you build, mortgage or trade.",
+            `<div class="mp-field mp-field-inline"><select id="drawer-timer" onchange="setTimerDuration(Number(this.value))">${timers
+              .map((v) => `<option value="${v}"${v === dur ? " selected" : ""}>${v === 0 ? "Off" : `${v} seconds`}</option>`)
+              .join("")}</select></div>`,
+          )}
+          ${stack("AI speed", "How long the AI pauses between moves", seg(AI_SPEED_CHOICES, AI_SPEED.factor || 1, "setAiSpeed", "AI speed"))}
+          ${stack("Movement speed", "How fast tokens move around the board", seg([["Fast", 0.4], ["Normal", 1], ["Slow", 1.8]], MOVE_SPEED.factor || 1, "setMoveSpeed", "Movement speed"))}
+        </section>
+        <section class="mp-card">
+          <h4 class="mp-card-title">Language and help</h4>
+          ${stack("Interface language", "", seg([["English", "en"], ["বাংলা", "bn"]], lang, "setUiLanguage", "Interface language"))}
+          ${settingsRow("First-game tips", "", settingsSwitch("drawer-tips", tipsEnabled(), `setTipsEnabled(${!tipsEnabled()})`, "First-game tips"))}
+          <p class="mp-setting-help drawer-keys"><b>Space</b> roll or end turn · <b>Enter</b> confirm · <b>Esc</b> close · <b>B</b> buy · <b>H</b> build · <b>M</b> mortgage · <b>T</b> trade · <b>V</b> 3D view · <b>P</b> pause</p>
+        </section>
+        <div class="drawer-actions">
+          <button type="button" class="mp-btn mp-btn-secondary mp-btn-block" onclick="closeDrawer();openBugReport()">Report a bug</button>
+          ${
+            !inMatch
+              ? ""
+              : canLeave
+                ? `<button type="button" class="mp-btn mp-btn-danger mp-btn-block" onclick="closeDrawer();openLeaveGameModal()">Leave online match</button>`
+                : `<button type="button" class="mp-btn mp-btn-danger mp-btn-block" onclick="closeDrawer();requestExitMatch()">Quit to menu</button>`
+          }
         </div>
       </div>
-      <div style="margin-bottom:1rem;padding:.7rem .8rem;border:1px solid rgba(255,255,255,.12);border-radius:10px;background:rgba(255,255,255,.04)">
-        <div style="color:#fff;font-size:var(--fs-sm);font-weight:700;margin-bottom:.4rem">Keyboard</div>
-        <div style="color:rgba(255,255,255,.55);font-size:var(--fs-xs);line-height:1.7">
-          <b style="color:rgba(255,255,255,.8)">Space</b> roll, or end turn ·
-          <b style="color:rgba(255,255,255,.8)">Enter</b> confirm dialog ·
-          <b style="color:rgba(255,255,255,.8)">Esc</b> close ·
-          <b style="color:rgba(255,255,255,.8)">B</b> buy ·
-          <b style="color:rgba(255,255,255,.8)">H</b> build ·
-          <b style="color:rgba(255,255,255,.8)">M</b> mortgage ·
-          <b style="color:rgba(255,255,255,.8)">T</b> trade
-        </div>
-      </div>
-      ${leaveBlock}
     `;
   }
   document.getElementById("mobile-drawer").classList.add("open");
@@ -638,10 +699,17 @@ function openOverlay(id) {
   const el = document.getElementById(id);
   const wasOpen = el.classList.contains("show");
   el.classList.add("show");
-  if (!wasOpen) resetModalScroll(el);
+  if (!wasOpen) {
+    resetModalScroll(el);
+    if (typeof onDialogOpened === "function") onDialogOpened(el);
+  }
 }
 function closeOverlay(id) {
-  document.getElementById(id).classList.remove("show");
+  const el = document.getElementById(id);
+  const wasOpen = el.classList.contains("show");
+  el.classList.remove("show");
+  if (wasOpen) window.__overlayClosedAt = performance.now();
+  if (wasOpen && typeof onDialogClosed === "function") onDialogClosed(el);
 }
 function closeAllOverlays() {
   document
@@ -712,7 +780,6 @@ function preloadSfxAssets() {
       if (src) files.add(String(src));
     });
   });
-  files.add(SFX_BGM_FILE);
   files.forEach((src) => {
     ensureSfxAssetTemplate(src);
   });
@@ -775,16 +842,18 @@ function ensureSfxEngine() {
 }
 
 function syncBgmForScreen(screenId = getVisibleScreenId()) {
-  const bgm = ensureBgmAudio();
-  if (!bgm) return;
-
-  bgm.volume = clampSfxVolume(SFX.volume * SFX_BGM_VOLUME_FACTOR);
   const shouldPlay = !!(
     SFX.enabled &&
     SFX.bgmEnabled &&
     screenId === "game-screen" &&
     !G?.gameOver
   );
+  // The music file is over a megabyte, so it is only fetched once it plays.
+  if (!shouldPlay && !SFX.bgmAudio) return;
+  const bgm = ensureBgmAudio();
+  if (!bgm) return;
+
+  bgm.volume = clampSfxVolume(SFX.volume * SFX_BGM_VOLUME_FACTOR);
   if (!shouldPlay) {
     bgm.pause();
     if (screenId !== "game-screen") {
@@ -1019,6 +1088,7 @@ function playSfxSynthFallback(name) {
 }
 
 function playSfx(name, options = {}) {
+  if (typeof hapticForSfx === "function") hapticForSfx(name);
   if (!SFX.enabled) return;
   const ctx = ensureSfxEngine();
   if (ctx && ctx.state === "suspended") {
@@ -1087,7 +1157,8 @@ function hasPendingBuy(state = G) {
   // Number(null) is 0, so null must be rejected before any numeric coercion.
   if (raw === null || raw === undefined || raw === "") return false;
   const id = Number(raw);
-  return Number.isInteger(id) && id >= 0 && id < SPACES.length;
+  // Only a square that can be owned can be waiting to be bought.
+  return Number.isInteger(id) && id >= 0 && id < SPACES.length && !!state?.properties?.[id];
 }
 
 function curPlayer() {
@@ -1349,14 +1420,19 @@ function showPlayerPortfolio(playerIdx, tab = "") {
           : prop.houses > 0
             ? "🏠".repeat(prop.houses)
             : "";
-        const mortgStr = prop.mortgaged
-          ? ' <span style="color:#f59e0b;font-size:var(--fs-2xs)">[Mortgaged]</span>'
-          : "";
+        const fullSet =
+          sp.type === "property" &&
+          SPACES.filter((s2) => s2.type === "property" && s2.group === sp.group).every((s2) => G.properties[s2.id]?.owner === p.id);
+        const tags = [
+          prop.mortgaged ? '<span class="pf-tag is-mortgaged">Mortgaged</span>' : "",
+          fullSet ? '<span class="pf-tag is-set">Full set</span>' : "",
+        ].join("");
+        const rentNow = prop.mortgaged ? 0 : sp.type === "utility" ? null : calcRent(sp, prop);
         propsHtml += `
-          <div style="display:flex;align-items:center;gap:.6rem;padding:.55rem .7rem;background:rgba(255,255,255,.06);border-radius:7px;margin-bottom:.35rem;border-left:3px solid ${c}">
-            <div style="font-size:var(--fs-md);flex:1;color:#fff;font-weight:600">${escHtml(sp.name)}${mortgStr}</div>
-            ${buildings ? `<div style="font-size:var(--fs-md)">${buildings}</div>` : ""}
-            <div style="font-size:var(--fs-xs);color:rgba(255,255,255,.7)">${fmtCurrency(sp.price || 0)}</div>
+          <div class="pf-row" style="border-left-color:${c}">
+            <div class="pf-name"><span>${escHtml(sp.name)}</span>${tags}</div>
+            ${buildings ? `<div class="pf-buildings" aria-label="${prop.hotel ? "Hotel" : `${prop.houses} house${prop.houses === 1 ? "" : "s"}`}">${buildings}</div>` : ""}
+            <div class="pf-rent">${rentNow === null ? escHtml(uiText("Rent by dice")) : `${escHtml(uiText("Rent"))} ${fmtCurrency(rentNow)}`}</div>
           </div>`;
       });
     });
@@ -1413,19 +1489,19 @@ function showPlayerPortfolio(playerIdx, tab = "") {
       </div>
       <div style="margin-left:auto;text-align:right">
         <div style="font-size:var(--fs-lg);font-weight:800;color:var(--gold-light)">${fmtCurrency(p.money)}</div>
-        <div style="font-size:var(--fs-2xs);color:rgba(255,255,255,.7)">${allProps.length} ${allProps.length === 1 ? "property" : "properties"}</div>
+        <div style="font-size:var(--fs-2xs);color:rgba(255,255,255,.7)">Net worth ${fmtCurrency(playerNetWorth(p))}</div>
+        <div style="font-size:var(--fs-2xs);color:rgba(255,255,255,.55)">${allProps.length} ${allProps.length === 1 ? "property" : "properties"}</div>
       </div>
     </div>
     ${p.jailFreeCards > 0 ? `<div style="background:rgba(201,151,28,.15);border:1px solid rgba(201,151,28,.3);border-radius:7px;padding:.5rem .8rem;margin-bottom:.75rem;color:var(--gold-light);font-size:var(--fs-sm)">🎴 ${p.jailFreeCards}× Get Out of Jail Free card</div>` : ""}
-    <div style="display:flex;gap:.45rem;margin-bottom:.75rem">
-      <button style="flex:1;padding:.45rem .6rem;border-radius:8px;cursor:pointer;font-size:var(--fs-sm);font-weight:700;${propertiesTabBtnStyle}" onclick="setPortfolioTab('properties')">Properties</button>
-      <button style="flex:1;padding:.45rem .6rem;border-radius:8px;cursor:pointer;font-size:var(--fs-sm);font-weight:700;${logTabBtnStyle}" onclick="setPortfolioTab('log')">History</button>
+    <div role="tablist" aria-label="Portfolio" style="display:flex;gap:.45rem;margin-bottom:.75rem">
+      <button role="tab" aria-selected="${activeTab === "properties"}" style="flex:1;padding:.45rem .6rem;border-radius:8px;cursor:pointer;font-size:var(--fs-sm);font-weight:700;${propertiesTabBtnStyle}" onclick="setPortfolioTab('properties')">Properties</button>
+      <button role="tab" aria-selected="${activeTab === "log"}" style="flex:1;padding:.45rem .6rem;border-radius:8px;cursor:pointer;font-size:var(--fs-sm);font-weight:700;${logTabBtnStyle}" onclick="setPortfolioTab('log')">History</button>
     </div>
-    <div style="display:${activeTab === "properties" ? "" : "none"}">
-      <div style="font-size:var(--fs-xs);font-weight:700;color:rgba(255,255,255,.7);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem">Properties</div>
+    <div role="tabpanel" style="display:${activeTab === "properties" ? "" : "none"}">
       ${propsHtml}
     </div>
-    <div style="display:${activeTab === "log" ? "" : "none"}">
+    <div role="tabpanel" style="display:${activeTab === "log" ? "" : "none"}">
       <div style="display:flex;gap:.6rem;margin-bottom:.6rem">
         <div style="flex:1;background:rgba(45,160,90,.15);border:1px solid rgba(45,160,90,.35);border-radius:8px;padding:.42rem .55rem">
           <div style="font-size:var(--fs-2xs);letter-spacing:.05em;text-transform:uppercase;color:#86efac">Total credit</div>
@@ -1446,6 +1522,8 @@ function showPlayerPortfolio(playerIdx, tab = "") {
 
 function openHomePage() {
   showScreen("home-screen");
+  renderContinueCard();
+  if (typeof renderRejoinCard === "function") renderRejoinCard();
 }
 
 function openBugReport() {
@@ -1477,6 +1555,13 @@ function openWhatsNewPage() {
   document.body.classList.add("route-leaving");
   window.setTimeout(() => {
     window.location.href = "whats-new.html";
+  }, 170);
+}
+
+function openPrivacyNotice() {
+  document.body.classList.add("route-leaving");
+  window.setTimeout(() => {
+    window.location.href = "whats-new.html#privacy";
   }, 170);
 }
 
@@ -1584,11 +1669,14 @@ function onExitGuardPop() {
   if (EXIT_GUARD.prompting) return;
   EXIT_GUARD.prompting = true;
   closeDrawer();
+  updateExitGuardCopy();
   openOverlay("exit-guard-overlay");
 }
 
 function onExitGuardBeforeUnload(e) {
   if (!matchInProgress()) return;
+  // A game on this device is saved as it goes, so closing loses nothing.
+  if (isSavableGame() && saveGameNow()) return;
   e.preventDefault();
   e.returnValue = "";
   return "";
@@ -1622,6 +1710,7 @@ function requestExitMatch() {
     return;
   }
   EXIT_GUARD.prompting = true;
+  updateExitGuardCopy();
   openOverlay("exit-guard-overlay");
 }
 
@@ -1639,6 +1728,7 @@ function confirmExitMatch() {
     openLeaveGameModal();
     return;
   }
+  saveGameNow();
   disarmExitGuard();
   stopTimer();
   clearOfflineAiTimer(true);
@@ -1664,18 +1754,65 @@ function currentTurnKey() {
   return `${G.gameStartedAt || 0}:${G.currentPlayerIdx}:${G.players[G.currentPlayerIdx]?.bankruptOrder || 0}`;
 }
 
-// Only modal decisions should hold the clock. An informational overlay left
-// open used to pause it indefinitely.
+// Managing your assets holds the clock; so does an auction or a trade, which
+// have timeouts of their own. The buy dialog and a drawn card do not: they
+// are stages the timer decides for you.
 const TIMER_BLOCKING_OVERLAYS = [
-  "buy-overlay",
   "auction-overlay",
   "trade-overlay",
   "trade-review-overlay",
   "bankrupt-overlay",
-  "card-overlay",
   "mortgage-overlay",
   "build-overlay",
+  "pause-overlay",
 ];
+
+// The stage of the turn the clock is timing. It restarts whenever this
+// changes: a new turn, a new roll, a buy decision, a card, the end of a move.
+function turnTimerStage() {
+  if (!G || G.gameOver || !Array.isArray(G.players)) return "";
+  if (G.auctionState || G.pendingTrade || DEBT_PROMPT.active) return "";
+  const n = Number(G.rollCount) || 0;
+  if (document.getElementById("card-overlay")?.classList.contains("show")) return `card:${n}`;
+  if (MOVE_FX.active || (Number(ONLINE.pendingCardResolutions) || 0) > 0) return "";
+  if (G.phase === "roll") return `roll:${n}`;
+  if (G.phase === "action" && hasPendingBuy()) return `buy:${G.pendingBuy}:${n}`;
+  if (G.phase === "action" || G.phase === "end") return `end:${n}`;
+  return "";
+}
+
+// Runs the clock only while a person on this device owns the turn.
+function syncTurnTimer() {
+  const cur = G?.players?.[G.currentPlayerIdx];
+  const mine = !!cur && !cur.bankrupt && !isAiPlayer(cur) && canLocalControlTurn();
+  const stage = mine ? turnTimerStage() : "";
+  if (!stage || TIMER.duration === 0) {
+    stopTimer();
+    return;
+  }
+  startTimer(false, stage);
+}
+
+// What running out of time does at each stage.
+function onTurnTimerExpired(stage) {
+  const p = curPlayer();
+  if (!p || G.gameOver) return;
+  const kind = String(stage || "").split(":")[0];
+  if (kind === "roll") {
+    closeOverlay("jail-overlay");
+    addLog(`${p.name} ran out of time, so the dice were rolled for them.`, "important");
+    rollDice();
+  } else if (kind === "buy") {
+    closeOverlay("buy-overlay");
+    addLog(`${p.name} ran out of time to decide on ${SPACES[G.pendingBuy]?.name || "the property"}.`, "important");
+    if (isAuctionSystemEnabled()) startAuction();
+    else declineBuy();
+  } else if (kind === "card") {
+    document.querySelector("#card-overlay .modal > .btn")?.click();
+  } else {
+    endTurn();
+  }
+}
 
 function timerIsBlocked() {
   return TIMER_BLOCKING_OVERLAYS.some((id) =>
@@ -1694,14 +1831,7 @@ function setTimerDuration(secs) {
   const timerInput = document.getElementById("lobby-timer");
   if (timerInput) timerInput.value = String(next);
   stopTimer();
-  if (
-    G &&
-    Array.isArray(G.players) &&
-    G.phase === "end" &&
-    canLocalControlTurn()
-  ) {
-    startTimer(true);
-  }
+  if (G && Array.isArray(G.players)) syncTurnTimer();
   // Re-open settings with updated state
   openDrawer("settings");
   toast(next === 0 ? "Turn timer off" : `Turn timer set to ${next}s`, "gold");
@@ -1711,9 +1841,9 @@ function setTimerDuration(secs) {
   });
 }
 
-function startTimer(force = false) {
+function startTimer(force = false, stage = "end") {
   if (TIMER.duration === 0) return;
-  const key = currentTurnKey();
+  const key = `${currentTurnKey()}:${stage}`;
   // Already counting down for this same turn - leave it running.
   if (!force && TIMER.intervalId && TIMER.turnKey === key) return;
   stopTimer();
@@ -1729,7 +1859,7 @@ function startTimer(force = false) {
     updateTimerUI();
     if (TIMER.remaining <= 0) {
       stopTimer();
-      endTurn();
+      onTurnTimerExpired(stage);
     }
   }, 1000);
 }
@@ -1748,7 +1878,8 @@ function updateTimerUI() {
     const line = `Turn ends in ${TIMER.remaining}s`;
     for (const id of ["center-msg", "mobile-turnline"]) {
       const el = document.getElementById(id);
-      if (el && /^Turn ends in \d+s$/.test(el.textContent)) el.textContent = line;
+      const shown = el && (typeof sourceText === "function" ? sourceText(el) : el.textContent);
+      if (el && /^Turn ends in \d+s$/.test(shown)) el.textContent = line;
     }
   }
   const arc = document.getElementById("timer-arc");
@@ -1973,6 +2104,13 @@ function installLobbyEvents() {
     });
   }
 
+  LOBBY_RULE_CONTROL_IDS.forEach((id) => {
+    document.getElementById(id)?.addEventListener("change", () => {
+      saveLobbyPrefs();
+      syncLobbySettingsToRoom();
+    });
+  });
+
   if (customSeedInput) {
     const onSeedInputUpdated = () => {
       const normalized = normalizeCustomBoardSeedText(customSeedInput.value);
@@ -1989,7 +2127,7 @@ function installLobbyEvents() {
         return;
       }
       setCustomBoardStatus(
-        `Seed ready (${normalized.length} chars). Click "Load Seed" to apply it.`,
+        `Seed ready (${normalized.length} chars). Click "Load seed" to apply it.`,
       );
     };
     customSeedInput.addEventListener("paste", () => {
@@ -2026,6 +2164,9 @@ function installLobbyEvents() {
     const gameScreen = document.getElementById("game-screen");
     if (!gameScreen || gameScreen.classList.contains("hidden")) return;
     if (!G || G.gameOver) return;
+    // A local game waits while the tab is hidden; an online one keeps its
+    // timeouts running so one sleeping phone cannot stall the room.
+    if (document.hidden && !isOnlineGame()) return;
     if (enforceAuctionBidderTimeout()) return;
     if (enforcePendingTradeTimeout()) return;
     maybeScheduleOfflineAiTurn();
@@ -2069,6 +2210,8 @@ const DISMISSABLE_OVERLAYS = {
   "leave-game-overlay": () => closeOverlay("leave-game-overlay"),
   // Closing the back-button prompt means staying in the game.
   "exit-guard-overlay": () => dismissExitGuard(),
+  // Closing the pause screen carries on playing.
+  "pause-overlay": () => resumeGame(),
   // A card cannot be refused, so closing it acknowledges it.
   "card-overlay": () =>
     document.querySelector("#card-overlay .modal > .btn, #card-overlay .modal .btn:not(.modal-close)")?.click(),
@@ -2079,6 +2222,7 @@ const MODAL_CLOSE_ICON =
   'stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>';
 
 function ensureModalCloseButton(modal, overlayId) {
+  if (typeof markCenteredDialog === "function") markCenteredDialog(modal);
   if (modal.querySelector(":scope > .modal-close-bar")) return;
   // A zero-height sticky bar holds the button: it takes no space in the flow
   // (so full-bleed headers keep their width) and stays pinned to the top of
@@ -2174,6 +2318,7 @@ function installKeyboardShortcuts() {
     else if (e.key === "m" || e.key === "M") document.getElementById("btn-mortgage")?.click();
     else if (e.key === "h" || e.key === "H") document.getElementById("btn-build")?.click();
     else if (e.key === "v" || e.key === "V") toggleBoard3d();
+    else if (e.key === "p" || e.key === "P") togglePause();
   });
 }
 
@@ -2188,8 +2333,10 @@ function saveLobbyPrefs() {
       startMoney: document.getElementById("starting-money")?.value,
       timer: document.getElementById("lobby-timer")?.value,
       auction: document.getElementById("auction-enabled")?.value,
+      rules: readLobbyRules(),
       theme: selectedThemeId,
       speed: MOVE_SPEED.factor,
+      aiSpeed: AI_SPEED.factor,
     };
     localStorage.setItem(LOBBY_PREFS_KEY, JSON.stringify(prefs));
   } catch (err) {
@@ -2214,6 +2361,9 @@ function loadLobbyPrefs() {
   }
   const auction = document.getElementById("auction-enabled");
   if (auction && prefs.auction != null) auction.value = prefs.auction;
+  if (prefs.rules && typeof prefs.rules === "object") applyRulesToLobbyUi(prefs.rules);
+  const aiSpeed = Number(prefs.aiSpeed);
+  if (Number.isFinite(aiSpeed) && aiSpeed > 0) AI_SPEED.factor = Math.min(2, Math.max(0.25, aiSpeed));
   if (prefs.theme && BOARD_THEMES[prefs.theme]) {
     applyThemeById(prefs.theme);
     refreshStartingMoneyUi(prefs.theme, false);
@@ -2258,9 +2408,14 @@ function registerServiceWorker() {
     /* URL parsing is not worth failing a boot over */
   }
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./sw.js").catch((err) => {
-      console.warn("Service worker registration failed:", err);
-    });
+    navigator.serviceWorker
+      .register("./sw.js")
+      .then((reg) => {
+        if (typeof watchRegistration === "function") watchRegistration(reg);
+      })
+      .catch((err) => {
+        console.warn("Service worker registration failed:", err);
+      });
   });
 }
 
@@ -2436,7 +2591,13 @@ function renderRecentActivity() {
   el.innerHTML = list
     .map((entry, i) => {
       const dot =
-        entry.kind === "online" || entry.kind === "lan" ? " is-online" : entry.kind === "board" ? " is-board" : "";
+        entry.kind === "online" || entry.kind === "lan"
+          ? " is-online"
+          : entry.kind === "board"
+            ? " is-board"
+            : entry.kind === "result"
+              ? " is-result"
+              : "";
       const when = formatRelativeTime(entry.time);
       const detail = [entry.detail, when].filter(Boolean).join(" · ");
       return `<button class="hp-recent-item" onclick="openRecentActivity(${i})">
@@ -2463,7 +2624,7 @@ function refreshHomeScreen() {
 // This page is the app-wide version: sound, defaults for new games, the
 // online name, saved data and app info.
 let CURRENT_DRAWER = "";
-const APP_VERSION = "0.2.0";
+const APP_VERSION = "0.4.0";
 
 function refreshSettingsViews() {
   if (CURRENT_DRAWER === "settings") openDrawer("settings");
@@ -2514,12 +2675,30 @@ function renderSettingsPage() {
   } catch (_err) {}
   if (!name) name = document.getElementById("online-player-name")?.value || "";
   const recentCount = readRecentActivity().length;
+  const aiSpeed = AI_SPEED.factor || 1;
+  const lang = currentUiLanguage();
 
   body.innerHTML = `
+    <section class="mp-card">
+      <h2 class="mp-card-title">Language</h2>
+      <div class="mp-setting mp-setting-stack">
+        <div class="mp-setting-text">
+          <div class="mp-setting-title">Interface language</div>
+          <div class="mp-setting-help">Menus, buttons, dialogs, cards and the game log. Place names come from the board you pick.</div>
+        </div>
+        <div class="mp-segmented mp-segmented-2" role="group" aria-label="Interface language">
+          ${[["en", "English"], ["bn", "বাংলা"]]
+            .map(([v, label]) => `<button type="button" class="${lang === v ? "is-selected" : ""}" aria-pressed="${lang === v}" lang="${v}" onclick="setUiLanguage('${v}')">${label}</button>`)
+            .join("")}
+        </div>
+      </div>
+    </section>
+
     <section class="mp-card">
       <h2 class="mp-card-title">Sound</h2>
       ${settingsRow("Sound effects", "Dice, rent, jail, auctions and wins", settingsSwitch("set-sfx", !!SFX.enabled, "toggleSfxEnabled()", "Sound effects"))}
       ${settingsRow("Music", "Plays during a match", settingsSwitch("set-bgm", !!SFX.bgmEnabled, "toggleBgmEnabled()", "Music"))}
+      ${typeof hapticsSupported === "function" && hapticsSupported() ? settingsRow("Vibration", "Short buzzes for your roll, rent, jail and your turn", settingsSwitch("set-haptics", hapticsOn(), `setHaptics(${!hapticsOn()})`, "Vibration")) : ""}
       <div class="mp-setting mp-setting-stack">
         <div class="mp-setting-text">
           <label class="mp-setting-title" for="set-volume">Volume</label>
@@ -2551,6 +2730,17 @@ function renderSettingsPage() {
             .join("")}
         </div>
       </div>
+      <div class="mp-setting mp-setting-stack">
+        <div class="mp-setting-text">
+          <div class="mp-setting-title">AI speed</div>
+          <div class="mp-setting-help">How long the AI pauses between moves</div>
+        </div>
+        <div class="mp-segmented mp-segmented-3" role="group" aria-label="AI speed">
+          ${AI_SPEED_CHOICES
+            .map(([label, v]) => `<button type="button" class="${Math.abs(aiSpeed - v) < 0.05 ? "is-selected" : ""}" aria-pressed="${Math.abs(aiSpeed - v) < 0.05}" onclick="setAiSpeed(${v})">${label}</button>`)
+            .join("")}
+        </div>
+      </div>
       ${settingsRow(
         '<label for="set-timer">Turn timer</label>',
         "Default for new games; each lobby can change it",
@@ -2561,12 +2751,44 @@ function renderSettingsPage() {
     </section>
 
     <section class="mp-card">
+      <h2 class="mp-card-title">Help and accessibility</h2>
+      ${settingsRow("First-game tips", "Short hints for rolling, buying, building and trading", settingsSwitch("set-tips", tipsEnabled(), `setTipsEnabled(${!tipsEnabled()})`, "First-game tips"))}
+      ${settingsRow("Show the tips again", "", '<button type="button" class="mp-btn mp-btn-secondary mp-btn-sm" onclick="resetTips()">Reset</button>')}
+      ${settingsRow("Reduce motion", reduceMotionFromDevice() ? "Your device already asks for less motion, so it is on" : "Shorter dice, token and camera animations, and no confetti", settingsSwitch("set-motion", reduceMotionOn(), `setReduceMotion(${!reduceMotionSetting()})`, "Reduce motion"))}
+    </section>
+
+    ${
+      INSTALL.available || INSTALL.installed
+        ? `<section class="mp-card">
+      <h2 class="mp-card-title">App</h2>
+      ${settingsRow(
+        "Install the game",
+        INSTALL.installed ? "Installed on this device" : "Adds it to your home screen or apps, and it works offline",
+        INSTALL.installed ? "" : '<button type="button" class="mp-btn mp-btn-primary mp-btn-sm" onclick="installApp()">Install</button>',
+      )}
+    </section>`
+        : ""
+    }
+
+    <section class="mp-card">
       <h2 class="mp-card-title">Online</h2>
       <div class="mp-field">
         <label for="set-online-name">Your name in online rooms</label>
         <input type="text" id="set-online-name" maxlength="24" placeholder="Enter your name" value="${escAttr(name)}" autocomplete="nickname" onchange="setDefaultOnlineName(this.value)" />
       </div>
     </section>
+
+    ${(() => {
+      const rec = typeof readRecords === "function" ? readRecords() : {};
+      const names = Object.keys(rec).slice(0, 6);
+      if (!names.length) return "";
+      return `<section class="mp-card">
+      <h2 class="mp-card-title">Records on this device</h2>
+      ${names
+        .map((n) => settingsRow(escHtml(n), `${rec[n].won || 0} won of ${rec[n].played || 0} played`, `<span class="mp-setting-value">${Math.round(((rec[n].won || 0) / Math.max(1, rec[n].played || 0)) * 100)}%</span>`))
+        .join("")}
+    </section>`;
+    })()}
 
     <section class="mp-card">
       <h2 class="mp-card-title">Saved data</h2>
@@ -2577,9 +2799,19 @@ function renderSettingsPage() {
       )}
       ${settingsRow(
         "Reset settings",
-        "Sound, speed, timer and lobby choices go back to their defaults",
-        `<button type="button" class="mp-btn mp-btn-danger mp-btn-sm" onclick="resetAllSettings()">Reset</button>`,
+        "Sound, speed, timer, lobby choices and the analytics question go back to their defaults",
+        `<button type="button" class="mp-btn mp-btn-danger mp-btn-sm" onclick="resetAllSettings(this)">Reset</button>`,
       )}
+    </section>
+
+    <section class="mp-card">
+      <h2 class="mp-card-title">Privacy</h2>
+      ${settingsRow(
+        "Usage statistics",
+        "Anonymous Google Analytics, only if you allow it. Helps find what to improve.",
+        settingsSwitch("set-analytics", typeof analyticsAllowed === "function" && analyticsAllowed(), `setAnalyticsConsent(${!(typeof analyticsAllowed === "function" && analyticsAllowed())})`, "Usage statistics"),
+      )}
+      ${settingsLink("Privacy notice", "What is stored, where, and for how long", "openPrivacyNotice()")}
     </section>
 
     <section class="mp-card">
@@ -2587,6 +2819,8 @@ function renderSettingsPage() {
       ${settingsRow("Version", "", `<span class="mp-setting-value">${APP_VERSION}</span>`)}
       ${settingsLink("Patch notes", "What changed in each update", "openWhatsNewPage()")}
       ${settingsLink("Report a bug", "Opens the issue form in a new tab", "openBugReport()")}
+      ${settingsLink("Test lab", "Set up board situations to try out rules", "openTestLabPage()")}
+      <p class="mp-setting-help mp-legal">Unofficial fan project, not affiliated with or endorsed by Hasbro. MONOPOLY is a trademark of Hasbro, Inc.</p>
       <div class="mp-setting mp-setting-stack">
         <div class="mp-setting-text">
           <div class="mp-setting-title">Keyboard shortcuts</div>
@@ -2636,8 +2870,21 @@ function clearRecentActivity() {
   toast("Recent activity cleared", "gold");
 }
 
-function resetAllSettings() {
-  if (!window.confirm("Reset sound, speed, timer and lobby choices to their defaults?")) return;
+// Two taps on the Reset button, like discarding a saved game: a native
+// confirm box could not be translated or styled.
+function resetAllSettings(btn) {
+  const button = btn || document.querySelector('[onclick^="resetAllSettings"]');
+  if (button && button.dataset.confirm !== "1") {
+    button.dataset.confirm = "1";
+    button.textContent = uiText("Tap again to reset");
+    setTimeout(() => {
+      if (button.dataset.confirm === "1") {
+        button.dataset.confirm = "";
+        button.textContent = uiText("Reset");
+      }
+    }, 3500);
+    return;
+  }
   try {
     [
       LOBBY_PREFS_KEY,
@@ -2645,6 +2892,9 @@ function resetAllSettings() {
       SFX_PREF_VOLUME_KEY,
       SFX_PREF_BGM_ENABLED_KEY,
       BOARD_VIEW_KEY,
+      "monopoly_analytics_consent",
+      "monopoly_haptics",
+      "monopoly_reduce_motion",
     ].forEach((k) => localStorage.removeItem(k));
   } catch (_err) {}
   // Defaults live in several modules; a reload is the only reliable way to
@@ -2715,8 +2965,11 @@ function dockCenterControls(intoScene) {
     }
   });
 }
+// Nothing to keep docked while the tab is hidden or the board is not shown.
 setInterval(() => {
-  if (BOARD_VIEW.gl) dockCenterControls(true);
+  if (!BOARD_VIEW.gl || document.hidden) return;
+  if (document.getElementById("game-screen")?.classList.contains("hidden")) return;
+  dockCenterControls(true);
 }, 250);
 
 function updateBoardViewButton() {

@@ -117,8 +117,8 @@ function canvasTexture(c, anisotropy = 4) {
   return t;
 }
 
-const BODY = '"DM Sans", system-ui, sans-serif';
-const DISPLAY = '"Playfair Display", Georgia, serif';
+const BODY = '"DM Sans", "Noto Sans Bengali", system-ui, sans-serif';
+const DISPLAY = '"Playfair Display", "Noto Sans Bengali", Georgia, serif';
 
 // Wraps text to at most maxLines lines of maxWidth, shrinking the font from
 // maxPx toward minPx until it fits. Returns { size, lines }.
@@ -173,12 +173,12 @@ function drawBoardTexture(canvas) {
   // dice and, in the 2D view, the Roll / End turn buttons).
   ctx.fillStyle = pal.title;
   ctx.font = `900 ${Math.round(PX * 1.05)}px ${DISPLAY}`;
-  ctx.fillText("MONOPOLY", TEX / 2, TEX / 2 - PX * 2.35);
+  ctx.fillText(L("MONOPOLY"), TEX / 2, TEX / 2 - PX * 2.35);
   ctx.fillStyle = "#1f5a33";
   ctx.font = `700 ${Math.round(PX * 0.3)}px ${BODY}`;
   // Letter-spacing is done by inserting hair spaces, which only works for
   // Latin text: in Bengali it splits vowel signs from their consonants.
-  const edition = `${String(t.name || "").toUpperCase()} EDITION`;
+  const edition = L(`${String(t.name || "").toUpperCase()} EDITION`);
   const latin = /^[ -~]*$/.test(edition);
   ctx.fillText(latin ? edition.split("").join(String.fromCharCode(8202, 8202)) : edition, TEX / 2, TEX / 2 - PX * 1.55);
 
@@ -202,6 +202,23 @@ function drawBoardTexture(canvas) {
       ctx.font = `${weight} ${Math.round(px)}px ${BODY}`;
       ctx.fillText(txt, cx, yy);
     };
+    // Once a square is owned its price no longer matters: the owner's token,
+    // on their colour, takes that line.
+    const owner = prop && prop.owner !== null && prop.owner !== undefined && g.players[prop.owner] ? g.players[prop.owner] : null;
+    const ownerPill = (at) => {
+      const ph = PX * 0.22;
+      // Above the "mortgaged" ribbon when there is one.
+      const yy = prop.mortgaged ? Math.min(at, y + h - PX * 0.2 - ph / 2 - PX * 0.03) : at;
+      const pw = Math.min(w - PX * 0.16, PX * 0.6);
+      ctx.fillStyle = owner.color || "#888";
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(cx - pw / 2, yy - ph / 2, pw, ph, ph / 2);
+      else ctx.rect(cx - pw / 2, yy - ph / 2, pw, ph);
+      ctx.fill();
+      ctx.font = `${Math.round(ph * 0.72)}px ${BODY}`;
+      ctx.fillText(owner.token || "●", cx, yy + ph * 0.04);
+    };
+    const priceOrOwner = (text, yy, px) => (owner ? ownerPill(yy) : small(text, yy, px, "#222", 700));
     const emoji = (txt, yy, px) => {
       ctx.font = `${Math.round(px)}px ${BODY}`;
       ctx.fillText(txt, cx, yy);
@@ -221,16 +238,17 @@ function drawBoardTexture(canvas) {
       ctx.fillRect(x, y, w, barH);
       ctx.fillStyle = "rgba(0,0,0,.28)";
       ctx.fillRect(x, y + barH - 2, w, 2);
-      const priceY = y + h - PX * 0.28;
-      nameBlock(sp.name, y + barH + pad, priceY - PX * 0.14);
-      small(money(sp.price), priceY, PX * 0.17, "#222", 700);
-      small(`Rent ${money((sp.rent && sp.rent[0]) || 0)}`, y + h - PX * 0.1, PX * 0.12, "#666", 500);
+      // Name and price only: the rent line was too small to read on a phone,
+      // and the full rent table is one tap away on the title deed.
+      const priceY = y + h - PX * 0.2;
+      nameBlock(sp.name, y + barH + pad, priceY - PX * 0.16);
+      priceOrOwner(money(sp.price), priceY, PX * 0.19);
     } else if (isCorner(sp.id)) {
       const my = y + h / 2;
       if (sp.type === "go") {
         emoji("🏁", my - PX * 0.42, PX * 0.42);
-        small("GO", my + PX * 0.1, PX * 0.5, "#c0392b", 900);
-        small(`Collect ${t.currency || ""}${Number(t.goSalary) || 0}`, my + PX * 0.55, PX * 0.15, "#1a5c1a");
+        small(L("GO"), my + PX * 0.1, PX * 0.5, "#c0392b", 900);
+        small(L(`Collect ${money(Number(t.goSalary) || 0)}`), my + PX * 0.55, PX * 0.15, "#1a5c1a");
       } else if (sp.type === "jail") {
         // The cell is the upper-right part (toward the board's centre);
         // "just visiting" runs along the outer edges.
@@ -249,27 +267,27 @@ function drawBoardTexture(canvas) {
         }
         ctx.fillStyle = "#1f2937";
         ctx.font = `900 ${Math.round(PX * 0.2)}px ${BODY}`;
-        ctx.fillText("JAIL", jx + cell / 2, y + cell / 2);
+        ctx.fillText(L("JAIL"), jx + cell / 2, y + cell / 2);
         ctx.font = `700 ${Math.round(PX * 0.13)}px ${BODY}`;
-        ctx.fillText("JUST VISITING", x + w / 2, y + h - PX * 0.14);
+        ctx.fillText(L("JUST VISITING"), x + w / 2, y + h - PX * 0.14);
       } else if (sp.type === "parking") {
-        small("FREE", my - PX * 0.45, PX * 0.24, "#b91c1c", 900);
+        small(L("FREE"), my - PX * 0.45, PX * 0.24, "#b91c1c", 900);
         emoji("🅿️", my, PX * 0.44);
-        small("PARKING", my + PX * 0.45, PX * 0.2, "#b91c1c", 900);
+        small(L("PARKING"), my + PX * 0.45, PX * 0.2, "#b91c1c", 900);
       } else if (sp.type === "gotojail") {
-        small("GO TO", my - PX * 0.45, PX * 0.22, "#b91c1c", 900);
+        small(L("GO TO"), my - PX * 0.45, PX * 0.22, "#b91c1c", 900);
         emoji("🚔", my, PX * 0.44);
-        small("JAIL", my + PX * 0.45, PX * 0.26, "#b91c1c", 900);
+        small(L("JAIL"), my + PX * 0.45, PX * 0.26, "#b91c1c", 900);
       }
     } else if (sp.type === "chance") {
       ctx.fillStyle = "#ea580c";
       ctx.font = `900 ${Math.round(Math.min(w, h) * 0.5)}px ${DISPLAY}`;
       ctx.fillText("?", cx, y + h * 0.42);
-      small("CHANCE", y + h - PX * 0.18, PX * 0.14, "#ea580c", 800);
+      small(L("CHANCE"), y + h - PX * 0.18, PX * 0.14, "#ea580c", 800);
     } else if (sp.type === "community") {
       emoji("📦", y + h * 0.38, Math.min(w, h) * 0.36);
-      small("COMMUNITY", y + h - PX * 0.3, PX * 0.12, "#1d4ed8", 800);
-      small("CHEST", y + h - PX * 0.15, PX * 0.12, "#1d4ed8", 800);
+      small(L("COMMUNITY"), y + h - PX * 0.3, PX * 0.12, "#1d4ed8", 800);
+      small(L("CHEST"), y + h - PX * 0.15, PX * 0.12, "#1d4ed8", 800);
     } else {
       // Stations, utilities, taxes: name, icon, price.
       const icon = sp.type === "railroad" ? "🚂" : sp.icon || "";
@@ -282,20 +300,41 @@ function drawBoardTexture(canvas) {
         nameBlock(sp.name, y + pad, y + h * 0.36, 2);
         emoji(icon, y + h * 0.56, Math.min(w, h) * 0.3);
       }
-      const priceText = sp.type === "tax" ? `Pay ${money(sp.amount)}` : money(sp.price);
-      small(priceText, priceY, PX * 0.15, "#222", 700);
+      if (sp.type === "tax") small(L(`Pay ${money(sp.amount)}`), priceY, PX * 0.15, "#222", 700);
+      else priceOrOwner(money(sp.price), priceY, PX * 0.15);
     }
 
-    // Ownership: a frame in the owner's colour. Mortgaged: dimmed.
-    if (prop && prop.owner !== null && prop.owner !== undefined && g.players[prop.owner]) {
-      const owner = g.players[prop.owner];
+    // Ownership: a frame in the owner's colour. The price line shows the
+    // owner's token instead (see ownerPill), so it does not rest on colour.
+    if (owner) {
       ctx.strokeStyle = owner.color || "#fff";
       ctx.lineWidth = PX * 0.07;
       ctx.strokeRect(x + PX * 0.035, y + PX * 0.035, w - PX * 0.07, h - PX * 0.07);
       if (prop.mortgaged) {
-        ctx.fillStyle = "rgba(40,40,40,.55)";
+        // Hatched and greyed, with a ribbon along the bottom: the name stays
+        // readable, which a stamp across the middle did not allow.
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(x, y, w, h);
+        ctx.clip();
+        ctx.fillStyle = "rgba(60,60,60,.22)";
         ctx.fillRect(x, y, w, h);
-        small("MORTGAGED", y + h / 2, PX * 0.12, "#fff", 800);
+        ctx.strokeStyle = "rgba(0,0,0,.16)";
+        ctx.lineWidth = PX * 0.03;
+        for (let d = -h; d < w + h; d += PX * 0.14) {
+          ctx.beginPath();
+          ctx.moveTo(x + d, y + h);
+          ctx.lineTo(x + d + h, y);
+          ctx.stroke();
+        }
+        const band = PX * 0.2;
+        ctx.fillStyle = "rgba(28,28,28,.9)";
+        ctx.fillRect(x, y + h - band, w, band);
+        ctx.restore();
+        ctx.fillStyle = "#fff";
+        const fit = fitText(ctx, L("MORTGAGED"), 800, w - PX * 0.08, 1, Math.round(PX * 0.12), Math.round(PX * 0.08));
+        ctx.font = `800 ${fit.size}px ${BODY}`;
+        ctx.fillText(fit.lines[0], cx, y + h - band / 2);
       }
     }
 
@@ -350,6 +389,16 @@ function orientationFor(value, yaw) {
 }
 const DICE_REST = [new Vector3(-0.5, TOP + 0.31, -0.35), new Vector3(0.5, TOP + 0.31, -0.35)];
 const DICE_MS = 620; // keep in step with diceRollDurationMs() in gameplay-actions.js
+const DICE_MS_REDUCED = 180;
+
+// Settings → Reduce motion, or the device's own setting (app-shell.js sets
+// the class): no camera swings, spins or bounces, and short token moves.
+// Board labels in the interface language (scripts/i18n.js), when it is loaded.
+const L = (text) => (typeof window.uiText === "function" ? window.uiText(text) : text);
+
+function reducedMotion() {
+  return document.documentElement.classList.contains("reduce-motion");
+}
 
 // ── Token chip and labels ──────────────────────────────────────────────────
 function chipTopTexture(token, color) {
@@ -403,11 +452,16 @@ function standPoint(pos, slot, jailed) {
     // Just visiting: along the outer (bottom and left) strip.
     return { x: r.x0 + 0.3 + (slot % 4) * 0.32, z: r.z0 + r.d - 0.3 - (slot >= 4 ? 0.34 : 0) };
   }
-  const scale = isCorner(pos) ? 1.4 : 1;
-  const barShift = isCorner(pos) ? 0 : (r.d * BAR) / 2;
-  const sx = Math.min(1, r.w / 1) * scale;
-  const sz = Math.min(1, r.d / 1) * scale;
-  return { x: r.cx + ox * sx, z: r.cz + barShift + oz * sz * 0.9 };
+  if (isCorner(pos)) {
+    // Corners: towards the board's centre, clear of the corner's own label.
+    const ix = r.cx > 0 ? -1 : 1;
+    const iz = r.cz > 0 ? -1 : 1;
+    return { x: r.cx + ix * r.w * 0.24 + ox * 0.95, z: r.cz + iz * r.d * 0.24 + oz * 0.95 };
+  }
+  // Other squares: over the lower part, so the name above stays readable.
+  const sx = Math.min(1, r.w / 1);
+  const sz = Math.min(1, r.d / 1);
+  return { x: r.cx + ox * sx, z: r.z0 + r.d * 0.66 + oz * sz * 0.62 };
 }
 
 // A Monopoly-style building: a block with a gabled roof along its width.
@@ -445,8 +499,14 @@ class BoardScene {
     this.mode = "2d";
     this.modeT = 0; // 0 = 2D, 1 = 3D (animated between)
     const mobile = Math.min(window.innerWidth, window.innerHeight) < 700;
-    this.renderer = new WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    // Phones with little memory or few cores draw at a lower resolution and
+    // with smaller shadows: much less GPU work for a barely visible change.
+    const lowEnd =
+      (Number(navigator.deviceMemory) > 0 && Number(navigator.deviceMemory) <= 4) ||
+      (Number(navigator.hardwareConcurrency) > 0 && Number(navigator.hardwareConcurrency) <= 4);
+    this.lowEnd = lowEnd;
+    this.renderer = new WebGLRenderer({ antialias: !lowEnd, alpha: true, powerPreference: lowEnd ? "default" : "high-performance" });
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, lowEnd ? 1.5 : 2));
     this.renderer.outputColorSpace = SRGBColorSpace;
     this.renderer.toneMapping = ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.05;
@@ -471,7 +531,7 @@ class BoardScene {
       this.invalidate();
     });
 
-    this.buildLights(mobile ? 1024 : 2048);
+    this.buildLights(mobile || lowEnd ? 1024 : 2048);
     this.buildTable();
     this.buildDice();
 
@@ -493,10 +553,50 @@ class BoardScene {
     this.resizeObserver.observe(host);
     if (hud) this.resizeObserver.observe(hud);
     this.loop = this.loop.bind(this);
+    this.poll = this.poll.bind(this);
+    this.sleeping = false;
+    this.idleFrames = 0;
+    this.sleepTimer = 0;
+    this.pointerActive = false;
+    // Phones (iOS especially) drop the WebGL context in the background. Stop
+    // drawing until it is back, then redraw everything.
+    this.contextLost = false;
+    this.renderer.domElement.addEventListener("webglcontextlost", (e) => {
+      e.preventDefault();
+      this.contextLost = true;
+    });
+    this.renderer.domElement.addEventListener("webglcontextrestored", () => {
+      this.contextLost = false;
+      this.sig.texture = "";
+      this.sig.buildings = "";
+      this.sync(true);
+      this.invalidate();
+    });
   }
 
   invalidate() {
     this.dirty = Math.max(this.dirty, 2);
+    this.wake();
+  }
+
+  // The loop sleeps when nothing on the table is moving, checking the game
+  // a few times a second instead of every frame; any change wakes it.
+  wake() {
+    if (!this.enabled || !this.sleeping) return;
+    this.sleeping = false;
+    this.idleFrames = 0;
+    clearTimeout(this.sleepTimer);
+    requestAnimationFrame(this.loop);
+  }
+  poll() {
+    if (!this.enabled || !this.sleeping) return;
+    if (!document.hidden) this.sync(true);
+    if (this.sleeping) this.sleepTimer = setTimeout(this.poll, 250);
+  }
+  isBusy(now) {
+    if (this.anims.size || this.dirty > 0 || this.pointerActive || now < this.diceUntil) return true;
+    for (const t of this.tokens.values()) if (t.hopping || (t.queue && t.queue.length)) return true;
+    return false;
   }
 
   // ── Scene building ──
@@ -548,25 +648,33 @@ class BoardScene {
     table.receiveShadow = true;
     this.scene.add(table);
 
-    // Card decks, bottom corners of the centre.
+    // Card decks, bottom corners of the centre. Their labels are redrawn with
+    // the board texture, so they follow the interface language.
+    this.deckLabels = [];
     const deck = (x, z, color, label, yaw) => {
       const g = new Group();
       const mat = new MeshStandardMaterial({ color, roughness: 0.6 });
       const c = makeCanvas(256, 160);
       const ctx = c.getContext("2d");
-      ctx.fillStyle = color;
-      ctx.fillRect(0, 0, 256, 160);
-      ctx.strokeStyle = "rgba(255,255,255,.8)";
-      ctx.lineWidth = 8;
-      ctx.strokeRect(12, 12, 232, 136);
-      ctx.fillStyle = "#fff";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      const lines = label.split(" ");
-      const size = lines.length > 1 ? 30 : 40;
-      ctx.font = `900 ${size}px ${BODY}`;
-      lines.forEach((l, i) => ctx.fillText(l, 128, 82 + (i - (lines.length - 1) / 2) * size * 1.1));
-      const topMat = new MeshStandardMaterial({ map: canvasTexture(c), roughness: 0.6 });
+      const texture = canvasTexture(c);
+      const draw = () => {
+        ctx.fillStyle = color;
+        ctx.fillRect(0, 0, 256, 160);
+        ctx.strokeStyle = "rgba(255,255,255,.8)";
+        ctx.lineWidth = 8;
+        ctx.strokeRect(12, 12, 232, 136);
+        ctx.fillStyle = "#fff";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        const lines = L(label).split(" ");
+        const size = lines.length > 1 ? 30 : 40;
+        ctx.font = `900 ${size}px ${BODY}`;
+        lines.forEach((l, i) => ctx.fillText(l, 128, 82 + (i - (lines.length - 1) / 2) * size * 1.1));
+        texture.needsUpdate = true;
+      };
+      draw();
+      this.deckLabels.push(draw);
+      const topMat = new MeshStandardMaterial({ map: texture, roughness: 0.6 });
       const edge = new MeshStandardMaterial({ color: 0xf2efe6, roughness: 0.8 });
       for (let i = 0; i < 6; i++) {
         const card = new Mesh(
@@ -648,11 +756,14 @@ class BoardScene {
         })
         .join(",") +
       "|" +
-      g.players.map((p) => p.color).join(",");
+      g.players.map((p) => `${p.color}${p.token}`).join(",") +
+      "|" +
+      document.documentElement.lang;
     if (texSig !== this.sig.texture) {
       this.sig.texture = texSig;
       drawBoardTexture(this.boardCanvas);
       this.boardTexture.needsUpdate = true;
+      (this.deckLabels || []).forEach((draw) => draw());
       this.invalidate();
     }
     const bSig = Object.keys(g.properties || {})
@@ -704,7 +815,8 @@ class BoardScene {
       all.forEach((b) => {
         b.position.y = 0.8;
       });
-      this.animate(0.35, (t) => all.forEach((b) => (b.position.y = 0.8 * (1 - easeOut(t)))));
+      if (reducedMotion()) all.forEach((b) => (b.position.y = 0));
+      else this.animate(0.35, (t) => all.forEach((b) => (b.position.y = 0.8 * (1 - easeOut(t)))));
     }
     this.invalidate();
   }
@@ -834,8 +946,9 @@ class BoardScene {
     const dist = Math.hypot(dx, dz);
     // Catch up when several squares are waiting.
     const hurry = t.queue.length > 3 ? 0.55 : 1;
-    const dur = step.jump ? 0.55 : Math.max(0.08, Math.min(0.22, 0.17 * moveFactor()) * hurry);
-    const height = step.jump ? 1.1 : 0.32;
+    const calm = reducedMotion();
+    const dur = calm ? 0.06 : step.jump ? 0.55 : Math.max(0.08, Math.min(0.22, 0.17 * moveFactor()) * hurry);
+    const height = calm ? 0 : step.jump ? 1.1 : 0.32;
     this.animate(dur, (k) => {
       const e = easeInOut(k);
       t.group.position.x = from.x + dx * e;
@@ -881,6 +994,16 @@ class BoardScene {
     const cur = g && g.players[g.currentPlayerIdx];
     const pos = cur ? (cur.inJail ? 10 : Number(cur.pos) || 0) : 0;
     const from = rectOf(pos);
+    if (reducedMotion()) {
+      // Straight onto the rolled faces, no throw.
+      this.diceUntil = performance.now() + DICE_MS_REDUCED;
+      this.dice.forEach((die, i) => {
+        die.position.copy(DICE_REST[i]);
+        die.quaternion.copy(orientationFor(values[i], i ? -0.2 : 0.25));
+      });
+      this.invalidate();
+      return;
+    }
     this.diceUntil = performance.now() + DICE_MS;
     this.dice.forEach((die, i) => {
       const rest = DICE_REST[i].clone();
@@ -927,13 +1050,27 @@ class BoardScene {
     let down = null;
     el.addEventListener("pointerdown", (e) => {
       down = { x: e.clientX, y: e.clientY, t: performance.now() };
+      this.pointerActive = true;
+      this.wake();
     });
-    el.addEventListener("pointerup", (e) => {
+    const release = () => {
+      this.pointerActive = false;
+    };
+    el.addEventListener("pointerup", release);
+    el.addEventListener("pointercancel", release);
+    el.addEventListener("pointerleave", release);
+    // Open on "click", not "pointerup": the click that follows a pointerup
+    // would otherwise land on the dialog's backdrop and close it at once.
+    el.addEventListener("click", (e) => {
       if (!down) return;
       const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y);
       const quick = performance.now() - down.t < 450;
       down = null;
       if (moved > 6 || !quick) return;
+      // A tap that closed a dialog (or lands while one is open) is not a tap
+      // on the board; without this it could open a square's details.
+      if (document.querySelector(".overlay.show")) return;
+      if (performance.now() - (Number(window.__overlayClosedAt) || 0) < 180) return;
       const id = this.pick(e);
       if (id !== null && typeof showSpaceInfo === "function") showSpaceInfo(id);
     });
@@ -956,6 +1093,46 @@ class BoardScene {
     el.addEventListener("pointerleave", () => {
       this.hoverId = null;
       this.hover.visible = false;
+      this.invalidate();
+    });
+    // Keyboard: the board takes focus; arrows walk the squares in board
+    // order, Enter opens one, and each square is read out as it is reached.
+    el.tabIndex = 0;
+    el.setAttribute("role", "application");
+    el.setAttribute("aria-roledescription", "board");
+    el.setAttribute("aria-label", "Board. Use the arrow keys to move between squares and Enter to open one.");
+    this.keyId = null;
+    const showKey = (id) => {
+      this.keyId = id;
+      const r = rectOf(id);
+      this.hover.scale.set(r.w, r.d, 1);
+      this.hover.position.x = r.cx;
+      this.hover.position.z = r.cz;
+      this.hover.visible = true;
+      this.invalidate();
+      const name = typeof spaceAccessibleName === "function" ? spaceAccessibleName(id) : "";
+      if (name && typeof announce === "function") announce(name);
+    };
+    el.addEventListener("keydown", (e) => {
+      const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
+      if (step) {
+        e.preventDefault();
+        e.stopPropagation();
+        const g = G_();
+        const start = this.keyId ?? (g && g.players[g.currentPlayerIdx] ? Number(g.players[g.currentPlayerIdx].pos) || 0 : 0);
+        showKey((((this.keyId === null ? start : start + step) % 40) + 40) % 40);
+      } else if (e.key === "Home") {
+        e.preventDefault();
+        showKey(0);
+      } else if ((e.key === "Enter" || e.key === " ") && this.keyId !== null) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (typeof showSpaceInfo === "function") showSpaceInfo(this.keyId);
+      }
+    });
+    el.addEventListener("blur", () => {
+      this.keyId = null;
+      if (this.hoverId === null) this.hover.visible = false;
       this.invalidate();
     });
   }
@@ -1053,7 +1230,7 @@ class BoardScene {
       this.userMoved = false;
       this.placeHud();
     };
-    if (!animate) {
+    if (!animate || reducedMotion()) {
       finish();
       return;
     }
@@ -1145,6 +1322,8 @@ class BoardScene {
     this.modeT = mode === "3d" ? 1 : 0;
     if (!this.enabled) {
       this.enabled = true;
+      this.sleeping = false;
+      this.idleFrames = 0;
       requestAnimationFrame(this.loop);
     }
     this.sig.texture = "";
@@ -1155,11 +1334,15 @@ class BoardScene {
   }
   stop() {
     this.enabled = false;
+    this.sleeping = false;
+    clearTimeout(this.sleepTimer);
   }
   loop(now) {
-    if (!this.enabled) return;
-    requestAnimationFrame(this.loop);
-    if (document.hidden || !this.host.clientWidth) return;
+    if (!this.enabled || this.sleeping) return;
+    if (document.hidden || !this.host.clientWidth || this.contextLost) {
+      requestAnimationFrame(this.loop);
+      return;
+    }
     this.frame++;
     this.sync(this.frame % 3 === 0);
     this.tickAnims(now);
@@ -1171,6 +1354,13 @@ class BoardScene {
       this.renderer.render(this.scene, this.camera);
       this.dirty--;
     }
+    this.idleFrames = this.isBusy(performance.now()) ? 0 : this.idleFrames + 1;
+    if (this.idleFrames > 45) {
+      this.sleeping = true;
+      this.sleepTimer = setTimeout(this.poll, 250);
+      return;
+    }
+    requestAnimationFrame(this.loop);
   }
 }
 
@@ -1204,6 +1394,18 @@ window.Board3D = {
   },
   resetView() {
     if (instance) instance.resetView();
+  },
+  // The class on <html> is read on every animation; this just redraws.
+  setReducedMotion() {
+    if (instance) instance.invalidate();
+  },
+  // Called when the game redraws, so a sleeping table picks the change up at once.
+  wake() {
+    if (instance && instance.enabled) {
+      instance.wake();
+      if (!instance.sleeping) return;
+      instance.sync(true);
+    }
   },
   get instance() {
     return instance;

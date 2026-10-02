@@ -21,14 +21,19 @@ A Monopoly-style board game that runs in the browser, set in Dhaka and around Ba
 
 ## What's in it
 
-- **The full game.** Buying, rent, auctions, houses and hotels (built evenly), mortgages, jail, Chance and Community Chest, trades between players, and bankruptcy that hands assets to whoever you owe.
-- **2 to 8 players.** Any mix of people and AI on one device. The AI buys, bids, builds, trades and handles its own debts.
-- **Online rooms.** Host an open or password-protected room and share the code. The host starts the match once everyone is ready, and there's in-game chat. If someone drops out, the AI takes their seat.
+- **The full game.** Buying, rent, auctions, houses and hotels (built evenly, with the bank's 32 houses and 12 hotels), mortgages, jail, Chance and Community Chest, and bankruptcy that hands assets to whoever you owe. Trade properties, cash and Get Out of Jail Free cards at any time, on anyone's turn.
+- **2 to 8 players.** Any mix of people and AI on one device. The AI comes in three levels (easy, normal, hard) and buys, bids, builds, trades and handles its own debts; its pace is adjustable.
+- **House rules.** Free Parking jackpot, no rent while in jail, double salary for landing on GO, and a time limit where the richest player wins. A turn timer that rolls, passes or ends the turn for a player who waits too long.
+- **Saved games.** Games on one device save as you play and continue from the home screen after a refresh or a closed tab; the last three are kept. They can be paused (P), which stops the AI, the timer and the match clock.
+- **English and বাংলা.** The whole interface, the game log included, in either language, with Bangla digits. Players in one online match can each use their own language.
+- **Online rooms.** Host an open or password-protected room and share the code or an invite link. The host starts the match once everyone is ready, and there's in-game chat (with mute). If someone drops out, the AI holds their seat until they rejoin.
 - **Same Wi-Fi.** Play with people on your network without a server of your own, like PairDrop. Games hosted on the same network appear automatically; the match runs on the host's device and goes to the others directly over WebRTC. The internet is only needed for the few seconds it takes to find each other and connect.
 - **Six boards, plus your own.** Dhaka City, Bangladesh, ধনী হবার মজার খেলা, Classic, World Tour and Ancient Wonders. Each has its own place names, currency and money scale.
 - **Custom boards.** The [board editor](https://wakifrajin.github.io/monopoly-bd/boardeditor.html) lets you rename spaces and change prices and rents. It exports a seed code that anyone can load.
 - **2D and 3D views of one table.** The board is a WebGL scene built with three.js: dice that tumble and land on the rolled numbers before anyone moves, chip tokens that hop square by square, and house and hotel models, all lit and casting shadows. The flat view is the same table seen from above; the 3D view tilts it, and switching animates the camera between the two. In 3D, drag to turn the table and scroll or pinch to zoom. Browsers without WebGL get a plain HTML board.
-- **Match options.** Auctions on or off, a turn timer, animation speed, sound and music.
+- **Match options.** Auctions on or off, animation and AI speed, sound and music, and first-game tips.
+- **Accessible.** Keyboard shortcuts, a board you can walk with the arrow keys, dialogs that take and return focus, game events read out to screen readers, owners shown by token as well as colour, pinch-zoom, and a reduce-motion setting that also follows the device's.
+- **End of the match.** A net-worth chart for the whole game, awards, and a result you can share. Wins are counted on the device.
 
 <details>
 <summary>More screenshots</summary>
@@ -54,11 +59,11 @@ The game is a Progressive Web App. It has a manifest and a service worker, so br
 - **iPhone and iPad (Safari):** Share → *Add to Home Screen*.
 - **Desktop (Chrome or Edge):** the install icon at the right of the address bar.
 
-Offline and AI games keep working with no connection once the app has loaded. Online rooms need a connection.
+After one visit the whole game is cached, so offline and AI games work with no connection. Online and Same Wi-Fi rooms need a connection. When a new version is deployed, an open copy of the game says so and offers to reload; a game on one device is saved first.
 
 ## Running it locally
 
-The game is plain HTML, CSS and JavaScript, so there's nothing to build. Serve the folder with any static server and open it:
+The game is plain HTML, CSS and JavaScript. The one built file, the 3D board bundle, is committed (see [Building the 3D board](#building-the-3d-board)), so there's nothing to build to run it. Serve the folder with any static server and open it:
 
 ```bash
 python -m http.server 8080
@@ -72,8 +77,27 @@ These URL flags help during development:
 |---|---|
 | `?nosw` | Unregisters the service worker so you always load the files on disk. |
 | `?debug` | Checks the game state for inconsistencies after every action and reports them in the console. |
+| `?open=offline` (also `online`, `lan`, `rules`) | Opens that page directly; used by the app's home-screen shortcuts. |
 
-`test-lab.html` runs the game's automated checks in the browser. A quick smoke test covers the core paths. The full suite fuzzes game-state invariants and tests online sync between clients.
+## Tests
+
+```bash
+npm install
+npm test              # the game in headless Chrome
+npm run test:rules    # the database rules, against the Firebase emulators
+npm run test:online   # online play in two browsers, against the emulators
+npm run check:version # the release version matches everywhere
+```
+
+[`tools/test-game.cjs`](tools/test-game.cjs) serves the working tree itself and plays the real game with forced dice. It checks the rules (doubles, jail, cards, bail, trades, hotels, auctions), the house rules, trading on another player's turn, the turn timer, pausing, saving and continuing, the AI, the Bangla interface and the app shell. It uses your installed Chrome; set `CHROME_PATH` to use another.
+
+[`tools/test-rules.mjs`](tools/test-rules.mjs) signs in as several users and checks that normal play (creating, joining, chatting, leaving, handing over a disconnected host) is allowed and that tampering (deleting someone's room, taking the host role, adding other people, forging or editing chat, fake room listings) is refused. It needs Java for the Firebase emulators.
+
+[`tools/test-online.cjs`](tools/test-online.cjs) runs two to four browsers through the real online code against the emulators: hosting and joining, turns and chat staying in sync, rejoining after a refresh, the AI holding a dropped player's seat until they come back, host handover, and password-protected rooms.
+
+All of them run on every push and pull request in [GitHub Actions](.github/workflows/ci.yml), along with a syntax check, the version check, and a check that the committed 3D bundle matches its source.
+
+`test-lab.html` has further checks you run in the browser: a quick smoke test, a fuzzer for game-state invariants, and online sync between clients.
 
 ## Online play on your own fork
 
@@ -88,6 +112,8 @@ Online rooms use Firebase Realtime Database with anonymous sign-in. To point a f
    ```bash
    firebase deploy --only database
    ```
+
+The rules only let the host delete a room (or anyone once it has gone stale), move the host role only when the host leaves or is offline, let players add only themselves, keep chat append-only under the sender's own id, and stop fake entries in the room list. Any member can still write the game state itself, because moves are made on the players' devices; stopping that would need the moves checked on a server.
 
 The rules also cover Same Wi-Fi play (`lanRooms` and `lanSignal`), which uses Firebase only to list games per network and to pass the one-time WebRTC offer and answer between two devices.
 
@@ -127,26 +153,31 @@ index.html              The app: every screen, dialog and panel
 styles/main.css         The match: board, panels, dialogs
 styles/menu.css         Menu pages: home, rooms, lobby, rules (and shared by the pages below)
 styles/standalone.css   Extra styles for the standalone pages
-scripts/                Game code, loaded in this order by index.html (board3d.min.js loads when a match starts)
+scripts/                Game code, loaded in this order by index.html (board3d.min.js is loaded on the first match; the service worker caches it at install)
   core-online-theme-lobby.js   Firebase config, online rooms and sync, board themes, lobby
   board-render-ai.js           Board rendering, player panels, AI players
   gameplay-actions.js          Rules: moving, rent, cards, building, trading, auctions, bankruptcy
   ui-systems.js                Dialogs, game log, drawers, timer, sound, settings
   game-feel.js                 Money animations, title deeds, card reveals, match stats, sound patches
+  game-options.js              House rules, Free Parking pot, time limit, pause, AI speed, first-game tips
+  app-shell.js                 Reduced motion, install button, new-version prompt, dialog focus, screen-reader announcements
+  save-game.js                 Saving and continuing games on this device
+  i18n-bn.js, i18n.js          Bangla strings, and the translator that applies them as text reaches the page
   lan.js                       Same Wi-Fi play: WebRTC link and the host's in-memory room
   init.js                      Start-up
   board3d/main.js              Board scene source, 2D and 3D views (three.js); built into board3d.min.js
 sw.js                   Service worker (network first, cache as offline fallback)
 manifest.json           Web app manifest
-icons/                  App icons
+icons/                  App icons (including maskable ones) and favicons
+images/                 Home background and the link-preview image (og-image.jpg)
 logo.svg                Logo and favicon
 sounds/                 Sound effects and music
 whats-new.html          Patch notes and credits
 boardeditor.html        Custom board editor (standalone page)
 test-lab.html           In-browser test runner (smoke tests, fuzzing, online sync)
 database.rules.json     Realtime Database security rules
-firebase.json           Firebase CLI config (rules deploy only)
-tools/                  Development scripts, not loaded by the game
+firebase.json           Firebase CLI config: rules deploy, and the emulators for the rules tests
+tools/                  Development scripts, not loaded by the game: tests, UI audit, screenshots, version bump, link-preview image
 docs/screenshots/       Images used in this README and the app manifest
 ```
 
@@ -176,10 +207,20 @@ npm run screenshots
 
 Set `CHROME_CHANNEL=msedge` to use Edge instead.
 
+The link-preview image, `images/og-image.jpg`, is rendered from [`tools/og-image.html`](tools/og-image.html) with `npm run og-image`.
+
 ## Contributing
 
-Bug reports are welcome, either through **Report** in the game or as an issue. For pull requests, keep to the existing style: no framework and no build step. Describe how you tested the change, and for anything touching online play, test with two browsers in one room.
+Bug reports are welcome, either through **Report** in the game or as an issue. For pull requests, keep to the existing style: no framework, and no build step beyond the 3D bundle. Run `npm test` (and `npm run test:rules` if you touch the rules), describe how you tested the change, and for anything touching online play, test with two browsers in one room. New interface text needs a Bangla entry in `scripts/i18n-bn.js`.
+
+## Privacy
+
+Games on one device, settings and saved games stay in the browser. Online and Same Wi-Fi play sign in anonymously; room data (names in the room, chat, the game) lives in Firebase while the room is open. Google Analytics only loads after the player allows it on first visit, and can be turned off in Settings. The full notice is on the [patch notes page](https://wakifrajin.github.io/monopoly-bd/whats-new.html#privacy).
 
 ## License
 
 [Apache License 2.0](LICENSE)
+
+## Disclaimer
+
+This is an unofficial, non-commercial fan project. It is not affiliated with, endorsed by or sponsored by Hasbro. MONOPOLY is a trademark of Hasbro, Inc. Computer players have made-up names.
