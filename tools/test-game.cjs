@@ -840,6 +840,17 @@ function check(name, ok, detail = "") {
   const missing = listed.filter((f) => !fs.existsSync(path.join(ROOT, f)));
   check("every file the service worker caches exists", missing.length === 0, missing.join(", "));
 
+  // Without WebSockets (data saver, in-app browsers, some mobile networks)
+  // the database falls back to long polling: scripts and a frame from its
+  // host. Blocking them left online and Same Wi-Fi silently doing nothing.
+  const csp = (fs.readFileSync(path.join(ROOT, "index.html"), "utf8").match(/Content-Security-Policy"\s+content="([^"]*)"/) || [])[1] || "";
+  const directive = (name) => (csp.match(new RegExp(`${name}\\s+([^;]*)`)) || [])[1] || "";
+  check(
+    "the online service can fall back to long polling",
+    directive("script-src").includes("https://*.firebasedatabase.app") && directive("frame-src").includes("https://*.firebasedatabase.app"),
+    csp.replace(/\s+/g, " "),
+  );
+
   check("no page errors", errors.length === 0, errors.slice(0, 3).join(" | "));
 
   await browser.close();

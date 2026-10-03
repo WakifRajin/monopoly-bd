@@ -736,6 +736,20 @@ function bootstrapFirebase() {
         if (typeof LAN !== "undefined" && LAN.real) LAN.real.serverTimeOffset = offset;
         else ONLINE.serverTimeOffset = offset;
       });
+      // Signing in goes over plain HTTPS, but rooms need the database's own
+      // connection. Check that it opens, so a network or browser that blocks
+      // it shows an error here instead of buttons that silently do nothing.
+      await withTimeout(
+        new Promise((resolve) => {
+          const off = dbMod.onValue(dbMod.ref(FIREBASE.db, ".info/connected"), (snap) => {
+            if (snap.val() !== true) return;
+            off();
+            resolve();
+          });
+        }),
+        20000,
+        "Connecting to the database",
+      );
       ONLINE.ready = true;
       setOnlineServiceState("ready");
       updateOnlineStatus("Online service ready. You can create or join a room.");
@@ -5176,9 +5190,10 @@ async function createOnlineRoom() {
     };
 
     try {
-      const result = await FIREBASE.api.runTransaction(
-        candidateRef,
-        (current) => {
+      // A connection that drops mid-way would otherwise leave the button
+      // doing nothing; time out with a message instead.
+      const result = await withTimeout(
+        FIREBASE.api.runTransaction(candidateRef, (current) => {
           if (current) return;
           return {
             schemaVersion: ROOM_SCHEMA_VERSION,
@@ -5195,7 +5210,9 @@ async function createOnlineRoom() {
             createdAt: Date.now(),
             updatedAt: Date.now(),
           };
-        },
+        }),
+        20000,
+        "Creating the room",
       );
       if (!result.committed) continue;
       createdRoomId = candidateRoomId;
@@ -5254,7 +5271,14 @@ async function joinOnlineRoom() {
   const myName = getOnlinePlayerName();
   ONLINE.localName = myName;
   const roomRef = FIREBASE.api.ref(FIREBASE.db, `rooms/${roomId}`);
-  const preSnap = await FIREBASE.api.get(roomRef);
+  let preSnap;
+  try {
+    preSnap = await withTimeout(FIREBASE.api.get(roomRef), 20000, "Finding the room");
+  } catch (err) {
+    console.error(err);
+    toast(firebaseErrorMessage(err, "Unable to find the room right now."), "danger");
+    return;
+  }
   const baseRoom = preSnap.exists() ? preSnap.val() : null;
   if (!baseRoom) {
     toast("Room not found", "danger");
