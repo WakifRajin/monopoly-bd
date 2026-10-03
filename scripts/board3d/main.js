@@ -51,6 +51,7 @@ import {
 } from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
+import { BUET_CARD_FONT, BUET_FONTS, drawBuetCenter, drawBuetSpace, drawDeedIcon } from "./buet-art.js";
 
 // ── Board geometry (world units; 1 unit = one edge square) ─────────────────
 const CORNER = 1.65;
@@ -118,6 +119,21 @@ function canvasTexture(c, anisotropy = 4) {
 }
 
 const BODY = '"DM Sans", "Noto Sans Bengali", system-ui, sans-serif';
+
+// Boards with their own artwork draw in web fonts the page may not have
+// loaded yet. Once they arrive the texture is drawn again (see sync()).
+let artFontsReady = 0;
+const artFontsAsked = new Set();
+function loadArtFonts(art) {
+  if (art !== "buet" || artFontsAsked.has(art) || !document.fonts || !document.fonts.load) return;
+  artFontsAsked.add(art);
+  Promise.all(BUET_FONTS.map((f) => document.fonts.load(f, "ABC")))
+    .catch(() => {})
+    .then(() => {
+      artFontsReady++;
+      if (window.Board3D) window.Board3D.wake();
+    });
+}
 const DISPLAY = '"Playfair Display", "Noto Sans Bengali", Georgia, serif';
 
 // Wraps text to at most maxLines lines of maxWidth, shrinking the font from
@@ -157,11 +173,21 @@ function drawBoardTexture(canvas) {
   const t = theme();
   const g = G_();
   const pal = palette();
+  // BUET: the printed board's own squares and campus map (buet-art.js).
+  const buet = t.art === "buet";
+  if (buet) loadArtFonts(t.art);
   ctx.save();
   ctx.clearRect(0, 0, TEX, TEX);
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
 
+  if (buet) drawBuetCenter(ctx, CORNER * PX, CORNER * PX, 9 * PX);
+  else drawGenericCenter(ctx, t, pal);
+  drawBoardSquares(ctx, t, g, pal, buet);
+  ctx.restore();
+}
+
+function drawGenericCenter(ctx, t, pal) {
   // Felt.
   const felt = ctx.createRadialGradient(TEX / 2, TEX / 2, TEX * 0.08, TEX / 2, TEX / 2, TEX * 0.72);
   felt.addColorStop(0, pal.felt[0]);
@@ -181,7 +207,9 @@ function drawBoardTexture(canvas) {
   const edition = L(`${String(t.name || "").toUpperCase()} EDITION`);
   const latin = /^[ -~]*$/.test(edition);
   ctx.fillText(latin ? edition.split("").join(String.fromCharCode(8202, 8202)) : edition, TEX / 2, TEX / 2 - PX * 1.55);
+}
 
+function drawBoardSquares(ctx, t, g, pal, buet) {
   for (const sp of spaces()) {
     if (!sp) continue;
     const r = rectOf(sp.id);
@@ -232,7 +260,17 @@ function drawBoardTexture(canvas) {
       fit.lines.forEach((l, i) => ctx.fillText(l, cx, mid + (i - (fit.lines.length - 1) / 2) * lh));
     };
 
-    if (sp.type === "property") {
+    if (buet) {
+      // Turned to face their side of the table, so the BUET art draws its own
+      // price line, owner token and mortgage ribbon in the square's frame.
+      drawBuetSpace(ctx, sp, x, y, w, h, PX, {
+        colorOf,
+        shadeOf: (key) => (t.bandShades || {})[key],
+        owner,
+        mortgaged: !!(owner && prop.mortgaged),
+        mortgagedLabel: L("MORTGAGED"),
+      });
+    } else if (sp.type === "property") {
       const barH = h * BAR;
       ctx.fillStyle = colorOf(sp.color);
       ctx.fillRect(x, y, w, barH);
@@ -310,7 +348,7 @@ function drawBoardTexture(canvas) {
       ctx.strokeStyle = owner.color || "#fff";
       ctx.lineWidth = PX * 0.07;
       ctx.strokeRect(x + PX * 0.035, y + PX * 0.035, w - PX * 0.07, h - PX * 0.07);
-      if (prop.mortgaged) {
+      if (prop.mortgaged && !buet) {
         // Hatched and greyed, with a ribbon along the bottom: the name stays
         // readable, which a stamp across the middle did not allow.
         ctx.save();
@@ -338,14 +376,14 @@ function drawBoardTexture(canvas) {
       }
     }
 
-    ctx.strokeStyle = "#1b1b1b";
-    ctx.lineWidth = 3;
+    // The printed BUET board parts its squares with fine light lines.
+    ctx.strokeStyle = buet ? "#b9ab98" : "#1b1b1b";
+    ctx.lineWidth = buet ? 2 : 3;
     ctx.strokeRect(x, y, w, h);
   }
-  ctx.lineWidth = 5;
-  ctx.strokeStyle = "#1b1b1b";
+  ctx.lineWidth = buet ? 3 : 5;
+  ctx.strokeStyle = buet ? "#9a8a78" : "#1b1b1b";
   ctx.strokeRect(CORNER * PX, CORNER * PX, 9 * PX, 9 * PX);
-  ctx.restore();
 }
 
 // ── Dice ───────────────────────────────────────────────────────────────────
@@ -458,10 +496,31 @@ function standPoint(pos, slot, jailed) {
     const iz = r.cz > 0 ? -1 : 1;
     return { x: r.cx + ix * r.w * 0.24 + ox * 0.95, z: r.cz + iz * r.d * 0.24 + oz * 0.95 };
   }
+  // BUET squares face their side, so "below the name" is away from the
+  // inner edge, whichever way that is.
+  if (theme().art === "buet") {
+    if (pos < 10) return { x: r.cx + ox, z: r.z0 + r.d * 0.66 + oz * 0.62 };
+    if (pos < 20) return { x: r.x0 + r.w * 0.34 - oz * 0.62, z: r.cz + ox };
+    if (pos < 30) return { x: r.cx - ox, z: r.z0 + r.d * 0.34 - oz * 0.62 };
+    return { x: r.x0 + r.w * 0.66 + oz * 0.62, z: r.cz - ox };
+  }
   // Other squares: over the lower part, so the name above stays readable.
   const sx = Math.min(1, r.w / 1);
   const sz = Math.min(1, r.d / 1);
   return { x: r.cx + ox * sx, z: r.z0 + r.d * 0.66 + oz * sz * 0.62 };
+}
+
+// The BUET board's band lies on each square's inner edge (buet-art.js turns
+// the squares to face their side). Its centre, the direction it runs, and its
+// length; null on other boards.
+const BUET_BAND = 0.29 / 2; // half the band and zigzag strip, in units
+function buetBand(id) {
+  if (theme().art !== "buet") return null;
+  const r = rectOf(id);
+  if (id < 10) return { x: r.cx, z: r.z0 + BUET_BAND, yaw: 0, length: r.w };
+  if (id < 20) return { x: r.x0 + r.w - BUET_BAND, z: r.cz, yaw: Math.PI / 2, length: r.d };
+  if (id < 30) return { x: r.cx, z: r.z0 + r.d - BUET_BAND, yaw: 0, length: r.w };
+  return { x: r.x0 + BUET_BAND, z: r.cz, yaw: Math.PI / 2, length: r.d };
 }
 
 // A Monopoly-style building: a block with a gabled roof along its width.
@@ -651,21 +710,39 @@ class BoardScene {
     // Card decks, bottom corners of the centre. Their labels are redrawn with
     // the board texture, so they follow the interface language.
     this.deckLabels = [];
-    const deck = (x, z, color, label, yaw) => {
+    const deck = (x, z, color, label, yaw, printed) => {
       const g = new Group();
       const mat = new MeshStandardMaterial({ color, roughness: 0.6 });
       const c = makeCanvas(256, 160);
       const ctx = c.getContext("2d");
       const texture = canvasTexture(c);
       const draw = () => {
+        // On the BUET board the decks lie on their printed places in the
+        // map, face up as cream cards in the deck's frame.
+        const own = theme().art === "buet" ? printed : null;
+        g.position.set(own ? own.x : x, 0, own ? own.z : z);
+        g.rotation.y = own ? own.yaw : yaw;
+        g.scale.setScalar(own ? 1.3 : 1);
+        mat.color.set(own ? own.frame : color);
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        if (own) {
+          ctx.fillStyle = own.frame;
+          ctx.fillRect(0, 0, 256, 160);
+          ctx.fillStyle = "#f0f1d8";
+          ctx.fillRect(14, 14, 228, 132);
+          ctx.fillStyle = "#333";
+          ctx.font = `400 46px ${BUET_CARD_FONT}`;
+          ctx.fillText(own.label, 128, 82);
+          texture.needsUpdate = true;
+          return;
+        }
         ctx.fillStyle = color;
         ctx.fillRect(0, 0, 256, 160);
         ctx.strokeStyle = "rgba(255,255,255,.8)";
         ctx.lineWidth = 8;
         ctx.strokeRect(12, 12, 232, 136);
         ctx.fillStyle = "#fff";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
         const lines = L(label).split(" ");
         const size = lines.length > 1 ? 30 : 40;
         ctx.font = `900 ${size}px ${BODY}`;
@@ -687,12 +764,12 @@ class BoardScene {
         card.receiveShadow = true;
         g.add(card);
       }
-      g.position.set(x, 0, z);
-      g.rotation.y = yaw;
       this.scene.add(g);
     };
-    deck(-2.75, 2.95, "#ea580c", "CHANCE", 0.18);
-    deck(2.75, 2.95, "#2563eb", "COMMUNITY CHEST", -0.18);
+    // Printed places on the BUET map: CGPA lower left, BIIS upper right
+    // (turned to face the far side of the table).
+    deck(-2.75, 2.95, "#ea580c", "CHANCE", 0.18, { x: -2.34, z: 2.85, yaw: -Math.PI / 4, frame: "#1f3a2c", label: "CGPA" });
+    deck(2.75, 2.95, "#2563eb", "COMMUNITY CHEST", -0.18, { x: 2.82, z: -2.34, yaw: (3 * Math.PI) / 4, frame: "#4f1e22", label: "BIIS" });
 
     this.hover = new Mesh(
       new PlaneGeometry(1, 1),
@@ -746,6 +823,8 @@ class BoardScene {
     const sps = spaces();
     const texSig =
       (theme().id || "") +
+      ":" +
+      artFontsReady +
       "|" +
       sps.map((s) => (s ? s.name + (s.price || "") : "")).join(",") +
       "|" +
@@ -795,17 +874,23 @@ class BoardScene {
       const p = g.properties && g.properties[sp.id];
       if (!p || (!p.houses && !p.hotel)) continue;
       const r = rectOf(sp.id);
-      const barZ = r.z0 + (r.d * BAR) / 2;
+      // Where the colour band runs: along the top of every square, or (on the
+      // BUET board, whose squares face their side) along the inner edge.
+      const lane = buetBand(sp.id) || { x: r.cx, z: r.z0 + (r.d * BAR) / 2, yaw: 0, length: r.w };
+      const along = (d) => ({ x: lane.x + Math.cos(lane.yaw) * d, z: lane.z - Math.sin(lane.yaw) * d });
       if (p.hotel) {
-        const hotel = building(Math.min(0.55, r.w * 0.6), 0.2, 0.2, 0.12, hotelMat, hotelRoof);
-        hotel.position.set(r.cx, 0, barZ);
+        const hotel = building(Math.min(0.55, lane.length * 0.6), 0.2, 0.2, 0.12, hotelMat, hotelRoof);
+        hotel.position.set(lane.x, 0, lane.z);
+        hotel.rotation.y = lane.yaw;
         this.buildings.add(hotel);
       } else {
         const n = Math.min(4, p.houses);
-        const gap = Math.min(0.22, (r.w * 0.9) / 4);
+        const gap = Math.min(0.22, (lane.length * 0.9) / 4);
         for (let i = 0; i < n; i++) {
           const house = building(0.16, 0.13, 0.16, 0.09, houseMat, roofMat);
-          house.position.set(r.cx + (i - (n - 1) / 2) * gap, 0, barZ);
+          const at = along((i - (n - 1) / 2) * gap);
+          house.position.set(at.x, 0, at.z);
+          house.rotation.y = lane.yaw;
           this.buildings.add(house);
         }
       }
@@ -1374,6 +1459,9 @@ function supportsWebGL() {
     return false;
   }
 }
+
+// The BUET deeds (scripts/game-feel.js) borrow the board's pictures.
+window.BuetArt = { drawDeedIcon };
 
 window.Board3D = {
   supported: supportsWebGL(),

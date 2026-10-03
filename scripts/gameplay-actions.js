@@ -1,11 +1,18 @@
 // ═══════════════════════════════════════════════
 //  DICE & MOVEMENT
 // ═══════════════════════════════════════════════
+// The game a piece of async work belongs to. After every pause, work for a
+// game that has since been replaced (a new game, a resumed save) stops.
+function sameGame(stamp) {
+  return !!G && G.gameStartedAt === stamp;
+}
+
 async function rollDice() {
   if (!requireTurnControl()) return;
   const p = getLivePlayer(curPlayer());
   if (!p || p.bankrupt) return;
   if (G.phase !== "roll" || MOVE_FX.active) return;
+  const game = G.gameStartedAt;
 
   const d1 = rand(1, 6),
     d2 = rand(1, 6);
@@ -41,9 +48,9 @@ async function rollDice() {
   try {
     await waitMs(diceRollDurationMs());
   } finally {
-    MOVE_FX.active = false;
+    if (sameGame(game)) MOVE_FX.active = false;
   }
-  if (!getLivePlayer(p.id) || G.gameOver) return;
+  if (!sameGame(game) || !getLivePlayer(p.id) || G.gameOver) return;
 
   if (p.inJail) {
     await handleJailRoll(p.id, d1, d2, doubles);
@@ -153,8 +160,9 @@ async function movePlayer(player, steps, rolledDoubles) {
   }
 
   G.phase = "action";
+  const game = G.gameStartedAt;
   const moved = await animatePlayerStepMovement(playerId, steps);
-  if (!moved) return;
+  if (!moved || !sameGame(game)) return;
   MOVE_FX.active = true;
   MOVE_FX.playerId = playerId;
   updateActionButtons();
@@ -164,11 +172,14 @@ async function movePlayer(player, steps, rolledDoubles) {
     livePlayer.pos = newPos;
     renderAll();
     await waitMs(160);
+    if (!sameGame(game)) return;
     landOn(livePlayer, rolledDoubles, { goPaid });
   } finally {
-    MOVE_FX.active = false;
-    MOVE_FX.playerId = null;
-    updateActionButtons();
+    if (sameGame(game)) {
+      MOVE_FX.active = false;
+      MOVE_FX.playerId = null;
+      updateActionButtons();
+    }
   }
 }
 
@@ -191,9 +202,10 @@ async function movePlayerTo(player, target, collectGo = true, landOpts = null) {
     playSfx("passgo");
   }
 
+  const game = G.gameStartedAt;
   if (stepsForward > 0 && stepsForward <= 12) {
     const moved = await animatePlayerStepMovement(playerId, stepsForward);
-    if (!moved) return;
+    if (!moved || !sameGame(game)) return;
   } else {
     const live = getLivePlayer(playerId);
     if (!live || live.bankrupt) return;
@@ -211,11 +223,14 @@ async function movePlayerTo(player, target, collectGo = true, landOpts = null) {
     livePlayer.pos = target;
     renderAll();
     await waitMs(140);
+    if (!sameGame(game)) return;
     landOn(livePlayer, false, { ...(landOpts || {}), goPaid });
   } finally {
-    MOVE_FX.active = false;
-    MOVE_FX.playerId = null;
-    updateActionButtons();
+    if (sameGame(game)) {
+      MOVE_FX.active = false;
+      MOVE_FX.playerId = null;
+      updateActionButtons();
+    }
   }
 }
 
@@ -453,14 +468,23 @@ function returnJailCard(p) {
   if (type) delete held[type];
 }
 
+// A card's whole wording on one line: the heading, the text, and the
+// COLLECT / amount lines that printed cards put under a rule.
+function cardFullText(card) {
+  return [card.heading, card.text, card.label, card.amount]
+    .filter(Boolean)
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function drawCard(type, p) {
   const card = drawFromDeck(type);
   const playerId = Number(p?.id);
   const drawPlayer = getLivePlayer(playerId) || p;
-  const cardText = formatThemeCurrencyText(card.text);
-  addLog(
-    `${drawPlayer.name} drew ${type === "chance" ? "Chance" : "Community Chest"}: ${cardText}`,
-  );
+  const deckName = themeDeckName(type, G.boardThemeId || selectedThemeId);
+  const cardText = formatThemeCurrencyText(cardFullText(card));
+  addLog(`${drawPlayer.name} drew ${deckName}: ${cardText}`);
   playSfx("card");
 
   ONLINE.pendingCardResolutions =
@@ -485,7 +509,7 @@ function drawCard(type, p) {
   document.getElementById("card-icon").textContent =
     type === "chance" ? "❓" : "📦";
   document.getElementById("card-title").textContent =
-    type === "chance" ? "Chance Card" : "Community Chest";
+    type === "chance" && deckName === "Chance" ? "Chance Card" : deckName;
   document.getElementById("card-desc").textContent = cardText;
   presentCardReveal(type, card, drawPlayer);
 
@@ -528,9 +552,11 @@ function drawCard(type, p) {
           return;
         }
       } else {
-        // The card's rule: the owner is paid twice the usual rent.
+        // The card's rule: the owner is paid twice the usual rent (or what
+        // the card says: BUET's pays thrice).
         const nearest = nearestRailroad(actor.pos);
-        await movePlayerTo(actor.id, nearest, true, { rentMultiplier: 2 });
+        const rentMultiplier = Math.max(1, Math.floor(Number(card.multiplier) || 2));
+        await movePlayerTo(actor.id, nearest, true, { rentMultiplier });
         return;
       }
     } else if (card.action === "back") {
@@ -813,14 +839,47 @@ function beginAuction(propId, { source = "market", bidderStartIdx = 0 } = {}) {
     activePlayers,
     source,
     bidderSince: Date.now(),
+    openedAt: Date.now(),
   };
   addLog(
     `Auction for ${sp.name} opens at ${fmtCurrency(openingBid)} (${openingPercent}% of list price).`,
   );
   playSfx("auction-open");
+  // The first bidder may not be able to afford the opening bid.
+  if (!settleAuctionBidder(G.auctionState, startPos)) return true;
   renderAuction();
   openOverlay("auction-overlay");
   maybeScheduleOfflineAiTurn();
+  return true;
+}
+
+// Who can still win: not passed, not already leading, and able to pay at
+// least the next bid. Anyone who cannot afford it drops out on the spot
+// instead of being asked, and the leader is never asked to outbid
+// themselves. Moves the turn to the next such bidder from `fromIdx`, or
+// closes the auction when no one is left. Returns false once closed.
+function settleAuctionBidder(a, fromIdx) {
+  if (!(a.passed instanceof Set)) {
+    a.passed = new Set(indexedObjectToArray(a.passed).map(Number).filter(Number.isInteger));
+  }
+  const min = auctionMinimumBid(a);
+  a.activePlayers.forEach((id) => {
+    if (a.passed.has(id) || id === a.highBidder) return;
+    const p = G.players[id];
+    if (!p || p.bankrupt) {
+      a.passed.add(id);
+    } else if ((Number(p.money) || 0) < min) {
+      a.passed.add(id);
+      addLog(`${p.name} can't cover ${fmtCurrency(min)} and is out of the bidding.`);
+    }
+  });
+  const nextIdx = nextAuctionBidderIndex(a, fromIdx);
+  if (nextIdx < 0) {
+    finalizeAuction(a);
+    return false;
+  }
+  if (nextIdx !== Number(a.bidderIdx)) a.bidderSince = Date.now();
+  a.bidderIdx = nextIdx;
   return true;
 }
 
@@ -954,7 +1013,8 @@ function nextAuctionBidderIndex(a, startIdx) {
   for (let i = 0; i < len; i++) {
     const idx = ((cursor % len) + len) % len;
     const playerId = Number(a.activePlayers[idx]);
-    if (!a.passed.has(playerId)) return idx;
+    // The leader waits: they cannot outbid themselves.
+    if (!a.passed.has(playerId) && playerId !== a.highBidder) return idx;
     cursor++;
   }
   return -1;
@@ -966,7 +1026,7 @@ function finalizeAuction(a) {
   let awardedPropId = null;
   closeOverlay("auction-overlay");
 
-  if (a.highBidder !== null && a.currentBid > 0) {
+  if (a.highBidder !== null && a.highBidder !== undefined && a.currentBid > 0) {
     const winner = G.players[a.highBidder];
     const sp = SPACES[a.propId];
     const prop = G.properties[a.propId];
@@ -1078,23 +1138,7 @@ function placeBid(amount) {
   addLog(`${bidder.name} bids ${fmtCurrency(newBid)} for ${a.propName}.`);
   playSfx("bid");
 
-  const remaining = a.activePlayers.filter((id) => !a.passed.has(id));
-  if (remaining.length <= 1 && a.highBidder !== null) {
-    finalizeAuction(a);
-    return;
-  }
-
-  const nextIdx = nextAuctionBidderIndex(a, Number(a.bidderIdx) + 1);
-  if (nextIdx < 0) {
-    addLog(
-      "No bidders left. Closing the auction.",
-      "danger",
-    );
-    finalizeAuction(a);
-    return;
-  }
-  a.bidderIdx = nextIdx;
-  a.bidderSince = Date.now();
+  if (!settleAuctionBidder(a, Number(a.bidderIdx) + 1)) return;
   renderAuction();
   maybeScheduleOfflineAiTurn();
 }
@@ -1114,27 +1158,7 @@ function passAuction() {
   if (!bidder) return;
   a.passed.add(bidder.id);
   addLog(`${bidder.name} passes.`);
-  // Check if only one active bidder remains
-  const remaining = a.activePlayers.filter((id) => !a.passed.has(id));
-  if (
-    remaining.length === 0 ||
-    (remaining.length === 1 && a.highBidder !== null)
-  ) {
-    finalizeAuction(a);
-    return;
-  }
-
-  const nextIdx = nextAuctionBidderIndex(a, Number(a.bidderIdx) + 1);
-  if (nextIdx < 0) {
-    addLog(
-      "No bidders left. Closing the auction.",
-      "danger",
-    );
-    finalizeAuction(a);
-    return;
-  }
-  a.bidderIdx = nextIdx;
-  a.bidderSince = Date.now();
+  if (!settleAuctionBidder(a, Number(a.bidderIdx) + 1)) return;
   renderAuction();
   maybeScheduleOfflineAiTurn();
 }

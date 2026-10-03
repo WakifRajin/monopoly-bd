@@ -179,6 +179,20 @@ function check(name, ok, detail = "") {
   const after = await page.evaluate(() => [G.players[0].money, G.players[1].money, calcRent(SPACES[5], G.properties[5]), getThemeGoSalary(G.boardThemeId)]);
   check("nearest-station card charges double rent", after[1] - before[1] === after[2] * 2, JSON.stringify({ before, after }));
 
+  // BUET board: its own names and decks, and BIIS's "pay thrice" card.
+  await newGame({ theme: "buet" });
+  const buet = await page.evaluate(() => ({ go: SPACES[0].name, biis: SPACES[33].name, cgpa: SPACES[7].name, rail: SPACES[35].name, deck: G.communityDeck.length + G.chanceDeck.length }));
+  check("the BUET board names its squares as printed", buet.go === "BUET Main Gate" && buet.biis === "BIIS" && buet.cgpa === "CGPA" && buet.rail === "Mechanical Building" && buet.deck === 32, JSON.stringify(buet));
+  await page.evaluate(() => { G.properties[35].owner = 1; G.players[1].railroads.push(35); G.players[0].pos = 29; });
+  await stackDeck("community", "nearest", "railroad");
+  const buetBefore = await page.evaluate(() => G.players[1].money);
+  await roll(1, 3); // 33 is BIIS
+  await readCard();
+  await closeAll();
+  const buetAfter = await page.evaluate(() => [G.players[1].money, calcRent(SPACES[35], G.properties[35])]);
+  check("BIIS nearest-building card charges three times the rent", buetAfter[0] - buetBefore === buetAfter[1] * 3, JSON.stringify({ buetBefore, buetAfter }));
+  await page.evaluate(() => applyThemeById("dhaka"));
+
   const deck = await page.evaluate(() => {
     G.jailCardHolder = { chance: 1 };
     G.chanceIdx = 0;
@@ -407,6 +421,90 @@ function check(name, ok, detail = "") {
   await page.evaluate(() => { while (G.auctionState) passAuction(); });
   await closeAll();
 
+
+  console.log("\nAuctions");
+  await newGame({ ai: 1 });
+  const order = await page.evaluate(() => {
+    // Three people: the leader is never asked to outbid themselves.
+    G.players.length = 3;
+    G.players.forEach((p) => (p.kind = "human"));
+    beginAuction(6, { source: "market", bidderStartIdx: 0 });
+    const a = G.auctionState;
+    placeBid(0); // player 1 takes the opening bid
+    const second = currentAuctionBidderId();
+    passAuction(); // player 2
+    const third = currentAuctionBidderId();
+    passAuction(); // player 3: player 1 wins without being asked again
+    return { second, third, open: !!G.auctionState, owner: G.properties[6].owner };
+  });
+  check("the leader is never asked to bid against themselves", order.second === 1 && order.third === 2 && !order.open && order.owner === 0, JSON.stringify(order));
+  await closeAll();
+
+  await newGame({ ai: 1 });
+  const broke = await page.evaluate(() => {
+    G.players.length = 3;
+    G.players.forEach((p) => (p.kind = "human"));
+    G.players[1].money = 10; // cannot cover the opening bid
+    beginAuction(6, { source: "market", bidderStartIdx: 1 });
+    const first = currentAuctionBidderId();
+    const passed = G.auctionState.passed.has(1);
+    while (G.auctionState) passAuction();
+    return { first, passed };
+  });
+  check("a player who can't afford the bid drops out instead of being asked", broke.first === 2 && broke.passed, JSON.stringify(broke));
+  await closeAll();
+
+  await newGame({ ai: 1, keepAi: true });
+  const opening = await page.evaluate(() => {
+    // An AI that completes its own set takes the opening price, not more.
+    const ai = G.players.find((p) => p.kind === "ai");
+    G.players.forEach((p) => { if (p !== ai) p.kind = "human"; });
+    G.properties[8].owner = ai.id; ai.properties.push(8);
+    G.properties[9].owner = ai.id; ai.properties.push(9);
+    beginAuction(6, { source: "market", bidderStartIdx: ai.id });
+    const open = G.auctionState.currentBid;
+    runOfflineAiStep();
+    const r = { open, bid: G.auctionState?.currentBid, leader: G.auctionState?.highBidder, ai: ai.id };
+    while (G.auctionState) { if (isAiPlayer(G.players[currentAuctionBidderId()])) { G.auctionState.passed.add(currentAuctionBidderId()); settleAuctionBidder(G.auctionState, G.auctionState.bidderIdx); } else passAuction(); }
+    return r;
+  });
+  check("the AI opens at the opening price instead of jumping above it", opening.bid === opening.open && opening.leader === opening.ai, JSON.stringify(opening));
+  await closeAll();
+
+  await newGame({ ai: 2, keepAi: true });
+  const stress = await page.evaluate(() => {
+    // Every seat an AI, every street and station auctioned in turn.
+    G.players.forEach((p) => (p.kind = "ai"));
+    const ids = SPACES.filter((sp) => ["property", "railroad", "utility"].includes(sp.type)).map((sp) => sp.id);
+    const out = { auctions: 0, stuck: 0, negative: 0, selfRaise: 0, sold: 0, overpaid: 0 };
+    for (const id of ids) {
+      if (G.properties[id].owner !== null) continue;
+      if (!beginAuction(id, { source: "market", bidderStartIdx: out.auctions % G.players.length })) continue;
+      out.auctions++;
+      let steps = 0;
+      while (G.auctionState && steps < 400) {
+        const leader = G.auctionState.highBidder;
+        const bidder = currentAuctionBidderId();
+        if (bidder === leader) out.selfRaise++;
+        runOfflineAiStep();
+        steps++;
+      }
+      if (G.auctionState) {
+        out.stuck++;
+        const a = G.auctionState;
+        out.stuckAt = { prop: SPACES[id].name, bid: a.currentBid, leader: a.highBidder, bidder: currentAuctionBidderId(), passed: [...a.passed], money: G.players.map((p) => p.money), log: G.log.slice(-6).map((e) => e.text), debt: DEBT_PROMPT.active, trade: !!G.pendingTrade, fx: MOVE_FX.active, phase: G.phase, cur: G.currentPlayerIdx };
+        G.auctionState = null;
+      }
+      if (G.properties[id].owner !== null) {
+        out.sold++;
+        if (G.properties[id].owner !== null && SPACES[id].price && false) out.overpaid++;
+      }
+      if (G.players.some((p) => p.money < 0)) out.negative++;
+    }
+    return out;
+  });
+  check("AI auctions always finish, never go negative and never self-raise", stress.auctions > 20 && !stress.stuck && !stress.negative && !stress.selfRaise && stress.sold > 0, JSON.stringify(stress));
+  await closeAll();
   console.log("\nTrading");
   await newGame();
   const trade = await page.evaluate(() => {
@@ -625,9 +723,11 @@ function check(name, ok, detail = "") {
   await newGame({ ai: 1 });
   const banner = await page.evaluate(async () => {
     G.phase = "end";
+    const why = { fx: MOVE_FX.active, pend: ONLINE.pendingCardResolutions, debt: DEBT_PROMPT.active, pb: hasPendingBuy(), ctl: canLocalControlTurn(), over: G.gameOver, auction: !!G.auctionState, paused: typeof isGamePaused === "function" && isGamePaused() };
     endTurn();
+    window.__why = why;
     for (let i = 0; i < 20 && !/Player 2/.test(document.querySelector(".turn-banner-text")?.textContent || ""); i++) await new Promise((r) => setTimeout(r, 50));
-    return { shown: !!document.querySelector(".turn-banner"), text: document.querySelector(".turn-banner-text")?.textContent, cur: G.currentPlayerIdx };
+    return { shown: !!document.querySelector(".turn-banner"), text: document.querySelector(".turn-banner-text")?.textContent, cur: G.currentPlayerIdx, why: window.__why };
   });
   check("the turn passes with a banner for the next player", banner.shown && /Player 2/.test(banner.text || ""), JSON.stringify(banner));
   const low = await page.evaluate(() => {

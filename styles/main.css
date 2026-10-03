@@ -2787,8 +2787,10 @@ body[data-theme="classic"] .space .sp-rent {
   background: rgba(255, 255, 255, 0.85);
   border-color: var(--own-color, #334155);
   border-width: 2px;
-}
-
+}
+
+
+
 /* ── Buildings ───────────────────────────────────────────────────────────────
    Houses and hotels sit on the colour bar, left of the ownership dot. */
 .space .bldg-badge {
@@ -3291,6 +3293,243 @@ body.board-3d .board-view-reset:hover {
 .deck-card-effect.is-move {
   background: #e0e7ff;
   color: #3730a3;
+}
+
+/* BUET title deeds, as printed: brown frame, cream card, the group's band
+   with a zigzag strip, rows in a rounded sans. */
+.deed.is-buet {
+  width: min(280px, 100%);
+  padding: 12px;
+  border-radius: 3px;
+  background: #6f4e37;
+  font-family: "Quicksand", var(--font-body);
+}
+.buet-deed-card {
+  background: #f2f1d8;
+  color: #3a3a34;
+  padding-bottom: 0.7rem;
+}
+.buet-deed-head {
+  position: relative;
+  margin-bottom: 20px;
+  padding: 0.7rem 0.6rem 0.55rem;
+  background: var(--band);
+  text-align: center;
+  font-size: 1.02rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.15;
+}
+.buet-deed-head::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  height: 14px;
+  background:
+    linear-gradient(var(--zig), var(--zig)) 0 0 / 100% 6px no-repeat,
+    conic-gradient(from -45deg at 50% 100%, var(--zig) 90deg, transparent 0) 0 6px / 12px 8px repeat-x;
+}
+.buet-deed-body {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.18rem;
+  padding: 0 0.8rem;
+  text-align: center;
+  font-size: 0.84rem;
+  font-weight: 500;
+}
+.buet-deed-rent {
+  margin-bottom: 0.25rem;
+  font-size: 1rem;
+  font-weight: 700;
+}
+.buet-deed-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.05rem 0.5rem;
+  text-align: left;
+  font-variant-numeric: tabular-nums;
+}
+.buet-deed-row > span:last-child {
+  white-space: nowrap;
+}
+.buet-deed-value {
+  margin: 0.4rem 0 0.2rem;
+  font-weight: 700;
+}
+.buet-deed-line {
+  line-height: 1.25;
+}
+.buet-deed-note {
+  margin-top: 0.4rem;
+  font-size: 0.6rem;
+  line-height: 1.3;
+}
+.deed.is-buet p.buet-deed-text {
+  color: inherit;
+  margin: 0.15rem 0 0.35rem;
+  font-size: 0.95rem;
+  line-height: 1.35;
+}
+.buet-deed-icon {
+  display: block;
+  width: 72%;
+  height: auto;
+  margin: 0 auto 0.4rem;
+}
+/* The rent that applies right now. */
+.deed.is-buet .is-current {
+  border-radius: 4px;
+  background: rgba(240, 192, 64, 0.4);
+  font-weight: 700;
+}
+/* A mortgaged deed, turned over. */
+.deed.is-buet.is-back {
+  padding: 0;
+  background: transparent;
+}
+.buet-deed-back {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.1rem;
+  min-height: 330px;
+  padding: 1.5rem 1rem;
+  background: #c07a3e;
+  color: #fff;
+  text-align: center;
+}
+.buet-deed-back-name {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+.buet-deed-back-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+/* Printed card faces (BUET): cream card in a thick deck-coloured frame,
+   the deck emblem on top, and the wording laid out as on the real cards. */
+.deck-card-art[hidden],
+.deck-card-heading[hidden],
+.deck-card-rule[hidden],
+.deck-card-kicker[hidden] {
+  display: none;
+}
+.deck-card[data-style="buet"] {
+  --deck: #1f3a2c;
+  width: min(260px, 100%);
+}
+.deck-card[data-style="buet"][data-deck="community"] {
+  --deck: #4f1e22;
+}
+.deck-card[data-style="buet"] .deck-card-face {
+  border-radius: 4px;
+  min-height: 340px;
+}
+.deck-card[data-style="buet"] .deck-card-back {
+  background: #f0f1d8;
+  border: 14px solid var(--deck);
+  color: #2f2f2f;
+}
+.deck-card[data-style="buet"] .deck-card-mark {
+  display: none;
+}
+.deck-card[data-style="buet"] .deck-card-brand {
+  font-family: "Aldrich", var(--font-body);
+  font-size: 2rem;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+}
+.deck-card[data-style="buet"] .deck-card-front {
+  justify-content: flex-start;
+  gap: 0.75rem;
+  padding: 1.1rem 1rem 1.2rem;
+  background: #f0f1d8;
+  border: 14px solid var(--deck);
+  color: #6b6b62;
+  font-family: "Aldrich", var(--font-body);
+  text-transform: uppercase;
+}
+.deck-card-art {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+}
+.deck-card-art svg {
+  width: 112px;
+  height: auto;
+}
+.deck-card-name {
+  font-family: "Aldrich", var(--font-body);
+  font-size: 1.85rem;
+  line-height: 1;
+  color: #333;
+  letter-spacing: 0.03em;
+}
+.deck-card-heading {
+  font-family: "Michroma", var(--font-body);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: #c4473f;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid #9a9a90;
+}
+.deck-card[data-style="buet"] p.deck-card-text {
+  font-family: "Aldrich", var(--font-body);
+  font-size: 0.98rem;
+  font-weight: 400;
+  line-height: 1.25;
+  letter-spacing: 0.06em;
+  color: #6b6b62;
+  white-space: pre-line;
+}
+.deck-card-rule {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.45rem;
+  align-self: stretch;
+  margin: 0 0.8rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #9a9a90;
+}
+.deck-card-rule-label {
+  font-family: "Michroma", var(--font-body);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.32em;
+  color: #24443a;
+}
+.deck-card-rule-amount {
+  font-family: "Comfortaa", var(--font-body);
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: #b4475a;
+  white-space: pre-line;
+}
+.deck-card-rule.is-words .deck-card-rule-label {
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+}
+.deck-card-rule.is-words .deck-card-rule-amount {
+  font-family: "Michroma", var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: #c4473f;
+}
+.deck-card[data-style="buet"] .deck-card-effect {
+  font-family: var(--font-body);
+  text-transform: none;
 }
 
 /* Winner: match summary. */

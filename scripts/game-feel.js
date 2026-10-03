@@ -173,6 +173,7 @@ function propertyDeedHtml(id) {
       level = countOwnedSpacesByType(Number(prop.owner), "utility") >= 2 ? 1 : 0;
     }
   }
+  if (getThemeById(G?.boardThemeId || selectedThemeId).art === "buet") return buetDeedHtml(sp, prop, level);
   let rowIdx = -1;
   const row = (label, value, strong = false) => {
     rowIdx++;
@@ -225,6 +226,89 @@ function propertyDeedHtml(id) {
   return "";
 }
 
+// BUET title deeds, laid out and worded like the printed ones: a brown frame,
+// a cream card, the group's band with its zigzag, and the rows as printed. A
+// mortgaged deed is shown turned over, as on the table. `level` marks the row
+// that applies now (see propertyDeedHtml).
+function buetDeedHtml(sp, prop, level) {
+  const theme = getThemeById("buet");
+  const tk = (n) => `${Number(n) || 0} TK`;
+  const mortgage = `Mortgage Value ${tk(mortgageValueForSpace(sp))}`;
+  const icon = sp.type === "property" ? "" : `<canvas class="buet-deed-icon" data-space="${sp.id}" width="360" height="200" aria-hidden="true"></canvas>`;
+  if (prop?.mortgaged) {
+    queueBuetDeedIcons();
+    return `
+      <div class="deed is-buet is-back">
+        <div class="buet-deed-back">
+          <span class="buet-deed-back-name">${escHtml(sp.name.toUpperCase())}</span>
+          ${icon}
+          <span class="buet-deed-back-value">${mortgage}</span>
+        </div>
+      </div>`;
+  }
+  let rowIdx = -1;
+  const row = (label, value) => {
+    rowIdx++;
+    const now = rowIdx === level;
+    return `<div class="buet-deed-row${now ? " is-current" : ""}"${now ? ' aria-current="true"' : ""}><span>${label}</span><span>${value}</span></div>`;
+  };
+  const head = (color, shade, ink) => `
+        <div class="buet-deed-head" style="--band:${color};--zig:${shade};color:${ink}">
+          <span>${escHtml(sp.name.toUpperCase())}</span>
+        </div>`;
+  let body = "";
+  let header = "";
+  if (sp.type === "property") {
+    header = head(COLOR[sp.color] || "#666", (theme.bandShades || {})[sp.color] || "#444", "#fff");
+    // The printed deed has no "full set" line; that row is still marked when
+    // it applies, as the rent line.
+    const base = level === 0 || level === 1;
+    rowIdx = 1; // the house rows are levels 2 to 5, the hotel 6
+    const rows = [1, 2, 3, 4].map((n) => row(`With ${n} House`, tk(sp.rent[n]))).join("") + row("With Hotel", tk(sp.rent[5]));
+    body = `
+          <div class="buet-deed-rent${base ? " is-current" : ""}">RENT ${tk(sp.rent[0])}</div>
+          ${rows}
+          <div class="buet-deed-value">${mortgage}</div>
+          <div class="buet-deed-line">Houses cost ${tk(sp.house)} each</div>
+          <div class="buet-deed-line">Hotels, ${tk(sp.house)} each<br>plus 4 houses</div>
+          <div class="buet-deed-note">If a player owns all the sites of any color group, the rent is doubled on unimproved sites in that group</div>`;
+  } else if (sp.type === "railroad") {
+    header = head("#6f717d", "#4f515c", "#fff");
+    body = `
+          ${icon}
+          ${(sp.rent || []).map((v, n) => row(n === 0 ? "RENT" : `If ${n + 1} buildings are owned`, tk(v))).join("")}
+          <div class="buet-deed-value">${mortgage}</div>`;
+  } else {
+    const m = getThemeUtilityRentMultipliers("buet");
+    header = head("#cfe6c2", "#a9cf98", "#2b2b2b");
+    body = `
+          ${icon}
+          <p class="buet-deed-text${level === 0 ? " is-current" : ""}">If one “Utility” is owned, rent is ${m.one} times amount shown on dice.</p>
+          <p class="buet-deed-text${level === 1 ? " is-current" : ""}">If both “Utilities”are owned, rent is ${m.both} times amount shown on dice.</p>
+          <div class="buet-deed-value">${mortgage}</div>`;
+  }
+  queueBuetDeedIcons();
+  return `
+      <div class="deed is-buet">
+        <div class="buet-deed-card">
+          ${header}
+          <div class="buet-deed-body">${body}</div>
+        </div>
+      </div>`;
+}
+
+// The building and utility pictures come from the board's own drawing code
+// (scripts/board3d/buet-art.js), once the deed is in the page.
+function queueBuetDeedIcons() {
+  requestAnimationFrame(() => {
+    document.querySelectorAll("canvas.buet-deed-icon:not([data-drawn])").forEach((c) => {
+      if (!window.BuetArt) return;
+      window.BuetArt.drawDeedIcon(c, Number(c.dataset.space), !!c.closest(".is-back"));
+      c.dataset.drawn = "1";
+    });
+  });
+}
+
 // ── Chance / Community Chest reveal ────────────────────────────────────────
 function cardEffectText(card, p) {
   if (!card) return { text: "", tone: "" };
@@ -249,7 +333,10 @@ function cardEffectText(card, p) {
     case "nearest":
       return v === "utility"
         ? { text: "Nearest utility · ten times the dice if it's owned", tone: "move" }
-        : { text: "Nearest station · double rent if it's owned", tone: "move" };
+        : {
+            text: `Nearest ${G.boardThemeId === "buet" ? "building" : "station"} · ${Number(card.multiplier) === 3 ? "triple" : "double"} rent if it's owned`,
+            tone: "move",
+          };
     case "back":
       return { text: `Back ${Number(v) || 3} spaces`, tone: "move" };
     case "payeach": {
@@ -272,15 +359,27 @@ function cardEffectText(card, p) {
   }
 }
 
+// Card faces for boards with printed cards of their own (BUET's CGPA and
+// BIIS): the deck's emblem, then the card laid out as printed.
+const PRINTED_CARD_ART = {
+  buet: {
+    chance: `<svg viewBox="0 0 120 52" aria-hidden="true"><g font-family="Josefin Sans, DM Sans, sans-serif" font-weight="600" font-size="54" text-anchor="middle"><text x="22" y="46" fill="#d99a5b">?</text><text x="60" y="46" fill="#8fa5b0">?</text><text x="98" y="46" fill="#b9a2d4">?</text></g></svg>`,
+    community: `<svg viewBox="0 0 120 52" aria-hidden="true"><rect x="22" y="6" width="50" height="32" rx="2" fill="none" stroke="#111" stroke-width="5"/><rect x="44" y="38" width="6" height="7" fill="#111"/><rect x="33" y="44" width="28" height="4" fill="#111"/><rect x="80" y="4" width="18" height="44" fill="#111"/><rect x="85" y="38" width="8" height="3" fill="#f0f1d8"/></svg>`,
+  },
+};
+
 function presentCardReveal(type, card, p) {
   const box = document.getElementById("deck-card");
   if (!box) return;
   const isChance = type === "chance";
+  const theme = getThemeById(G.boardThemeId || selectedThemeId);
+  const deckName = themeDeckName(type, theme.id);
   box.dataset.deck = isChance ? "chance" : "community";
   const backTitle = document.getElementById("card-back-title");
   const backIcon = document.getElementById("card-back-icon");
-  if (backTitle) backTitle.textContent = isChance ? "Chance" : "Community Chest";
+  if (backTitle) backTitle.textContent = deckName;
   if (backIcon) backIcon.textContent = isChance ? "?" : "📦";
+  presentPrintedCard(theme, type, card);
   const effect = cardEffectText(card, p);
   const effectEl = document.getElementById("card-effect");
   if (effectEl) {
@@ -291,6 +390,41 @@ function presentCardReveal(type, card, p) {
   box.classList.remove("is-revealed");
   void box.offsetWidth;
   setTimeout(() => box.classList.add("is-revealed"), prefersReducedMotion() ? 0 : 320);
+}
+
+function presentPrintedCard(theme, type, card) {
+  const box = document.getElementById("deck-card");
+  const art = PRINTED_CARD_ART[theme.art];
+  const artEl = document.getElementById("card-art");
+  const headingEl = document.getElementById("card-heading");
+  const ruleEl = document.getElementById("card-rule");
+  const kicker = document.querySelector("#deck-card .deck-card-kicker");
+  if (!box || !artEl || !headingEl || !ruleEl) return;
+  if (!art) {
+    delete box.dataset.style;
+    artEl.hidden = headingEl.hidden = ruleEl.hidden = true;
+    if (kicker) kicker.hidden = false;
+    return;
+  }
+  box.dataset.style = theme.art;
+  artEl.innerHTML = art[type === "chance" ? "chance" : "community"];
+  artEl.hidden = false;
+  if (kicker) kicker.hidden = true;
+  const title = document.createElement("div");
+  title.className = "deck-card-name";
+  title.textContent = themeDeckName(type, theme.id);
+  artEl.appendChild(title);
+  headingEl.textContent = card.heading || "";
+  headingEl.hidden = !card.heading;
+  // The printed wording, line breaks and all; amounts stay as printed.
+  document.getElementById("card-desc").textContent = card.text || "";
+  const label = document.getElementById("card-rule-label");
+  const amount = document.getElementById("card-rule-amount");
+  label.textContent = card.label || "";
+  amount.textContent = card.amount || "";
+  ruleEl.hidden = !(card.label || card.amount);
+  // "ATTEND / SUPPLEMENTARY EXAM" is printed in red capitals, not as a sum.
+  ruleEl.classList.toggle("is-words", !/৳/.test(card.amount || ""));
 }
 
 // ── Match stats (kept in G so everyone in an online match sees the same) ──

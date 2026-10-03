@@ -132,6 +132,12 @@ function buildBoard() {
     } else if (s.type === "tax") {
       inner = `<div class="sp-name"><div style="font-size:1.3em">${escHtml(s.icon)}</div><div style="font-size:.8em;font-family: var(--font-body);font-weight:700">${boardLabelHtml(s.name)}</div><div class="sp-price">${fmtCurrency(s.amount)}</div></div>`;
     }
+    // A board that renames its corners and card squares (BUET) shows those
+    // names here too.
+    const special = (window.ACTIVE_THEME || {}).specialNames?.[s.type];
+    if (special) {
+      inner = `<div class="sp-name"><div style="font-size:1.2em">${escHtml(s.icon || "")}</div><div style="font-family: var(--font-body);font-weight:700;font-size:.8em">${boardLabelHtml(special)}</div></div>`;
+    }
     el.innerHTML = inner;
     board.appendChild(el);
   });
@@ -651,10 +657,13 @@ async function animatePlayerStepMovement(player, steps, options = {}) {
   const startPlayer = getLivePlayer(player);
   if (!startPlayer || !Number.isInteger(steps) || steps <= 0) return false;
   const playerId = startPlayer.id;
+  // A move from a game that has since been replaced (a new game, a resumed
+  // save) stops instead of walking a token in the new one.
+  const game = G?.gameStartedAt;
   const canContinue =
     typeof options.canContinue === "function"
-      ? options.canContinue
-      : () => true;
+      ? () => G?.gameStartedAt === game && options.canContinue()
+      : () => G?.gameStartedAt === game;
 
   if (!canContinue()) return false;
 
@@ -678,9 +687,12 @@ async function animatePlayerStepMovement(player, steps, options = {}) {
       if (!canContinue()) return false;
     }
   } finally {
-    MOVE_FX.active = false;
-    MOVE_FX.playerId = null;
-    updateActionButtons();
+    // Only the game this move belongs to has its movement lock released.
+    if (G?.gameStartedAt === game) {
+      MOVE_FX.active = false;
+      MOVE_FX.playerId = null;
+      updateActionButtons();
+    }
   }
 
   return true;
@@ -2091,7 +2103,9 @@ function runOfflineAiStep() {
       const a = G.auctionState;
       const reserve = aiCashReserve(bidder);
       const steps = auctionBidSteps(SPACES[a.propId]?.price);
-      const nextBid = (Number(a.currentBid) || 0) + steps[0];
+      // With no bid yet, the opening price itself is the cheapest bid.
+      const leading = a.highBidder !== null && a.highBidder !== undefined;
+      const nextBid = (Number(a.currentBid) || 0) + (leading ? steps[0] : 0);
 
       const threatCount = aiCountOpponentMonopolyThreats(
         a.propId,
@@ -2104,10 +2118,14 @@ function runOfflineAiStep() {
         threatCount > 0
           ? Math.floor(basePrice * (0.24 + 0.08 * Math.min(2, threatCount - 1)))
           : 0;
-      const valueCap = Math.floor(
-        (aiPropertyPriority(bidder, a.propId) + defensePremium) *
-          (0.93 + Math.random() * 0.16),
-      );
+      // A little randomness in how much it will pay, picked once per auction:
+      // re-rolling it at every bid made the AI bid and then pass at the
+      // same price.
+      if (!AI_CTRL.auctionJitter || AI_CTRL.auctionJitter.key !== `${a.propId}|${a.openedAt || ""}`) {
+        AI_CTRL.auctionJitter = { key: `${a.propId}|${a.openedAt || ""}`, by: {} };
+      }
+      const jitter = AI_CTRL.auctionJitter.by[bidder.id] ?? (AI_CTRL.auctionJitter.by[bidder.id] = 0.93 + Math.random() * 0.16);
+      const valueCap = Math.floor((aiPropertyPriority(bidder, a.propId) + defensePremium) * jitter);
       const reserveFactor = threatCount > 0 ? 0.3 : 0.45;
       // Mortgaging to win is only worth it for a card that completes its own
       // set or blocks someone else's. The cap is worked out from that potential
@@ -2136,9 +2154,14 @@ function runOfflineAiStep() {
         return;
       }
 
+      // Raise by the smallest step, as a person would; only a bigger one
+      // when there is a long way to go, so auctions don't drag on.
+      if (!leading) {
+        placeBid(0);
+        return;
+      }
       const room = maxBid - (Number(a.currentBid) || 0);
-      let increment = steps[0];
-      for (const step of steps) if (room >= step) increment = step;
+      const increment = room >= steps[0] * 10 && steps[1] ? steps[1] : steps[0];
       placeBid(increment);
       return;
     }
