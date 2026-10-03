@@ -24,7 +24,9 @@ function isSavableGame() {
     G.gameStartedAt &&
     !G.gameOver &&
     !isOnlineGame() &&
-    !onLan
+    !onLan &&
+    // A hidden board's games are not kept in the browser.
+    !isHiddenTheme(G.boardThemeId)
   );
 }
 

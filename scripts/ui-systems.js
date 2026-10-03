@@ -2195,11 +2195,14 @@ function primaryButtonIn(overlayId) {
 //  DIALOG CLOSE BUTTONS
 // ═══════════════════════════════════════════════
 // Dialogs that are safe to dismiss get an X in their top corner. Each maps to
-// what "close" means for that dialog. Deliberately absent: the auction (bid or
-// pass), the debt prompt, buy-or-auction, and a trade you have been offered —
-// those are decisions the game is waiting on, and dismissing them would stall
-// the match or quietly skip a rule (closing buy would skip the auction).
+// what "close" means for that dialog. Deliberately absent: the debt prompt and
+// a trade you have been offered — decisions the game is waiting on.
 const DISMISSABLE_OVERLAYS = {
+  // Put aside to look at the board; the Buy button or End turn brings it
+  // back, so the property is still bought or auctioned.
+  "buy-overlay": () => closeOverlay("buy-overlay"),
+  // Passes when it's your bid; otherwise hides it until it is.
+  "auction-overlay": () => dismissAuction(),
   "prop-overlay": () => closeOverlay("prop-overlay"),
   "portfolio-overlay": () => closeOverlay("portfolio-overlay"),
   "build-overlay": () => closeOverlay("build-overlay"),
@@ -2334,7 +2337,10 @@ function saveLobbyPrefs() {
       timer: document.getElementById("lobby-timer")?.value,
       auction: document.getElementById("auction-enabled")?.value,
       rules: readLobbyRules(),
-      theme: selectedThemeId,
+      // A hidden board is never remembered: keep the last listed one.
+      theme: isHiddenTheme(selectedThemeId)
+        ? (JSON.parse(localStorage.getItem(LOBBY_PREFS_KEY) || "null") || {}).theme
+        : selectedThemeId,
       speed: MOVE_SPEED.factor,
       aiSpeed: AI_SPEED.factor,
     };
@@ -2364,7 +2370,7 @@ function loadLobbyPrefs() {
   if (prefs.rules && typeof prefs.rules === "object") applyRulesToLobbyUi(prefs.rules);
   const aiSpeed = Number(prefs.aiSpeed);
   if (Number.isFinite(aiSpeed) && aiSpeed > 0) AI_SPEED.factor = Math.min(2, Math.max(0.25, aiSpeed));
-  if (prefs.theme && BOARD_THEMES[prefs.theme]) {
+  if (prefs.theme && BOARD_THEMES[prefs.theme] && !isHiddenTheme(prefs.theme)) {
     applyThemeById(prefs.theme);
     refreshStartingMoneyUi(prefs.theme, false);
   }
@@ -2526,6 +2532,8 @@ function readRecentActivity() {
 
 function recordRecentActivity(entry) {
   if (!entry || !entry.kind) return;
+  // Games on a hidden board leave no trace in the browser.
+  if (entry.themeId && isHiddenTheme(entry.themeId)) return;
   try {
     const list = readRecentActivity();
     list.unshift({ ...entry, time: Date.now() });
@@ -3077,7 +3085,7 @@ function boardMoney(theme, n) {
 function renderBoardsPage() {
   const grid = document.getElementById("boards-grid");
   if (!grid) return;
-  const themes = Object.values(BOARD_THEMES).filter((t) => t && t.id !== CUSTOM_BOARD_THEME_ID);
+  const themes = Object.values(BOARD_THEMES).filter((t) => t && t.id !== CUSTOM_BOARD_THEME_ID && themeIsListed(t));
   grid.innerHTML = themes
     .map((t) => {
       const props = Array.isArray(t.spaces) ? t.spaces : [];

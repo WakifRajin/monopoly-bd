@@ -316,6 +316,7 @@ function hideTip() {
   TIP_STATE.el?.remove();
   TIP_STATE.el = null;
   TIP_STATE.current = "";
+  TIP_STATE.missingSince = 0;
   clearInterval(TIP_STATE.follow);
   TIP_STATE.follow = 0;
 }
@@ -330,10 +331,15 @@ function placeTip() {
   const def = TIPS[TIP_STATE.current];
   if (!tip || !def) return;
   const anchor = visibleAnchor(def.anchor);
+  // Buttons blink out during a re-render or a camera move. Wait it out
+  // instead of removing the tip, which then popped straight back up.
   if (!anchor) {
-    hideTip();
+    tip.style.visibility = "hidden";
+    TIP_STATE.missingSince ||= Date.now();
+    if (Date.now() - TIP_STATE.missingSince > 2000) hideTip();
     return;
   }
+  TIP_STATE.missingSince = 0;
   // A dialog opened over the anchor: step out of the way until it closes.
   const underDialog =
     [...document.querySelectorAll(".overlay.show")].some((o) => !o.contains(anchor)) ||
@@ -416,14 +422,16 @@ function maybeShowTip() {
   }
   const screen = document.getElementById("game-screen");
   if (!screen || screen.classList.contains("hidden")) return hideTip();
-  if (TIP_STATE.current) {
-    placeTip();
-    return;
-  }
-  const seen = new Set(readTipsState().seen);
   const cur = curPlayer();
   const myTurn = cur && !isAiPlayer(cur) && canLocalControlTurn();
   const buyOpen = document.getElementById("buy-overlay")?.classList.contains("show");
+  if (TIP_STATE.current) {
+    // Doing what the tip says counts as reading it: it won't come back.
+    if ((TIP_STATE.current === "roll" && G.phase !== "roll") || (TIP_STATE.current === "buy" && !buyOpen)) dismissTip();
+    else placeTip();
+    return;
+  }
+  const seen = new Set(readTipsState().seen);
   const otherOverlay = [...document.querySelectorAll(".overlay.show")].some((o) => o.id !== "buy-overlay");
   if (otherOverlay) return;
   let next = "";

@@ -1017,6 +1017,21 @@ function loadSavedCustomBoardSeed() {
   toast("Saved custom board loaded.", "gold");
 }
 
+// A code typed in place of a seed can open a hidden board for this page
+// load. Nothing is stored.
+function unlockHiddenBoard(code) {
+  const themeId = hiddenBoardForCode(code);
+  if (!themeId || !BOARD_THEMES[themeId]) return false;
+  UNLOCKED_THEMES.add(themeId);
+  applyThemeById(themeId);
+  refreshStartingMoneyUi(themeId, true);
+  renderBoardThemeSelector();
+  refreshCustomBoardPanel();
+  syncLobbySettingsToRoom().catch((err) => console.error(err));
+  toast("Seed loaded successfully.", "gold");
+  return true;
+}
+
 function loadCustomBoardSeedFromInput() {
   if (!customBoardHostCanEdit()) {
     toast("Only the host can change board settings in online mode.", "danger");
@@ -1024,6 +1039,10 @@ function loadCustomBoardSeedFromInput() {
   }
   const seedInput = document.getElementById("custom-board-seed");
   const seed = normalizeCustomBoardSeedText(seedInput?.value || "");
+  if (unlockHiddenBoard(seed)) {
+    if (seedInput) seedInput.value = "";
+    return;
+  }
   if (seedInput && seedInput.value !== seed) {
     seedInput.value = seed;
   }
@@ -2473,6 +2492,9 @@ const BOARD_THEMES = {
     desc: "Halls, buildings and corners of the BUET campus",
     currency: "৳",
     locale: "en-BD",
+    // Not listed anywhere until unlocked for this page load (see
+    // unlockHiddenBoard), and never remembered or saved.
+    hidden: true,
     // Drawn by scripts/board3d/buet-art.js instead of the generic squares.
     art: "buet",
     goSalary: 200,
@@ -2605,6 +2627,27 @@ let selectedThemeId = "dhaka";
 
 function getThemeById(themeId = selectedThemeId) {
   return BOARD_THEMES[themeId] || BOARD_THEMES.dhaka;
+}
+
+// Hidden boards, by a hash of the code that opens them. Unlocking lasts
+// only for this page load.
+const HIDDEN_BOARD_CODES = { "0215f881": "buet" };
+const UNLOCKED_THEMES = new Set();
+
+function hiddenBoardForCode(text) {
+  const s = String(text || "").trim().toLowerCase();
+  if (!s || s.length > 32) return null;
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 0x01000193) >>> 0;
+  return HIDDEN_BOARD_CODES[h.toString(16).padStart(8, "0")] || null;
+}
+
+function isHiddenTheme(themeId) {
+  return !!BOARD_THEMES[themeId]?.hidden;
+}
+
+function themeIsListed(t) {
+  return !!t && (!t.hidden || UNLOCKED_THEMES.has(t.id) || t.id === selectedThemeId);
 }
 
 function getThemeGoSalary(themeId = selectedThemeId) {
@@ -2871,7 +2914,7 @@ function renderBoardThemeSelector() {
   if (!el) return;
   el.innerHTML = "";
   const hostCanEditTheme = !isOnlineGame() || ONLINE.isHost;
-  Object.values(BOARD_THEMES).forEach((t) => {
+  Object.values(BOARD_THEMES).filter(themeIsListed).forEach((t) => {
     const btn = document.createElement("button");
     const active = t.id === selectedThemeId;
     btn.type = "button";

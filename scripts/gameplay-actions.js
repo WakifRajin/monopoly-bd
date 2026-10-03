@@ -744,6 +744,18 @@ function confirmBuy() {
   actionBuy();
 }
 
+// The action-bar Buy button: brings back the buy dialog if it was put aside
+// (so auctioning or skipping stays an option), and buys straight away
+// otherwise.
+function buyButton() {
+  if (hasPendingBuy() && !document.getElementById("buy-overlay")?.classList.contains("show")) {
+    if (!requireTurnControl() || MOVE_FX.active) return;
+    promptBuy(curPlayer(), SPACES[Number(G.pendingBuy)]);
+    return;
+  }
+  actionBuy();
+}
+
 function actionBuy() {
   if (!requireTurnControl()) return;
   if (MOVE_FX.active) return;
@@ -928,6 +940,37 @@ function auctionBidSteps(price) {
   return ladder.slice(i, i + 4);
 }
 
+// An auction someone has put aside while others bid. It comes back when it is
+// their bid, or with the next auction.
+const AUCTION_UI = { hiddenFor: "" };
+
+function auctionUiKey(a) {
+  return a ? `${a.propId}|${a.openedAt || ""}` : "";
+}
+
+function auctionPutAside(a, canBidNow) {
+  if (!a || AUCTION_UI.hiddenFor !== auctionUiKey(a)) return false;
+  if (canBidNow) {
+    AUCTION_UI.hiddenFor = "";
+    return false;
+  }
+  return true;
+}
+
+function dismissAuction() {
+  const a = G?.auctionState;
+  if (!a) {
+    closeOverlay("auction-overlay");
+    return;
+  }
+  if (!isOfflineAiAuctionTurn() && canLocalControlAuctionAction()) {
+    passAuction();
+    return;
+  }
+  AUCTION_UI.hiddenFor = auctionUiKey(a);
+  closeOverlay("auction-overlay");
+}
+
 function renderAuction() {
   const a = G.auctionState;
   if (!a) return;
@@ -950,7 +993,16 @@ function renderAuction() {
     bidder?.money || 0,
   );
 
-  openOverlay("auction-overlay");
+  const canBidNow = !aiBidderTurn && canLocalControlAuctionAction();
+  if (auctionPutAside(a, canBidNow)) closeOverlay("auction-overlay");
+  else openOverlay("auction-overlay");
+  // The dialog's X passes when it's your bid, and hides it otherwise.
+  const closeBtn = document.querySelector("#auction-overlay .modal-close");
+  if (closeBtn) {
+    const label = canBidNow ? "Pass" : "Hide until it's your bid";
+    closeBtn.setAttribute("aria-label", label);
+    closeBtn.title = label;
+  }
 
   const steps = auctionBidSteps(basePrice);
   const stepKey = steps.join(",");

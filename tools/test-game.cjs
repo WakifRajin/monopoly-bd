@@ -179,8 +179,28 @@ function check(name, ok, detail = "") {
   const after = await page.evaluate(() => [G.players[0].money, G.players[1].money, calcRent(SPACES[5], G.properties[5]), getThemeGoSalary(G.boardThemeId)]);
   check("nearest-station card charges double rent", after[1] - before[1] === after[2] * 2, JSON.stringify({ before, after }));
 
+  // The BUET board is hidden until its code is typed as a seed, and nothing
+  // about it is kept in the browser.
+  const hidden = await page.evaluate(() => {
+    applyThemeById("dhaka");
+    renderBoardThemeSelector();
+    renderBoardsPage();
+    const listed = () => document.getElementById("board-theme-grid").textContent.includes("BUET") || document.getElementById("boards-grid").textContent.includes("BUET");
+    const before = listed();
+    document.getElementById("custom-board-seed").value = " BUET22 ";
+    loadCustomBoardSeedFromInput();
+    renderBoardsPage();
+    const after = listed();
+    saveLobbyPrefs();
+    const prefs = JSON.parse(localStorage.getItem("monopoly_lobby_prefs") || "{}");
+    return { before, after, selected: selectedThemeId, input: document.getElementById("custom-board-seed").value, savedTheme: prefs.theme };
+  });
+  check("the BUET board stays hidden until its code is entered, and isn't remembered", !hidden.before && hidden.after && hidden.selected === "buet" && hidden.input === "" && hidden.savedTheme !== "buet", JSON.stringify(hidden));
+
   // BUET board: its own names and decks, and BIIS's "pay thrice" card.
   await newGame({ theme: "buet" });
+  const buetSaved = await page.evaluate(() => { saveGameNow(); return Object.keys(localStorage).some((k) => k.startsWith("monopoly_save") && /buet/i.test(localStorage.getItem(k))) || /buet/i.test(localStorage.getItem("monopoly_lobby_prefs") || "") || /BUET/.test(localStorage.getItem(RECENT_ACTIVITY_KEY) || ""); });
+  check("a BUET game leaves nothing in the browser's storage", !buetSaved, String(buetSaved));
   const buet = await page.evaluate(() => ({ go: SPACES[0].name, biis: SPACES[33].name, cgpa: SPACES[7].name, rail: SPACES[35].name, deck: G.communityDeck.length + G.chanceDeck.length }));
   check("the BUET board names its squares as printed", buet.go === "BUET Main Gate" && buet.biis === "BIIS" && buet.cgpa === "CGPA" && buet.rail === "Mechanical Building" && buet.deck === 32, JSON.stringify(buet));
   await page.evaluate(() => { G.properties[35].owner = 1; G.players[1].railroads.push(35); G.players[0].pos = 29; });
@@ -191,7 +211,7 @@ function check(name, ok, detail = "") {
   await closeAll();
   const buetAfter = await page.evaluate(() => [G.players[1].money, calcRent(SPACES[35], G.properties[35])]);
   check("BIIS nearest-building card charges three times the rent", buetAfter[0] - buetBefore === buetAfter[1] * 3, JSON.stringify({ buetBefore, buetAfter }));
-  await page.evaluate(() => applyThemeById("dhaka"));
+  await page.evaluate(() => { applyThemeById("dhaka"); refreshStartingMoneyUi("dhaka", true); });
 
   const deck = await page.evaluate(() => {
     G.jailCardHolder = { chance: 1 };
@@ -492,7 +512,7 @@ function check(name, ok, detail = "") {
       if (G.auctionState) {
         out.stuck++;
         const a = G.auctionState;
-        out.stuckAt = { prop: SPACES[id].name, bid: a.currentBid, leader: a.highBidder, bidder: currentAuctionBidderId(), passed: [...a.passed], money: G.players.map((p) => p.money), log: G.log.slice(-6).map((e) => e.text), debt: DEBT_PROMPT.active, trade: !!G.pendingTrade, fx: MOVE_FX.active, phase: G.phase, cur: G.currentPlayerIdx };
+        out.stuckAt = { prop: SPACES[id].name, bid: a.currentBid, leader: a.highBidder, bidder: currentAuctionBidderId(), passed: [...a.passed], money: G.players.map((p) => p.money), log: G.log.slice(-6).map((e) => e.text), debt: DEBT_PROMPT.active, trade: !!G.pendingTrade, fx: MOVE_FX.active, phase: G.phase, cur: G.currentPlayerIdx, paused: isGamePaused(), over: !!G.gameOver, cards: ONLINE.pendingCardResolutions, hidden: document.getElementById("game-screen").classList.contains("hidden"), bidderAi: isAiPlayer(G.players[currentAuctionBidderId()]), bankrupt: G.players.map((p) => p.bankrupt ? 1 : 0).join(""), kinds: G.players.map((p) => p.kind).join(",") };
         G.auctionState = null;
       }
       if (G.properties[id].owner !== null) {
@@ -505,6 +525,60 @@ function check(name, ok, detail = "") {
   });
   check("AI auctions always finish, never go negative and never self-raise", stress.auctions > 20 && !stress.stuck && !stress.negative && !stress.selfRaise && stress.sold > 0, JSON.stringify(stress));
   await closeAll();
+
+  await newGame({ ai: 1 });
+  const closing = await page.evaluate(() => {
+    // The buy dialog can be put aside and brought back; the auction's X
+    // passes on your bid and hides it while someone else bids.
+    G.players.length = 3;
+    G.players.forEach((p) => (p.kind = "human"));
+    G.pendingBuy = 6; G.phase = "action";
+    promptBuy(G.players[0], SPACES[6]);
+    const shown = (id) => document.getElementById(id).classList.contains("show");
+    document.querySelector("#buy-overlay .modal-close").click();
+    const buyHidden = !shown("buy-overlay") && G.pendingBuy === 6;
+    buyButton();
+    const buyBack = shown("buy-overlay");
+    startAuction();
+    const first = currentAuctionBidderId();
+    document.querySelector("#auction-overlay .modal-close").click();
+    const passed = G.auctionState.passed.has(first);
+    G.players[currentAuctionBidderId()].kind = "ai";
+    renderAuction();
+    document.querySelector("#auction-overlay .modal-close").click();
+    renderAll();
+    const watcherHidden = !shown("auction-overlay");
+    G.players.forEach((p) => (p.kind = "human"));
+    renderAll();
+    const backOnBid = shown("auction-overlay");
+    while (G.auctionState) passAuction();
+    return { buyHidden, buyBack, passed, watcherHidden, backOnBid };
+  });
+  check("the buy and auction dialogs can be closed without stalling the game", Object.values(closing).every(Boolean), JSON.stringify(closing));
+  await closeAll();
+
+  const tip = await page.evaluate(async () => {
+    // A tip whose button blinks out stays put, and rolling counts as reading it.
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const before = readTipsState();
+    writeTipsState({ enabled: true, seen: [] });
+    G.phase = "roll";
+    hideTip();
+    showTip("roll");
+    const rb = document.getElementById("roll-btn");
+    rb.hidden = true;
+    await wait(600);
+    const kept = TIP_STATE.current === "roll";
+    rb.hidden = false;
+    G.phase = "action";
+    maybeShowTip();
+    const r = { kept, seen: readTipsState().seen.includes("roll"), gone: !TIP_STATE.el };
+    hideTip();
+    writeTipsState(before);
+    return r;
+  });
+  check("the roll tip doesn't flicker away and stops once the dice are rolled", tip.kept && tip.seen && tip.gone, JSON.stringify(tip));
+
   console.log("\nTrading");
   await newGame();
   const trade = await page.evaluate(() => {

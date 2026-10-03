@@ -519,6 +519,7 @@ const I18N_BN = {
     "Leader:": "এগিয়ে:",
     "Bidding:": "দর দিচ্ছেন:",
     "Pass": "পাস",
+    "Hide until it's your bid": "আপনার বিডের পালা না আসা পর্যন্ত লুকান",
     "Waiting for bidder sync...": "দরদাতার সাথে মিলানো হচ্ছে...",
     "Rent due": "ভাড়া বাকি",
     "OK": "ঠিক আছে",

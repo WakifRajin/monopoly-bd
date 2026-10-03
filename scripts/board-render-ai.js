@@ -210,8 +210,8 @@ function syncAuctionOverlay() {
   }
 
   if (G.auctionState) {
+    // Opens it, unless this player has put it aside (renderAuction).
     renderAuction();
-    openOverlay("auction-overlay");
   } else {
     closeOverlay("auction-overlay");
   }
