@@ -8,7 +8,7 @@
  * pictures. Ownership frames and the mortgaged ribbon are still drawn by
  * main.js on top.
  */
-import { BUILDINGS, MAP_H, MAP_W, ROADS } from "./buet-map.js";
+import { BUILDINGS, MAP_H, MAP_W, ROADS } from "./campus-map.js";
 
 export const BUET_FONT = '"Josefin Sans", "DM Sans", system-ui, sans-serif';
 export const BUET_CARD_FONT = '"Aldrich", "DM Sans", system-ui, sans-serif';

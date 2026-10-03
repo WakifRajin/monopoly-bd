@@ -1,6 +1,6 @@
 // Campus map in the centre of the BUET board: roads and buildings traced from
 // the printed board into SVG path data (a 1000-wide box, y down). Drawn by
-// buet-art.js with Path2D, so it stays sharp at any texture size.
+// campus-art.js with Path2D, so it stays sharp at any texture size.
 export const MAP_W = 1000;
 export const MAP_H = 997.7;
 export const ROADS =

@@ -2495,7 +2495,7 @@ const BOARD_THEMES = {
     // Not listed anywhere until unlocked for this page load (see
     // unlockHiddenBoard), and never remembered or saved.
     hidden: true,
-    // Drawn by scripts/board3d/buet-art.js instead of the generic squares.
+    // Drawn by scripts/board3d/campus-art.js instead of the generic squares.
     art: "buet",
     goSalary: 200,
     startMoneyDefault: 1500,

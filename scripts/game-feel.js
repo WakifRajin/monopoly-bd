@@ -298,7 +298,7 @@ function buetDeedHtml(sp, prop, level) {
 }
 
 // The building and utility pictures come from the board's own drawing code
-// (scripts/board3d/buet-art.js), once the deed is in the page.
+// (scripts/board3d/campus-art.js), once the deed is in the page.
 function queueBuetDeedIcons() {
   requestAnimationFrame(() => {
     document.querySelectorAll("canvas.buet-deed-icon:not([data-drawn])").forEach((c) => {

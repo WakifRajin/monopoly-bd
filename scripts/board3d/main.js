@@ -51,7 +51,7 @@ import {
 } from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
-import { BUET_CARD_FONT, BUET_FONTS, drawBuetCenter, drawBuetSpace, drawDeedIcon } from "./buet-art.js";
+import { BUET_CARD_FONT, BUET_FONTS, drawBuetCenter, drawBuetSpace, drawDeedIcon } from "./campus-art.js";
 
 // ── Board geometry (world units; 1 unit = one edge square) ─────────────────
 const CORNER = 1.65;
@@ -173,7 +173,7 @@ function drawBoardTexture(canvas) {
   const t = theme();
   const g = G_();
   const pal = palette();
-  // BUET: the printed board's own squares and campus map (buet-art.js).
+  // BUET: the printed board's own squares and campus map (campus-art.js).
   const buet = t.art === "buet";
   if (buet) loadArtFonts(t.art);
   ctx.save();
@@ -510,7 +510,7 @@ function standPoint(pos, slot, jailed) {
   return { x: r.cx + ox * sx, z: r.z0 + r.d * 0.66 + oz * sz * 0.62 };
 }
 
-// The BUET board's band lies on each square's inner edge (buet-art.js turns
+// The BUET board's band lies on each square's inner edge (campus-art.js turns
 // the squares to face their side). Its centre, the direction it runs, and its
 // length; null on other boards.
 const BUET_BAND = 0.29 / 2; // half the band and zigzag strip, in units
